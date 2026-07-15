@@ -1,0 +1,31 @@
+{
+  "name": "@tasker/eslint-config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./eslint.config.mjs",
+    "./base": "./base.mjs",
+    "./node": "./node.mjs",
+    "./react": "./react.mjs"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.0.0"
+  },
+  "peerDependencies": {
+    "eslint-plugin-react-hooks": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "eslint-plugin-react-hooks": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

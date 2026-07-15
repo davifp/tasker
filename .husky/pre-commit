@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+set -e
+
+pnpm lint-staged
+
+# Scoped typecheck: only workspaces that changed since the previous commit.
+# On the very first commit HEAD^ does not exist, so fall back to checking all workspaces.
+if git rev-parse --verify HEAD^ > /dev/null 2>&1; then
+  pnpm turbo run typecheck --filter="...[HEAD^]"
+else
+  pnpm turbo run typecheck
+fi
+
+# Block secrets — gitleaks is required. Install: https://github.com/gitleaks/gitleaks#installing
+if ! command -v gitleaks > /dev/null 2>&1; then
+  echo "✗ gitleaks is required but not installed."
+  echo "  Install: https://github.com/gitleaks/gitleaks#installing"
+  echo "  macOS: brew install gitleaks  |  Linux: see link above"
+  exit 1
+fi
+gitleaks protect --staged --redact --config .gitleaks.toml

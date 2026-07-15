@@ -1,0 +1,45 @@
+{
+  "name": "tasker",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "prepare": "husky || true",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:cov": "turbo run test:cov",
+    "test:e2e": "echo 'E2E deferred — Playwright runs in a later phase' && exit 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "depcheck": "depcheck",
+    "knip": "knip"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "@tasker/eslint-config": "workspace:*",
+    "depcheck": "^1.4.0",
+    "eslint": "^9.0.0",
+    "husky": "^9.0.0",
+    "knip": "^5.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.4.0",
+    "turbo": "^2.3.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
+  }
+}

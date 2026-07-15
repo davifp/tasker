@@ -1,0 +1,2 @@
+-- Baseline migration: empty initial state
+-- Future migrations will build upon this foundation

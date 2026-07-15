@@ -1,0 +1,17 @@
+node_modules
+dist
+.next
+coverage
+pnpm-lock.yaml
+*.lock
+
+# Claude Code & agent skill files — not project source
+.claude
+.agents
+tasks
+spec-driven
+
+# Project documentation — formatted manually
+CLAUDE.md
+README.md
+Escopo_*.md

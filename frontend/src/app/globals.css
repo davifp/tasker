@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme — Tasker design tokens (Flat Design, blue-primary palette) */
+    --background: 210 40% 98%; /* #F8FAFC slate-50  */
+    --foreground: 222 47% 11%; /* #0F172A slate-900 */
+    --card: 0 0% 100%; /* #FFFFFF           */
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%; /* #2563EB blue-600  */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 221 81% 96%; /* #F1F5FD           */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 221 81% 96%; /* #F1F5FD           */
+    --muted-foreground: 215 16% 47%; /* #64748B slate-500 */
+    --accent: 161 94% 30%; /* #059669 emerald-600 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%; /* #DC2626 red-600   */
+    --destructive-foreground: 0 0% 100%;
+    --border: 221 81% 88%; /* #E4ECFC           */
+    --input: 221 81% 88%;
+    --ring: 221 83% 53%; /* #2563EB blue-600  */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark theme — WCAG AA verified */
+    --background: 222 47% 11%; /* #0F172A slate-900 */
+    --foreground: 210 40% 98%; /* #F8FAFC slate-50  */
+    --card: 217 33% 17%; /* #1E293B slate-800 */
+    --card-foreground: 210 40% 98%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%; /* #3B82F6 blue-500  */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%; /* #1E293B slate-800 */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%; /* #1E293B slate-800 */
+    --muted-foreground: 215 20% 65%; /* #94A3B8 slate-400 */
+    --accent: 160 84% 39%; /* #10B981 emerald-500 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%; /* #EF4444 red-500   */
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 17%; /* #1E293B slate-800 */
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%; /* #3B82F6 blue-500  */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+
+  /* Visible focus rings for all interactive elements — WCAG 2.1 AA */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}

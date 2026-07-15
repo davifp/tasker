@@ -1,0 +1,27 @@
+node_modules
+.pnpm-store
+dist
+.next
+out
+.turbo
+coverage
+
+# Version control
+.git
+.gitignore
+
+# Logs & env
+*.log
+.env
+.env.*
+
+# Claude Code & project planning — not needed in the image
+.claude
+.agents
+tasks
+spec-driven
+skills-lock.json
+
+# Docs
+README.md
+Escopo_*.md

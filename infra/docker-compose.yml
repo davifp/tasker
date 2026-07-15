@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    container_name: tasker_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tasker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tasker}
+      POSTGRES_DB: ${POSTGRES_DB:-tasker}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - tasker_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-tasker} -d ${POSTGRES_DB:-tasker}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: tasker_redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - tasker_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: tasker_mailhog
+    restart: unless-stopped
+    ports:
+      - '${MAILHOG_SMTP_PORT:-1025}:1025'
+      - '${MAILHOG_UI_PORT:-8025}:8025'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8025/api/v2/messages']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  tasker_pg_data:
+  tasker_redis_data:
