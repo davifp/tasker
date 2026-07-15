@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
-import { HealthCheck, HealthCheckResult, HealthCheckService, PrismaHealthIndicator } from '@nestjs/terminus';
-import { PrismaService } from '../prisma/prisma.service';
+import { HealthCheck, HealthCheckResult, HealthCheckService } from '@nestjs/terminus';
+import { PrismaHealthIndicator } from './prisma.health';
 import { RedisHealthIndicator } from './redis.health';
 
 @Controller('health')
@@ -8,7 +8,6 @@ export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
     private readonly prismaIndicator: PrismaHealthIndicator,
-    private readonly prismaService: PrismaService,
     private readonly redisIndicator: RedisHealthIndicator,
   ) {}
 
@@ -16,7 +15,7 @@ export class HealthController {
   @HealthCheck()
   check(): Promise<HealthCheckResult> {
     return this.health.check([
-      () => this.prismaIndicator.pingCheck('prisma', this.prismaService),
+      () => this.prismaIndicator.isHealthy('prisma'),
       () => this.redisIndicator.isHealthy('redis'),
     ]);
   }
