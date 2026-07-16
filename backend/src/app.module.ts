@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { BullModule } from '@nestjs/bullmq';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { envSchema } from '@tasker/config';
 import { LoggerModule } from './common/logger/logger.module';
@@ -18,6 +19,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { SessionsModule } from './sessions/sessions.module';
 import { MeModule } from './me/me.module';
+import { BullMQModule } from './queues/bullmq.module';
 import Redis from 'ioredis';
 
 @Module({
@@ -26,6 +28,24 @@ import Redis from 'ioredis';
       isGlobal: true,
       ignoreEnvFile: true,
       validate: (config) => envSchema.parse(config),
+    }),
+    // BullMQ global setup — must come before any feature module that calls registerQueue.
+    // Uses connection options (not an instance) so BullMQ can spawn its own ioredis connections
+    // with maxRetriesPerRequest: null as required by BullMQ.
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const url = new URL(config.getOrThrow<string>('REDIS_URL'));
+        return {
+          connection: {
+            host: url.hostname,
+            port: parseInt(url.port || '6379', 10),
+            ...(url.password ? { password: decodeURIComponent(url.password) } : {}),
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+          },
+        };
+      },
     }),
     EventEmitterModule.forRoot({ wildcard: false, delimiter: '.', global: true }),
     RedisModule,
@@ -50,6 +70,31 @@ import Redis from 'ioredis';
             limit: config.get<number>('THROTTLE_REFRESH_LIMIT')!,
             ttl: config.get<number>('THROTTLE_REFRESH_TTL_S')! * 1000,
           },
+          // The two throttlers below only apply to routes that opt in via
+          // @Throttle({ emailResend: {} }) or @Throttle({ passwordReset: {} }).
+          // Without skipIf they would run on every request (Nest applies all
+          // named throttlers globally), throttling unrelated endpoints like /health.
+          {
+            name: 'emailResend',
+            limit: config.get<number>('THROTTLE_EMAIL_RESEND_LIMIT', 3)!,
+            ttl: config.get<number>('THROTTLE_EMAIL_RESEND_TTL_S', 300)! * 1000,
+            skipIf: (ctx) => {
+              const req = ctx.switchToHttp().getRequest<{ route?: { path?: string } }>();
+              return req.route?.path !== '/auth/email/verify/resend';
+            },
+          },
+          {
+            name: 'passwordReset',
+            limit: config.get<number>('THROTTLE_PASSWORD_RESET_LIMIT', 3)!,
+            ttl: config.get<number>('THROTTLE_PASSWORD_RESET_TTL_S', 300)! * 1000,
+            skipIf: (ctx) => {
+              const req = ctx.switchToHttp().getRequest<{ route?: { path?: string } }>();
+              const path = req.route?.path;
+              return (
+                path !== '/auth/password/reset/request' && path !== '/auth/password/reset/confirm'
+              );
+            },
+          },
         ],
         storage: new RedisThrottlerStorage(redis),
       }),
@@ -62,6 +107,7 @@ import Redis from 'ioredis';
     AuthModule,
     SessionsModule,
     MeModule,
+    BullMQModule,
   ],
   providers: [
     {

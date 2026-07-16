@@ -46,7 +46,7 @@ describe('SessionsService', () => {
     sessionDb = makeSession();
 
     mockTokenService = {
-      newRefresh: vi.fn().mockReturnValue({ token: RAW_TOKEN, hash: TOKEN_HASH }),
+      generateToken: vi.fn().mockReturnValue({ token: RAW_TOKEN, hash: TOKEN_HASH }),
       hash: vi
         .fn()
         .mockImplementation((t: string) => (t === RAW_TOKEN ? TOKEN_HASH : `hash-of-${t}`)),
@@ -66,6 +66,7 @@ describe('SessionsService', () => {
         })),
         findUnique: vi.fn().mockImplementation(() => sessionDb),
         update: vi.fn().mockImplementation(({ data }) => ({ ...sessionDb, ...data })),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     };
 

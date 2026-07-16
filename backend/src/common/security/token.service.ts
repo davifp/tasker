@@ -19,7 +19,7 @@ export class TokenService {
     return this.jwt.verify<AccessTokenPayload>(token);
   }
 
-  newRefresh(): { token: string; hash: string } {
+  generateToken(): { token: string; hash: string } {
     const token = randomBytes(32).toString('base64url');
     return { token, hash: this.hash(token) };
   }

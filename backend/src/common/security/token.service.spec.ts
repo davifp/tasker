@@ -36,22 +36,22 @@ describe('TokenService', () => {
     });
   });
 
-  describe('newRefresh()', () => {
+  describe('generateToken()', () => {
     it('returns a base64url token and its sha256 hash', () => {
-      const { token, hash } = service.newRefresh();
+      const { token, hash } = service.generateToken();
       const expected = createHash('sha256').update(token).digest('hex');
       expect(hash).toBe(expected);
     });
 
     it('token has at least 256 bits of entropy (≥ 32 bytes → 43 base64url chars)', () => {
-      const { token } = service.newRefresh();
+      const { token } = service.generateToken();
       // 32 bytes base64url = 43 chars (ceil(32*4/3) without padding)
       expect(token.length).toBeGreaterThanOrEqual(43);
     });
 
     it('generates unique tokens on each call', () => {
-      const { token: t1 } = service.newRefresh();
-      const { token: t2 } = service.newRefresh();
+      const { token: t1 } = service.generateToken();
+      const { token: t2 } = service.generateToken();
       expect(t1).not.toBe(t2);
     });
   });

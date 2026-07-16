@@ -33,7 +33,7 @@ export class SessionsService {
   }
 
   async create(userId: string, device: DeviceMeta): Promise<{ session: Session; refresh: string }> {
-    const { token: rawToken, hash } = this.tokenService.newRefresh();
+    const { token: rawToken, hash } = this.tokenService.generateToken();
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + this.sessionTtlDays);
@@ -98,7 +98,7 @@ export class SessionsService {
       throw new UnauthorizedException('Session has expired');
     }
 
-    const { token: newRawToken, hash: newHash } = this.tokenService.newRefresh();
+    const { token: newRawToken, hash: newHash } = this.tokenService.generateToken();
 
     // Atomic compare-and-swap: only updates if the hash hasn't changed since we read it.
     // If two concurrent requests race past the hash check above, exactly one wins here;

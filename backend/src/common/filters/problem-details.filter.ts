@@ -1,4 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { ZodValidationException } from 'nestjs-zod';
@@ -12,6 +18,17 @@ export interface ProblemDetails {
   instance?: string;
   traceId: string;
   errors?: Array<{ path: string; message: string }>;
+}
+
+function isProblemDetailsPayload(
+  value: unknown,
+): value is { type: string; title?: string; detail?: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    typeof (value as { type: unknown }).type === 'string'
+  );
 }
 
 @Catch()
@@ -75,6 +92,21 @@ export class ProblemDetailsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
+      const response = exception.getResponse();
+
+      // If the caller threw an HttpException with a Problem-Details-shaped
+      // object (i.e. carries a custom `type` URI), preserve their fields.
+      if (isProblemDetailsPayload(response)) {
+        return {
+          type: response.type,
+          title: response.title ?? exception.message,
+          status,
+          instance: request.url,
+          traceId,
+          ...(response.detail !== undefined ? { detail: response.detail } : {}),
+        };
+      }
+
       return {
         type: 'about:blank',
         title: exception.message,

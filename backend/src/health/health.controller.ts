@@ -6,7 +6,18 @@ import { PrismaHealthIndicator } from './prisma.health';
 import { RedisHealthIndicator } from './redis.health';
 
 @Public()
-@SkipThrottle()
+// @SkipThrottle() with no args only skips the 'default' throttler.
+// Named throttlers still run — and their storage would blow up if Redis is
+// unreachable, turning any /health request during a Redis outage into a 500
+// instead of the intended 503. List every throttler explicitly.
+@SkipThrottle({
+  default: true,
+  register: true,
+  login: true,
+  refresh: true,
+  emailResend: true,
+  passwordReset: true,
+})
 @Controller('health')
 export class HealthController {
   constructor(

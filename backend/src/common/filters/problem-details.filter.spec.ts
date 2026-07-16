@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { HttpException, HttpStatus, ServiceUnavailableException, ArgumentsHost } from '@nestjs/common';
+import {
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  ServiceUnavailableException,
+  ArgumentsHost,
+} from '@nestjs/common';
 import { ZodError, z } from 'zod';
 import { ProblemDetailsFilter } from './problem-details.filter';
 import { TraceContext } from '../trace/trace-context';
@@ -153,6 +159,43 @@ describe('ProblemDetailsFilter', () => {
     );
     expect((capturedBody as { status?: number })?.status).toBe(503);
     expect((capturedBody as { traceId?: string })?.traceId).toBe('trace-health');
+  });
+
+  it('preserves custom Problem-Details type from HttpException payload', () => {
+    const exception = new ForbiddenException({
+      type: 'https://tasker.dev/problems/email-verification-required',
+      title: 'Email Verification Required',
+      detail: 'You must verify your email address before performing this action.',
+      status: 403,
+    });
+    const host = makeHost('/api/v1/workspaces');
+    let capturedBody: unknown;
+    const res = host.switchToHttp().getResponse() as {
+      status: ReturnType<typeof vi.fn>;
+    };
+    (res.status as ReturnType<typeof vi.fn>).mockReturnValue({
+      header: vi.fn().mockReturnValue({
+        json: vi.fn((body) => {
+          capturedBody = body;
+        }),
+      }),
+      json: vi.fn(),
+    });
+
+    TraceContext.run('trace-guard', () => {
+      filter.catch(exception, host);
+    });
+
+    const body = capturedBody as {
+      type?: string;
+      title?: string;
+      detail?: string;
+      status?: number;
+    };
+    expect(body?.type).toBe('https://tasker.dev/problems/email-verification-required');
+    expect(body?.title).toBe('Email Verification Required');
+    expect(body?.detail).toBe('You must verify your email address before performing this action.');
+    expect(body?.status).toBe(403);
   });
 
   it('always injects traceId', () => {

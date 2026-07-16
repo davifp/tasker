@@ -6,6 +6,7 @@ import { Argon2Service } from '../common/security/argon2.service';
 import { HibpService } from '../common/security/hibp.service';
 import { TokenService } from '../common/security/token.service';
 import { SessionsService, DeviceMeta } from '../sessions/sessions.service';
+import { EmailVerificationService } from './email-verification.service';
 import {
   AuthEvents,
   LoginFailedEvent,
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly hibp: HibpService,
     private readonly tokenService: TokenService,
     private readonly sessions: SessionsService,
+    private readonly emailVerification: EmailVerificationService,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -55,6 +57,17 @@ export class AuthService {
       userId: user.id,
       email: user.email,
     } satisfies UserRegisteredEvent);
+
+    // Awaited so the caller only gets a 201 after the verification email is on the queue.
+    // Enqueue failures do not fail signup — the user can request a resend from /auth/email/verify/resend.
+    try {
+      await this.emailVerification.sendVerificationEmail(user.id, user.email);
+    } catch (err) {
+      this.logger.error(
+        { userId: user.id, err },
+        'Failed to enqueue verification email on registration',
+      );
+    }
 
     return this.issueTokens(user, params.device);
   }
