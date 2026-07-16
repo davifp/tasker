@@ -31,6 +31,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.tenant;
   }
 
+  // For operations that legitimately span workspaces (e.g. listing a user's memberships).
+  // Do not use inside a workspace-scoped request handler.
+  forSystem(): PrismaClient {
+    return this.raw;
+  }
+
   async ping(): Promise<void> {
     await this.raw.$queryRaw`SELECT 1`;
   }

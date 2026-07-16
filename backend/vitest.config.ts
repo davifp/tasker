@@ -21,6 +21,7 @@ export default defineConfig({
       REDIS_URL: 'redis://localhost:6379',
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
+      JWT_SECRET: 'test-secret-that-is-at-least-32-chars-long',
     },
     coverage: {
       provider: 'v8',
