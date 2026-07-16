@@ -438,15 +438,39 @@ describe('Workspaces + invitations + RBAC (integration)', () => {
       const restore = await req(baseUrl, 'POST', '/workspaces/delete-me/restore', {
         token: owner.accessToken,
       });
-      // Restore requires resolving the (deleted) workspace — the guard blocks
-      // requests when the workspace is soft-deleted, so restore must bypass.
-      // We assert either 201 (restored) or 403 (guard-blocked) and document the gap.
-      if (restore.status === 201) {
-        const after = await getPrisma().workspace.findUnique({ where: { id: workspaceId } });
-        expect(after?.deletedAt).toBeNull();
-      } else {
-        expect(restore.status).toBe(403);
-      }
+      // WorkspaceGuard bypasses the deletedAt check for the /restore route so
+      // the Owner can undo a soft-delete inside the 30-day window.
+      expect(restore.status).toBe(201);
+      const after = await getPrisma().workspace.findUnique({ where: { id: workspaceId } });
+      expect(after?.deletedAt).toBeNull();
+    });
+
+    it('rejects a mismatched X-Workspace-Id header against the URL slug (tenant leak guard)', async () => {
+      // Register a user who is Admin of workspace A. Ask for workspace B by
+      // slug while asserting X-Workspace-Id: A → must 403, otherwise Admin of A
+      // could read/mutate B's data.
+      const attacker = await register(baseUrl, 'tenant-leak@example.com');
+      await verifyUser(attacker.userId);
+      const wsA = await req(baseUrl, 'POST', '/workspaces', {
+        token: attacker.accessToken,
+        body: { name: 'Attacker WS', slug: 'attacker-ws' },
+      });
+      const wsAId = ((await wsA.json()) as { id: string }).id;
+
+      const victim = await register(baseUrl, 'tenant-leak-victim@example.com');
+      await verifyUser(victim.userId);
+      await req(baseUrl, 'POST', '/workspaces', {
+        token: victim.accessToken,
+        body: { name: 'Victim WS', slug: 'victim-ws' },
+      });
+
+      const res = await req(baseUrl, 'GET', '/workspaces/victim-ws/members', {
+        token: attacker.accessToken,
+        headers: { 'X-Workspace-Id': wsAId },
+      });
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { type: string };
+      expect(body.type).toBe('https://tasker.dev/problems/workspace-id-mismatch');
     });
   });
 

@@ -36,7 +36,7 @@ describe('IdempotencyInterceptor', () => {
   beforeEach(() => {
     redis = {
       get: vi.fn(),
-      set: vi.fn().mockResolvedValue('OK'),
+      set: vi.fn(),
     };
   });
 
@@ -46,6 +46,7 @@ describe('IdempotencyInterceptor', () => {
     const result = await firstValueFrom(interceptor.intercept(makeCtx(), next));
     expect(result).toEqual({ ok: true });
     expect(redis.get).not.toHaveBeenCalled();
+    expect(redis.set).not.toHaveBeenCalled();
   });
 
   it('passes through when Idempotency-Key header is absent', async () => {
@@ -53,31 +54,66 @@ describe('IdempotencyInterceptor', () => {
     const next: CallHandler = { handle: () => of({ ok: true }) };
     const result = await firstValueFrom(interceptor.intercept(makeCtx(), next));
     expect(result).toEqual({ ok: true });
-    expect(redis.get).not.toHaveBeenCalled();
+    expect(redis.set).not.toHaveBeenCalled();
   });
 
-  it('stores response on first call and short-circuits on second call with same key', async () => {
+  it('claims the slot with SET NX pending, runs the handler, then writes the completed cache', async () => {
     const interceptor = new IdempotencyInterceptor(makeReflector(true), redis as unknown as Redis);
-    redis.get.mockResolvedValueOnce(null);
+    // SET NX wins: the atomic claim returns OK.
+    redis.set.mockResolvedValueOnce('OK');
+    // SET on completion — no return needed.
+    redis.set.mockResolvedValueOnce('OK');
     const firstNext: CallHandler = { handle: () => of({ id: 'w-1' }) };
+
     const first = await firstValueFrom(
       interceptor.intercept(makeCtx({ 'idempotency-key': 'k-1' }), firstNext),
     );
+
     expect(first).toEqual({ id: 'w-1' });
-    expect(redis.set).toHaveBeenCalledWith(
+    // First call: SET NX pending for 60s
+    expect(redis.set).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('idem:user-1:POST:/workspaces:k-1'),
+      '__pending__',
+      'EX',
+      60,
+      'NX',
+    );
+    // Second call: SET completed payload for 24h
+    expect(redis.set).toHaveBeenNthCalledWith(
+      2,
       expect.stringContaining('idem:user-1:POST:/workspaces:k-1'),
       expect.stringContaining('"body":{"id":"w-1"}'),
       'EX',
       86400,
     );
+  });
 
-    // Simulate cached value on replay
+  it('returns the cached response on replay without invoking the handler', async () => {
+    const interceptor = new IdempotencyInterceptor(makeReflector(true), redis as unknown as Redis);
+    // SET NX loses because the completed cache already exists.
+    redis.set.mockResolvedValueOnce(null);
     redis.get.mockResolvedValueOnce(JSON.stringify({ status: 201, body: { id: 'w-1' } }));
     const notCalledNext: CallHandler = { handle: vi.fn() as unknown as () => never };
-    const second = await firstValueFrom(
+
+    const result = await firstValueFrom(
       interceptor.intercept(makeCtx({ 'idempotency-key': 'k-1' }), notCalledNext),
     );
-    expect(second).toEqual({ id: 'w-1' });
+
+    expect(result).toEqual({ id: 'w-1' });
+    expect(notCalledNext.handle as unknown as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 when a prior request with the same key is still in-flight', async () => {
+    const interceptor = new IdempotencyInterceptor(makeReflector(true), redis as unknown as Redis);
+    // SET NX loses; GET reports the pending sentinel — another request is running.
+    redis.set.mockResolvedValueOnce(null);
+    redis.get.mockResolvedValueOnce('__pending__');
+    const notCalledNext: CallHandler = { handle: vi.fn() as unknown as () => never };
+
+    await expect(
+      firstValueFrom(interceptor.intercept(makeCtx({ 'idempotency-key': 'k-1' }), notCalledNext)),
+    ).rejects.toMatchObject({ status: 409 });
     expect(notCalledNext.handle as unknown as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 

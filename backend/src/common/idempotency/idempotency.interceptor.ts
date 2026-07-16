@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   CallHandler,
+  ConflictException,
   ExecutionContext,
   Injectable,
   NestInterceptor,
@@ -19,6 +20,10 @@ interface CachedResponse {
 
 const KEY_MAX_LEN = 200;
 const TTL_SECONDS = 24 * 60 * 60;
+const PENDING_SENTINEL = '__pending__';
+// Pending lock lives long enough to outlast a reasonable request; if the
+// process crashes mid-request, the lock naturally expires so retries succeed.
+const PENDING_TTL_SECONDS = 60;
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
@@ -47,12 +52,23 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     const cacheKey = this.buildKey(http, req, rawKey);
 
-    return from(this.redis.get(cacheKey)).pipe(
-      switchMap((cached) => {
-        if (cached) {
-          const { status, body } = JSON.parse(cached) as CachedResponse;
+    return from(this.reserveOrRead(cacheKey)).pipe(
+      switchMap((reservation) => {
+        if (reservation.kind === 'cached') {
+          const { status, body } = reservation.value;
           res.status(status);
           return of(body);
+        }
+        if (reservation.kind === 'pending') {
+          // Another request with this key is in-flight. Refuse rather than
+          // execute the sensitive action a second time — the client may retry.
+          throw new ConflictException({
+            type: 'https://tasker.dev/problems/idempotency-in-flight',
+            title: 'Idempotent request already in flight',
+            detail:
+              'A prior request with this Idempotency-Key is still being processed. Retry shortly.',
+            status: 409,
+          });
         }
         return next.handle().pipe(
           tap((body) => {
@@ -62,6 +78,29 @@ export class IdempotencyInterceptor implements NestInterceptor {
         );
       }),
     );
+  }
+
+  // Atomic single-round-trip claim: SET NX with a pending sentinel. If the
+  // insert wins, we own the slot and proceed to execute the handler. If it
+  // loses, we fetch the current value: either it's a completed cache entry
+  // (replay) or still the pending sentinel (concurrent in-flight → 409).
+  private async reserveOrRead(
+    cacheKey: string,
+  ): Promise<
+    { kind: 'reserved' } | { kind: 'cached'; value: CachedResponse } | { kind: 'pending' }
+  > {
+    const inserted = await this.redis.set(
+      cacheKey,
+      PENDING_SENTINEL,
+      'EX',
+      PENDING_TTL_SECONDS,
+      'NX',
+    );
+    if (inserted === 'OK') return { kind: 'reserved' };
+
+    const current = await this.redis.get(cacheKey);
+    if (!current || current === PENDING_SENTINEL) return { kind: 'pending' };
+    return { kind: 'cached', value: JSON.parse(current) as CachedResponse };
   }
 
   // Scope the idempotency key by user + route so two different callers using

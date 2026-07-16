@@ -45,17 +45,25 @@ export class InvitationsService {
   }): Promise<Invitation> {
     const email = params.email.toLowerCase();
     const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
-    const { token, hash } = this.tokenService.generateToken();
 
+    // The token is regenerated inside each branch so the raw token we email
+    // is guaranteed to match the hash we just wrote to Postgres. Generating it
+    // eagerly before the create/refresh path opens a race: two concurrent
+    // calls both generate tokens, both lose/win the partial-unique index in
+    // different orders, and the winner of the mail race can end up emailing a
+    // raw token whose hash the DB no longer has.
     let invitation: Invitation;
     let refreshed = false;
+    let token: string;
     try {
+      const generated = this.tokenService.generateToken();
+      token = generated.token;
       invitation = await this.prisma.forSystem().invitation.create({
         data: {
           workspaceId: params.workspaceId,
           email,
           role: params.role,
-          tokenHash: hash,
+          tokenHash: generated.hash,
           invitedByUserId: params.invitedByUserId,
           expiresAt,
         },
@@ -63,16 +71,19 @@ export class InvitationsService {
     } catch (err) {
       if (!isOpenInvitationCollision(err)) throw err;
 
-      // Refresh the open invitation per PRD FR-9: "re-inviting the same email
-      // refreshes the token instead of creating a duplicate." Update in place
-      // so the caller sees the same row id but the token becomes the new one.
       const existing = await this.prisma.forSystem().invitation.findFirst({
         where: { workspaceId: params.workspaceId, email, acceptedAt: null, revokedAt: null },
       });
       if (!existing) throw err;
+
+      // Generate the new token AFTER the collision so the update we're about
+      // to run is the last writer for this row — no concurrent caller can
+      // overwrite our tokenHash before we email its raw form.
+      const refresh = this.tokenService.generateToken();
+      token = refresh.token;
       invitation = await this.prisma.forSystem().invitation.update({
         where: { id: existing.id },
-        data: { tokenHash: hash, role: params.role, expiresAt },
+        data: { tokenHash: refresh.hash, role: params.role, expiresAt },
       });
       refreshed = true;
     }

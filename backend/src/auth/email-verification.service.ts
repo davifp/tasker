@@ -49,16 +49,22 @@ export class EmailVerificationService {
       throw new GoneException('Verification token is invalid, expired, or has already been used');
     }
 
-    await this.prisma.forSystem().$transaction([
-      this.prisma.forSystem().emailVerificationToken.update({
-        where: { tokenHash: hash },
-        data: { consumedAt: new Date() },
-      }),
-      this.prisma.forSystem().user.update({
-        where: { id: record.userId },
-        data: { emailVerifiedAt: new Date() },
-      }),
-    ]);
+    // Atomic compare-and-swap on (tokenHash, consumedAt=null): only the first
+    // of two concurrent verify() calls flips consumedAt from null; the second
+    // gets count=0 and is rejected. Without this guard the check-then-act
+    // window above lets both callers proceed and violates single-use.
+    const consumed = await this.prisma.forSystem().emailVerificationToken.updateMany({
+      where: { tokenHash: hash, consumedAt: null, expiresAt: { gt: new Date() } },
+      data: { consumedAt: new Date() },
+    });
+    if (consumed.count === 0) {
+      throw new GoneException('Verification token is invalid, expired, or has already been used');
+    }
+
+    await this.prisma.forSystem().user.update({
+      where: { id: record.userId },
+      data: { emailVerifiedAt: new Date() },
+    });
   }
 
   async resend(userId: string): Promise<void> {

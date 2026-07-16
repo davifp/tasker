@@ -7,6 +7,7 @@ import { PasswordResetService } from './password-reset.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokenService } from '../common/security/token.service';
 import { Argon2Service } from '../common/security/argon2.service';
+import { HibpService } from '../common/security/hibp.service';
 import { MAIL_PROVIDER } from '../common/mail/mail.provider';
 
 const now = new Date('2024-06-01T12:00:00Z');
@@ -53,6 +54,7 @@ async function buildService(): Promise<PasswordResetService> {
       { provide: PrismaService, useValue: mockPrisma },
       { provide: TokenService, useValue: mockTokenService },
       { provide: Argon2Service, useValue: mockArgon2 },
+      { provide: HibpService, useValue: { isBreached: vi.fn().mockResolvedValue(false) } },
       { provide: MAIL_PROVIDER, useValue: mockMail },
       { provide: ConfigService, useValue: mockConfig },
       { provide: EventEmitter2, useValue: { emit: vi.fn() } },
@@ -108,6 +110,9 @@ describe('PasswordResetService', () => {
         expiresAt: future,
         consumedAt: null,
       });
+      // The atomic compare-and-swap wins for this test — count=1 indicates the
+      // token was consumed successfully.
+      prismaClient.passwordResetToken.updateMany.mockResolvedValueOnce({ count: 1 });
 
       await service.confirmReset('raw-reset', 'new-password-123');
 

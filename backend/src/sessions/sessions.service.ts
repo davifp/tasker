@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Session } from '@prisma/client';
@@ -134,7 +134,14 @@ export class SessionsService {
       where: { id: sessionId },
     });
 
-    if (!session || session.revokedAt) return;
+    if (!session) return;
+    // Defense-in-depth: refuse to revoke a session that belongs to another
+    // user, even though every current caller pre-checks ownership. Keeps a
+    // future refactor from accidentally handing out a foot-gun.
+    if (session.userId !== actorUserId) {
+      throw new ForbiddenException('You cannot revoke another user’s session');
+    }
+    if (session.revokedAt) return;
 
     await this.prisma.forSystem().session.update({
       where: { id: sessionId },

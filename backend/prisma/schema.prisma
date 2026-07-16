@@ -151,8 +151,11 @@ model AuditLog {
   traceId     String?
   createdAt   DateTime  @default(now())
 
-  workspace Workspace? @relation(fields: [workspaceId], references: [id])
-  actor     User?      @relation("AuditLogActor", fields: [actorUserId], references: [id])
+  // SetNull on workspace so hard-deleting a workspace (cleanup cron past
+  // purgeAt) preserves the audit trail — the FK falls back to null instead
+  // of blocking the delete or cascading it away.
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  actor     User?      @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([event])

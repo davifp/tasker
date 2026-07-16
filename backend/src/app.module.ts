@@ -29,7 +29,20 @@ import { WorkspaceGuard } from './common/context/workspace.guard';
 import { RolesGuard } from './common/context/roles.guard';
 import { WorkspaceContextInterceptor } from './common/context/workspace-context.interceptor';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
+import type { ExecutionContext } from '@nestjs/common';
 import Redis from 'ioredis';
+
+// Throttlers below use route-scoped skipIf. `req.route?.path` is unreliable
+// because it depends on whether the guard runs before or after express-router
+// sets that field. `originalUrl` is set by the outer server the moment the
+// request enters, so it's always available. It includes the global prefix
+// (`/api/v1`), plus any query string — strip both before comparing.
+function matchesPath(ctx: ExecutionContext, target: string): boolean {
+  const req = ctx.switchToHttp().getRequest<{ originalUrl?: string; url: string }>();
+  const raw = req.originalUrl ?? req.url ?? '';
+  const path = raw.split('?', 1)[0]!.replace(/^\/api\/v1/, '');
+  return path === target;
+}
 
 @Module({
   imports: [
@@ -64,45 +77,42 @@ import Redis from 'ioredis';
       useFactory: (config: ConfigService, redis: Redis) => ({
         throttlers: [
           { name: 'default', limit: 100, ttl: 60_000 },
+          // Named throttlers below MUST include a skipIf that matches the
+          // exact route they cover — @nestjs/throttler runs every registered
+          // throttler on every request unless one opts out. Without skipIf,
+          // `login: 5/min` silently applies to `/me`, `/workspaces/*`, and
+          // any polling UI would burn through the budget in seconds.
           {
             name: 'register',
             limit: config.get<number>('THROTTLE_REGISTER_LIMIT')!,
             ttl: config.get<number>('THROTTLE_REGISTER_TTL_S')! * 1000,
+            skipIf: (ctx) => !matchesPath(ctx, '/auth/register'),
           },
           {
             name: 'login',
             limit: config.get<number>('THROTTLE_LOGIN_LIMIT')!,
             ttl: config.get<number>('THROTTLE_LOGIN_TTL_S')! * 1000,
+            skipIf: (ctx) => !matchesPath(ctx, '/auth/login'),
           },
           {
             name: 'refresh',
             limit: config.get<number>('THROTTLE_REFRESH_LIMIT')!,
             ttl: config.get<number>('THROTTLE_REFRESH_TTL_S')! * 1000,
+            skipIf: (ctx) => !matchesPath(ctx, '/auth/refresh'),
           },
-          // The two throttlers below only apply to routes that opt in via
-          // @Throttle({ emailResend: {} }) or @Throttle({ passwordReset: {} }).
-          // Without skipIf they would run on every request (Nest applies all
-          // named throttlers globally), throttling unrelated endpoints like /health.
           {
             name: 'emailResend',
             limit: config.get<number>('THROTTLE_EMAIL_RESEND_LIMIT', 3)!,
             ttl: config.get<number>('THROTTLE_EMAIL_RESEND_TTL_S', 300)! * 1000,
-            skipIf: (ctx) => {
-              const req = ctx.switchToHttp().getRequest<{ route?: { path?: string } }>();
-              return req.route?.path !== '/auth/email/verify/resend';
-            },
+            skipIf: (ctx) => !matchesPath(ctx, '/auth/email/verify/resend'),
           },
           {
             name: 'passwordReset',
             limit: config.get<number>('THROTTLE_PASSWORD_RESET_LIMIT', 3)!,
             ttl: config.get<number>('THROTTLE_PASSWORD_RESET_TTL_S', 300)! * 1000,
-            skipIf: (ctx) => {
-              const req = ctx.switchToHttp().getRequest<{ route?: { path?: string } }>();
-              const path = req.route?.path;
-              return (
-                path !== '/auth/password/reset/request' && path !== '/auth/password/reset/confirm'
-              );
-            },
+            skipIf: (ctx) =>
+              !matchesPath(ctx, '/auth/password/reset/request') &&
+              !matchesPath(ctx, '/auth/password/reset/confirm'),
           },
         ],
         storage: new RedisThrottlerStorage(redis),

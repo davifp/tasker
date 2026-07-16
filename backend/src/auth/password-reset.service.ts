@@ -1,9 +1,10 @@
-import { GoneException, Inject, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, GoneException, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokenService } from '../common/security/token.service';
 import { Argon2Service } from '../common/security/argon2.service';
+import { HibpService } from '../common/security/hibp.service';
 import { MAIL_PROVIDER, MailProvider } from '../common/mail/mail.provider';
 import {
   AuthEvents,
@@ -19,6 +20,7 @@ export class PasswordResetService {
     private readonly prisma: PrismaService,
     private readonly tokenService: TokenService,
     private readonly argon2: Argon2Service,
+    private readonly hibp: HibpService,
     @Inject(MAIL_PROVIDER) private readonly mail: MailProvider,
     private readonly config: ConfigService,
     private readonly events: EventEmitter2,
@@ -50,12 +52,18 @@ export class PasswordResetService {
     const baseUrl = this.config.get<string>('APP_BASE_URL', 'http://localhost:3000');
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
-    await this.mail.send({
-      template: 'password-reset',
-      to: email,
-      variables: { resetUrl },
-      idempotencyKey: `password-reset-${user.id}-${hash.slice(0, 16)}`,
-    });
+    // Mail enqueue failure must not turn a "known email" branch into a 5xx —
+    // that would leak account existence via the status code. Swallow + log.
+    try {
+      await this.mail.send({
+        template: 'password-reset',
+        to: email,
+        variables: { resetUrl },
+        idempotencyKey: `password-reset-${user.id}-${hash.slice(0, 16)}`,
+      });
+    } catch (err) {
+      this.logger.error({ err, userId: user.id }, 'Failed to enqueue password-reset email');
+    }
 
     this.events.emit(AuthEvents.PASSWORD_RESET_REQUESTED, {
       userId: user.id,
@@ -73,16 +81,32 @@ export class PasswordResetService {
       throw new GoneException('Reset token is invalid, expired, or has already been used');
     }
 
+    // Additional breach check on reset — registration enforces this; a leaked
+    // password shouldn't be re-usable via the reset path either.
+    if (await this.hibp.isBreached(newPassword)) {
+      throw new BadRequestException(
+        'This password has appeared in a data breach. Please choose a different password.',
+      );
+    }
+
     const passwordHash = await this.argon2.hash(newPassword);
 
-    // Password update, token consumption, and session revocation must be atomic —
-    // if the session sweep fails, we cannot leave the new password committed with
-    // stale refresh tokens still valid.
-    const [, , sessionSweep] = await this.prisma.forSystem().$transaction([
-      this.prisma.forSystem().passwordResetToken.update({
-        where: { tokenHash: hash },
-        data: { consumedAt: new Date() },
-      }),
+    // Atomic compare-and-swap consumes the token exactly once. Two concurrent
+    // confirmReset calls with the same raw token both pass the check above,
+    // but only one wins the updateMany — the other sees count=0 and is
+    // rejected as if the token were already spent.
+    const consumed = await this.prisma.forSystem().passwordResetToken.updateMany({
+      where: { tokenHash: hash, consumedAt: null, expiresAt: { gt: new Date() } },
+      data: { consumedAt: new Date() },
+    });
+    if (consumed.count === 0) {
+      throw new GoneException('Reset token is invalid, expired, or has already been used');
+    }
+
+    // Password update and session revocation must be atomic — if the session
+    // sweep fails, we cannot leave the new password committed with stale
+    // refresh tokens still valid.
+    const [, sessionSweep] = await this.prisma.forSystem().$transaction([
       this.prisma.forSystem().user.update({
         where: { id: record.userId },
         data: { passwordHash },

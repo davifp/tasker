@@ -51,6 +51,21 @@ export class OAuthAccountLinker {
     }
 
     if (userWithEmail) {
+      // The local user is verified, but that says nothing about whether the
+      // OAuth provider considers this address the caller's own. If GitHub
+      // returns `verified: false` (e.g. the account's public email points at
+      // someone else's inbox), linking here would hand the attacker sign-in
+      // rights for the victim's Tasker account. Require the provider to have
+      // verified the address before we accept it as proof of ownership.
+      if (!profile.emailVerified) {
+        throw new ConflictException({
+          type: 'https://tasker.dev/problems/oauth-unverified-provider-email',
+          title: 'Provider email is not verified',
+          detail:
+            'The OAuth provider did not confirm ownership of this email address. Verify the email with the provider and try again.',
+          status: 409,
+        });
+      }
       await db.oAuthAccount.create({
         data: {
           userId: userWithEmail.id,

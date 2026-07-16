@@ -318,8 +318,9 @@ describe('Auth lifecycle (integration)', () => {
   });
 
   describe('GET /me/sessions + DELETE /me/sessions/:id', () => {
-    let accessToken: string;
-    let sessionId: string;
+    let livingAccessToken: string; // the session used to observe post-revoke state
+    let revokableAccessToken: string; // the session we intentionally revoke
+    let revokableSessionId: string;
 
     beforeAll(async () => {
       await redisFlushClient.flushdb();
@@ -328,30 +329,49 @@ describe('Auth lifecycle (integration)', () => {
         password: 'evePassword123',
         displayName: 'Eve',
       });
-      const res = await post(baseUrl, '/auth/login', {
+      // Two logins ⇒ two sessions. We keep one alive to observe post-revoke
+      // state — with immediate JWT revocation (PRD FR-16), the revoked session's
+      // access token is rejected right away, so subsequent reads must ride on a
+      // still-valid session.
+      const first = await post(baseUrl, '/auth/login', {
         email: 'eve@example.com',
         password: 'evePassword123',
       });
-      const body = (await res.json()) as { accessToken: string; refreshToken: string };
-      accessToken = body.accessToken;
+      livingAccessToken = ((await first.json()) as { accessToken: string }).accessToken;
+      const second = await post(baseUrl, '/auth/login', {
+        email: 'eve@example.com',
+        password: 'evePassword123',
+      });
+      revokableAccessToken = ((await second.json()) as { accessToken: string }).accessToken;
     });
 
     it('lists active sessions', async () => {
-      const res = await get(baseUrl, '/me/sessions', accessToken);
+      const res = await get(baseUrl, '/me/sessions', livingAccessToken);
       expect(res.status).toBe(200);
       const sessions = (await res.json()) as { id: string }[];
-      expect(sessions.length).toBeGreaterThanOrEqual(1);
-      sessionId = sessions[0].id;
+      expect(sessions.length).toBeGreaterThanOrEqual(2);
+      // Pick the session that is NOT the one we're using to observe — otherwise
+      // we'd revoke our observation token and the follow-up list would 401.
+      const observing = sessions[sessions.length - 1]?.id;
+      revokableSessionId = sessions.find((s) => s.id !== observing)?.id ?? sessions[0]!.id;
     });
 
     it('revokes a session successfully', async () => {
-      const delRes = await del(baseUrl, `/me/sessions/${sessionId}`, accessToken);
+      const delRes = await del(baseUrl, `/me/sessions/${revokableSessionId}`, revokableAccessToken);
       expect(delRes.status).toBe(200);
 
-      // Session no longer appears in list
-      const listRes = await get(baseUrl, '/me/sessions', accessToken);
+      const listRes = await get(baseUrl, '/me/sessions', livingAccessToken);
+      expect(listRes.status).toBe(200);
       const sessions = (await listRes.json()) as { id: string }[];
-      expect(sessions.some((s) => s.id === sessionId)).toBe(false);
+      expect(sessions.some((s) => s.id === revokableSessionId)).toBe(false);
+    });
+
+    it('rejects the revoked session’s access token on subsequent requests (FR-16)', async () => {
+      // The revoked session must be honoured as revoked immediately — the
+      // access JWT is stateless with a 15-minute TTL, so without checking the
+      // session on every request we'd honour it for up to 15 minutes.
+      const res = await get(baseUrl, '/me', revokableAccessToken);
+      expect(res.status).toBe(401);
     });
   });
 

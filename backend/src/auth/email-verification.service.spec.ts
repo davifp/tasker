@@ -85,10 +85,29 @@ describe('EmailVerificationService', () => {
         expiresAt: future,
         consumedAt: null,
       });
+      // Atomic compare-and-swap succeeds for this test — count=1.
+      prismaClient.emailVerificationToken.updateMany.mockResolvedValueOnce({ count: 1 });
 
       await service.verify('raw-token');
 
-      expect(prismaClient.$transaction).toHaveBeenCalled();
+      expect(prismaClient.user.update).toHaveBeenCalledWith({
+        where: { id: 'u1' },
+        data: { emailVerifiedAt: expect.any(Date) },
+      });
+    });
+
+    it('rejects concurrent consumption of the same token (compare-and-swap loses)', async () => {
+      prismaClient.emailVerificationToken.findUnique.mockResolvedValueOnce({
+        tokenHash: 'hashed-token',
+        userId: 'u1',
+        expiresAt: future,
+        consumedAt: null,
+      });
+      // Second concurrent call finds count=0 (someone else already consumed).
+      prismaClient.emailVerificationToken.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(service.verify('raw-token')).rejects.toBeInstanceOf(GoneException);
+      expect(prismaClient.user.update).not.toHaveBeenCalled();
     });
 
     it('throws GoneException for an expired token', async () => {
