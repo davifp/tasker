@@ -8,10 +8,18 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Invitation, Prisma, WorkspaceRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokenService } from '../common/security/token.service';
 import { MAIL_PROVIDER, MailProvider } from '../common/mail/mail.provider';
+import {
+  InvitationAcceptedEvent,
+  InvitationCreatedEvent,
+  InvitationDeclinedEvent,
+  InvitationEvents,
+  InvitationRevokedEvent,
+} from './events/invitation.events';
 
 const INVITATION_TTL_DAYS = 7;
 
@@ -22,6 +30,7 @@ export class InvitationsService {
     private readonly tokenService: TokenService,
     @Inject(MAIL_PROVIDER) private readonly mail: MailProvider,
     private readonly config: ConfigService,
+    private readonly events: EventEmitter2,
   ) {}
 
   // Creates or returns the existing open invitation for (workspaceId, email).
@@ -39,6 +48,7 @@ export class InvitationsService {
     const { token, hash } = this.tokenService.generateToken();
 
     let invitation: Invitation;
+    let refreshed = false;
     try {
       invitation = await this.prisma.forSystem().invitation.create({
         data: {
@@ -64,6 +74,7 @@ export class InvitationsService {
         where: { id: existing.id },
         data: { tokenHash: hash, role: params.role, expiresAt },
       });
+      refreshed = true;
     }
 
     const baseUrl = this.config.get<string>('APP_BASE_URL', 'http://localhost:3000');
@@ -81,6 +92,15 @@ export class InvitationsService {
       idempotencyKey: `invitation-${invitation.id}`,
     });
 
+    this.events.emit(InvitationEvents.CREATED, {
+      invitationId: invitation.id,
+      workspaceId: invitation.workspaceId,
+      invitedByUserId: params.invitedByUserId,
+      email,
+      role: params.role,
+      refreshed,
+    } satisfies InvitationCreatedEvent);
+
     return invitation;
   }
 
@@ -91,7 +111,7 @@ export class InvitationsService {
     });
   }
 
-  async revoke(invitationId: string, workspaceId: string): Promise<void> {
+  async revoke(invitationId: string, workspaceId: string, actorUserId: string): Promise<void> {
     const invitation = await this.prisma
       .forSystem()
       .invitation.findUnique({ where: { id: invitationId } });
@@ -106,6 +126,11 @@ export class InvitationsService {
       where: { id: invitationId },
       data: { revokedAt: new Date() },
     });
+    this.events.emit(InvitationEvents.REVOKED, {
+      invitationId,
+      workspaceId,
+      actorUserId,
+    } satisfies InvitationRevokedEvent);
   }
 
   // Resolves a raw invitation token, ensuring it is valid, unexpired, and
@@ -162,6 +187,13 @@ export class InvitationsService {
       });
     });
 
+    this.events.emit(InvitationEvents.ACCEPTED, {
+      invitationId: invitation.id,
+      workspaceId: invitation.workspaceId,
+      actorUserId,
+      role: invitation.role,
+    } satisfies InvitationAcceptedEvent);
+
     return { workspaceId: invitation.workspaceId };
   }
 
@@ -171,6 +203,11 @@ export class InvitationsService {
       where: { id: invitation.id },
       data: { revokedAt: new Date() },
     });
+    this.events.emit(InvitationEvents.DECLINED, {
+      invitationId: invitation.id,
+      workspaceId: invitation.workspaceId,
+      email: invitation.email,
+    } satisfies InvitationDeclinedEvent);
   }
 }
 

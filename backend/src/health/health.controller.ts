@@ -4,6 +4,7 @@ import { HealthCheck, HealthCheckResult, HealthCheckService } from '@nestjs/term
 import { Public } from '../common/decorators/public.decorator';
 import { PrismaHealthIndicator } from './prisma.health';
 import { RedisHealthIndicator } from './redis.health';
+import { BullMqHealthIndicator } from './bullmq.health';
 
 @Public()
 // @SkipThrottle() with no args only skips the 'default' throttler.
@@ -24,6 +25,7 @@ export class HealthController {
     private readonly health: HealthCheckService,
     private readonly prismaIndicator: PrismaHealthIndicator,
     private readonly redisIndicator: RedisHealthIndicator,
+    private readonly bullmqIndicator: BullMqHealthIndicator,
   ) {}
 
   @Get()
@@ -32,6 +34,7 @@ export class HealthController {
     return this.health.check([
       () => this.prismaIndicator.isHealthy('prisma'),
       () => this.redisIndicator.isHealthy('redis'),
+      () => this.bullmqIndicator.isHealthy('bullmq'),
     ]);
   }
 }

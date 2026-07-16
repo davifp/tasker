@@ -72,18 +72,26 @@ export class WorkspacesController {
   @Delete('workspaces/:slug')
   @Roles('OWNER')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteWorkspace(@Param('slug') slug: string) {
+  async deleteWorkspace(
+    @Param('slug') slug: string,
+    @Request() req: ExpressRequest & { user: JwtUser; workspaceContext?: WorkspaceContext },
+  ) {
     const workspace = await this.workspaces.findBySlug(slug);
     if (!workspace) throw new NotFoundException('Workspace not found');
-    await this.workspaces.softDelete(workspace.id);
+    const ctx = requireCtx(req);
+    await this.workspaces.softDelete({ workspaceId: workspace.id, actorUserId: ctx.userId });
   }
 
   @Post('workspaces/:slug/restore')
   @Roles('OWNER')
-  async restoreWorkspace(@Param('slug') slug: string) {
+  async restoreWorkspace(
+    @Param('slug') slug: string,
+    @Request() req: ExpressRequest & { user: JwtUser; workspaceContext?: WorkspaceContext },
+  ) {
     const workspace = await this.workspaces.findBySlug(slug, true);
     if (!workspace) throw new NotFoundException('Workspace not found');
-    return this.workspaces.restore(workspace.id);
+    const ctx = requireCtx(req);
+    return this.workspaces.restore({ workspaceId: workspace.id, actorUserId: ctx.userId });
   }
 
   @Post('workspaces/:slug/transfer-ownership')
@@ -132,6 +140,7 @@ export class WorkspacesController {
       workspaceId: workspace.id,
       targetUserId: userId,
       newRole: dto.role,
+      actorUserId: ctx.userId,
       actorRole: ctx.role,
     });
   }

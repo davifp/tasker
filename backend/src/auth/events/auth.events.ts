@@ -36,6 +36,16 @@ export interface SessionReuseDetectedEvent {
   ip?: string;
 }
 
+export interface PasswordResetRequestedEvent {
+  userId: string;
+  email: string;
+}
+
+export interface PasswordResetCompletedEvent {
+  userId: string;
+  revokedSessionCount: number;
+}
+
 export const AuthEvents = {
   USER_REGISTERED: 'auth.user.registered',
   LOGIN_SUCCESS: 'auth.login.success',
@@ -44,4 +54,6 @@ export const AuthEvents = {
   SESSION_REVOKED: 'auth.session.revoked',
   REFRESH_ROTATED: 'auth.session.refresh_rotated',
   REUSE_DETECTED: 'auth.session.reuse_detected',
+  PASSWORD_RESET_REQUESTED: 'auth.password.reset_requested',
+  PASSWORD_RESET_COMPLETED: 'auth.password.reset_completed',
 } as const;

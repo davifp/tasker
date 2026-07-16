@@ -51,6 +51,23 @@ export const envSchema = z.object({
   THROTTLE_EMAIL_RESEND_TTL_S: z.coerce.number().default(300),
   THROTTLE_PASSWORD_RESET_LIMIT: z.coerce.number().default(3),
   THROTTLE_PASSWORD_RESET_TTL_S: z.coerce.number().default(300),
+
+  // Cleanup cron (purges expired tokens, expired sessions, and workspaces past their purge window).
+  CLEANUP_CRON: z.string().default('0 3 * * *'),
+  // Days before purgeAt to email the Owner a warning. Idempotent per (workspaceId, purgeAt).
+  PURGE_WARNING_LEAD_DAYS: z.coerce.number().default(3),
+  // Days after Session.expiresAt to keep the row around before hard-deleting it.
+  SESSION_RETENTION_DAYS: z.coerce.number().default(7),
+
+  // BullMQ health thresholds (report degraded above these).
+  BULLMQ_HEALTH_MAX_WAITING: z.coerce.number().default(1000),
+  BULLMQ_HEALTH_MAX_STALLED: z.coerce.number().default(10),
+  // Max time to wait for BullMQ queue introspection before reporting degraded
+  // (protects /health from hanging when Redis is unreachable).
+  BULLMQ_HEALTH_TIMEOUT_MS: z.coerce.number().default(2000),
+  // Max time to wait for the cleanup repeatable-job registration at boot
+  // (protects app.listen from blocking when Redis is unreachable).
+  CLEANUP_REGISTER_TIMEOUT_MS: z.coerce.number().default(2000),
 });
 
 export type Env = z.infer<typeof envSchema>;

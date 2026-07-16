@@ -62,10 +62,14 @@ export class WorkspaceInvitationsController {
   @Delete(':id')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async revoke(@Param('slug') slug: string, @Param('id') invitationId: string) {
+  async revoke(
+    @Param('slug') slug: string,
+    @Param('id') invitationId: string,
+    @Request() req: ExpressRequest & { user: JwtUser },
+  ) {
     const workspace = await this.workspaces.findBySlug(slug);
     if (!workspace) throw new NotFoundException('Workspace not found');
-    await this.invitations.revoke(invitationId, workspace.id);
+    await this.invitations.revoke(invitationId, workspace.id, req.user.userId);
   }
 }
 

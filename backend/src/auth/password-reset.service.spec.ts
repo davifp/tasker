@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Test } from '@nestjs/testing';
 import { GoneException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PasswordResetService } from './password-reset.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokenService } from '../common/security/token.service';
@@ -54,6 +55,7 @@ async function buildService(): Promise<PasswordResetService> {
       { provide: Argon2Service, useValue: mockArgon2 },
       { provide: MAIL_PROVIDER, useValue: mockMail },
       { provide: ConfigService, useValue: mockConfig },
+      { provide: EventEmitter2, useValue: { emit: vi.fn() } },
     ],
   }).compile();
   return module.get(PasswordResetService);

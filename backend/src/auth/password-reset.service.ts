@@ -1,9 +1,15 @@
 import { GoneException, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokenService } from '../common/security/token.service';
 import { Argon2Service } from '../common/security/argon2.service';
 import { MAIL_PROVIDER, MailProvider } from '../common/mail/mail.provider';
+import {
+  AuthEvents,
+  PasswordResetCompletedEvent,
+  PasswordResetRequestedEvent,
+} from './events/auth.events';
 
 @Injectable()
 export class PasswordResetService {
@@ -15,6 +21,7 @@ export class PasswordResetService {
     private readonly argon2: Argon2Service,
     @Inject(MAIL_PROVIDER) private readonly mail: MailProvider,
     private readonly config: ConfigService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async requestReset(email: string): Promise<void> {
@@ -49,6 +56,11 @@ export class PasswordResetService {
       variables: { resetUrl },
       idempotencyKey: `password-reset-${user.id}-${hash.slice(0, 16)}`,
     });
+
+    this.events.emit(AuthEvents.PASSWORD_RESET_REQUESTED, {
+      userId: user.id,
+      email: user.email,
+    } satisfies PasswordResetRequestedEvent);
   }
 
   async confirmReset(rawToken: string, newPassword: string): Promise<void> {
@@ -66,7 +78,7 @@ export class PasswordResetService {
     // Password update, token consumption, and session revocation must be atomic —
     // if the session sweep fails, we cannot leave the new password committed with
     // stale refresh tokens still valid.
-    await this.prisma.forSystem().$transaction([
+    const [, , sessionSweep] = await this.prisma.forSystem().$transaction([
       this.prisma.forSystem().passwordResetToken.update({
         where: { tokenHash: hash },
         data: { consumedAt: new Date() },
@@ -80,5 +92,10 @@ export class PasswordResetService {
         data: { revokedAt: new Date() },
       }),
     ]);
+
+    this.events.emit(AuthEvents.PASSWORD_RESET_COMPLETED, {
+      userId: record.userId,
+      revokedSessionCount: sessionSweep.count,
+    } satisfies PasswordResetCompletedEvent);
   }
 }

@@ -5,16 +5,28 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, Workspace, WorkspaceMember, WorkspaceRole } from '@prisma/client';
 import { isReservedSlug } from '@tasker/config';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  MembershipRemovedEvent,
+  MembershipRoleChangedEvent,
+  WorkspaceDeletedEvent,
+  WorkspaceEvents,
+  WorkspaceOwnershipTransferredEvent,
+  WorkspaceRestoredEvent,
+} from './events/workspace.events';
 
 const SLUG_RETRY_LIMIT = 3;
 const SOFT_DELETE_WINDOW_DAYS = 30;
 
 @Injectable()
 export class WorkspacesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   // Creates a workspace, retrying with a numeric suffix on slug collision up to
   // SLUG_RETRY_LIMIT times. Owner membership is created inside the same
@@ -73,26 +85,39 @@ export class WorkspacesService {
   }
 
   // Soft delete: sets deletedAt + purgeAt = now + 30 days.
-  async softDelete(id: string): Promise<Workspace> {
+  async softDelete(params: { workspaceId: string; actorUserId: string }): Promise<Workspace> {
     const now = new Date();
     const purgeAt = new Date(now.getTime() + SOFT_DELETE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-    return this.prisma.forSystem().workspace.update({
-      where: { id },
+    const workspace = await this.prisma.forSystem().workspace.update({
+      where: { id: params.workspaceId },
       data: { deletedAt: now, purgeAt },
     });
+    this.events.emit(WorkspaceEvents.DELETED, {
+      workspaceId: workspace.id,
+      actorUserId: params.actorUserId,
+      purgeAt,
+    } satisfies WorkspaceDeletedEvent);
+    return workspace;
   }
 
-  async restore(id: string): Promise<Workspace> {
-    const workspace = await this.prisma.forSystem().workspace.findUnique({ where: { id } });
-    if (!workspace) throw new NotFoundException('Workspace not found');
-    if (!workspace.deletedAt) throw new BadRequestException('Workspace is not deleted');
-    if (workspace.purgeAt && workspace.purgeAt < new Date()) {
+  async restore(params: { workspaceId: string; actorUserId: string }): Promise<Workspace> {
+    const existing = await this.prisma
+      .forSystem()
+      .workspace.findUnique({ where: { id: params.workspaceId } });
+    if (!existing) throw new NotFoundException('Workspace not found');
+    if (!existing.deletedAt) throw new BadRequestException('Workspace is not deleted');
+    if (existing.purgeAt && existing.purgeAt < new Date()) {
       throw new BadRequestException('Workspace has already been purged');
     }
-    return this.prisma.forSystem().workspace.update({
-      where: { id },
+    const workspace = await this.prisma.forSystem().workspace.update({
+      where: { id: params.workspaceId },
       data: { deletedAt: null, purgeAt: null },
     });
+    this.events.emit(WorkspaceEvents.RESTORED, {
+      workspaceId: workspace.id,
+      actorUserId: params.actorUserId,
+    } satisfies WorkspaceRestoredEvent);
+    return workspace;
   }
 
   // Atomically promote the target Admin to Owner and demote the previous Owner
@@ -106,7 +131,7 @@ export class WorkspacesService {
       throw new BadRequestException('Cannot transfer ownership to the current owner');
     }
 
-    return this.prisma.forSystem().$transaction(async (tx) => {
+    const workspace = await this.prisma.forSystem().$transaction(async (tx) => {
       const target = await tx.workspaceMember.findUnique({
         where: {
           workspaceId_userId: {
@@ -135,6 +160,14 @@ export class WorkspacesService {
         data: { ownerUserId: params.newOwnerUserId },
       });
     });
+
+    this.events.emit(WorkspaceEvents.OWNERSHIP_TRANSFERRED, {
+      workspaceId: workspace.id,
+      previousOwnerUserId: params.currentOwnerUserId,
+      newOwnerUserId: params.newOwnerUserId,
+    } satisfies WorkspaceOwnershipTransferredEvent);
+
+    return workspace;
   }
 
   // Cursor pagination over members. Cursor is the member's id.
@@ -163,9 +196,10 @@ export class WorkspacesService {
     workspaceId: string;
     targetUserId: string;
     newRole: 'ADMIN' | 'MEMBER' | 'GUEST';
+    actorUserId: string;
     actorRole: WorkspaceRole;
   }): Promise<WorkspaceMember> {
-    return this.prisma.forSystem().$transaction(async (tx) => {
+    const result = await this.prisma.forSystem().$transaction(async (tx) => {
       const target = await tx.workspaceMember.findUnique({
         where: {
           workspaceId_userId: {
@@ -192,11 +226,23 @@ export class WorkspacesService {
           status: 403,
         });
       }
-      return tx.workspaceMember.update({
+      const previousRole = target.role;
+      const updated = await tx.workspaceMember.update({
         where: { id: target.id },
         data: { role: params.newRole as WorkspaceRole },
       });
+      return { updated, previousRole };
     });
+
+    this.events.emit(WorkspaceEvents.MEMBERSHIP_ROLE_CHANGED, {
+      workspaceId: params.workspaceId,
+      actorUserId: params.actorUserId,
+      targetUserId: params.targetUserId,
+      previousRole: result.previousRole,
+      newRole: result.updated.role,
+    } satisfies MembershipRoleChangedEvent);
+
+    return result.updated;
   }
 
   // Removes a member. Self-leave is allowed for Members and Guests; Admins can
@@ -207,7 +253,8 @@ export class WorkspacesService {
     actorUserId: string;
     actorRole: WorkspaceRole;
   }): Promise<void> {
-    await this.prisma.forSystem().$transaction(async (tx) => {
+    const isSelfRemove = params.targetUserId === params.actorUserId;
+    const previousRole = await this.prisma.forSystem().$transaction(async (tx) => {
       const target = await tx.workspaceMember.findUnique({
         where: {
           workspaceId_userId: {
@@ -227,7 +274,6 @@ export class WorkspacesService {
       }
       // PRD FR-8: only the Owner can remove another Admin (Admins cannot remove each other).
       // Self-remove ('leave workspace') bypasses this — the caller is leaving voluntarily.
-      const isSelfRemove = params.targetUserId === params.actorUserId;
       if (!isSelfRemove && target.role === 'ADMIN' && params.actorRole !== 'OWNER') {
         throw new ForbiddenException({
           type: 'https://tasker.dev/problems/admin-cannot-touch-admin',
@@ -237,7 +283,16 @@ export class WorkspacesService {
         });
       }
       await tx.workspaceMember.delete({ where: { id: target.id } });
+      return target.role;
     });
+
+    this.events.emit(WorkspaceEvents.MEMBERSHIP_REMOVED, {
+      workspaceId: params.workspaceId,
+      actorUserId: params.actorUserId,
+      targetUserId: params.targetUserId,
+      previousRole,
+      selfLeave: isSelfRemove,
+    } satisfies MembershipRemovedEvent);
   }
 
   async findMembership(workspaceId: string, userId: string): Promise<WorkspaceMember | null> {

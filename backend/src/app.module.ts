@@ -24,6 +24,7 @@ import { OAuthModule } from './oauth/oauth.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { ContextModule } from './common/context/context.module';
+import { AuditModule } from './common/audit/audit.module';
 import { WorkspaceGuard } from './common/context/workspace.guard';
 import { RolesGuard } from './common/context/roles.guard';
 import { WorkspaceContextInterceptor } from './common/context/workspace-context.interceptor';
@@ -118,6 +119,7 @@ import Redis from 'ioredis';
     BullMQModule,
     OAuthModule,
     ContextModule,
+    AuditModule,
     WorkspacesModule,
     InvitationsModule,
   ],
