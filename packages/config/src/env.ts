@@ -29,6 +29,17 @@ export const envSchema = z.object({
   EMAIL_VERIFY_TTL_S: z.coerce.number().default(86400),
   PASSWORD_RESET_TTL_S: z.coerce.number().default(3600),
 
+  // OAuth
+  // Callback base URL for building the redirect_uri passed to providers.
+  // Providers must have {OAUTH_CALLBACK_BASE_URL}/api/v1/auth/oauth/{provider}/callback registered.
+  OAUTH_CALLBACK_BASE_URL: z.string().url().default('http://localhost:3001'),
+  OAUTH_SUCCESS_REDIRECT_URL: z.string().url().default('http://localhost:3000/auth/oauth/callback'),
+  OAUTH_STATE_TTL_S: z.coerce.number().default(600),
+  GOOGLE_CLIENT_ID: z.string().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().default(''),
+  GITHUB_CLIENT_ID: z.string().default(''),
+  GITHUB_CLIENT_SECRET: z.string().default(''),
+
   // Throttler (auth endpoints)
   THROTTLE_REGISTER_LIMIT: z.coerce.number().default(5),
   THROTTLE_REGISTER_TTL_S: z.coerce.number().default(60),

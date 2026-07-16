@@ -20,6 +20,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { SessionsModule } from './sessions/sessions.module';
 import { MeModule } from './me/me.module';
 import { BullMQModule } from './queues/bullmq.module';
+import { OAuthModule } from './oauth/oauth.module';
 import Redis from 'ioredis';
 
 @Module({
@@ -108,6 +109,7 @@ import Redis from 'ioredis';
     SessionsModule,
     MeModule,
     BullMQModule,
+    OAuthModule,
   ],
   providers: [
     {
