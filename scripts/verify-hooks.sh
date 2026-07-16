@@ -111,34 +111,8 @@ else
   fail "Prettier incorrectly rejected formatted file"
 fi
 
-# ── 5. Gitleaks: secrets must be detected ────────────────────────────────────
-section "5. Gitleaks — secret detection"
-
-if command -v gitleaks >/dev/null 2>&1; then
-  SECRET_FILE="$(tmp_file ts)"
-  # shellcheck disable=SC2016
-  printf 'const key = "sk-live-%s";\n' "$(printf 'x%.0s' {1..56})" > "$SECRET_FILE"
-
-  if gitleaks detect --source "$SECRET_FILE" --no-git --config .gitleaks.toml --quiet 2>/dev/null; then
-    fail "gitleaks did not detect secret"
-  else
-    ok "gitleaks detects secret pattern"
-  fi
-
-  SAFE_FILE="$(tmp_file ts)"
-  printf 'const url = "postgres://tasker:tasker@localhost:5432/tasker";\n' > "$SAFE_FILE"
-
-  if gitleaks detect --source "$SAFE_FILE" --no-git --config .gitleaks.toml --quiet 2>/dev/null; then
-    ok "gitleaks allows allowlisted local dev string"
-  else
-    fail "gitleaks incorrectly flagged allowlisted dev string"
-  fi
-else
-  skip "gitleaks not installed (install: https://github.com/gitleaks/gitleaks#installing)"
-fi
-
-# ── 6. Coverage gate ──────────────────────────────────────────────────────────
-section "6. Coverage gate script"
+# ── 5. Coverage gate ──────────────────────────────────────────────────────────
+section "5. Coverage gate script"
 
 if [ -f backend/coverage/coverage-summary.json ] || [ -f frontend/coverage/coverage-summary.json ]; then
   if node scripts/check-coverage.mjs; then

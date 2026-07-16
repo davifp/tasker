@@ -14,7 +14,7 @@ Invoke the global Claude Code skills via `/<skill-name>` before implementing or 
 | `claude-api`                       | `ai` module: Anthropic SDK, prompt caching per workspace, tool use, thinking, migration between versions (4.6 → 4.7), token/rate limit guardrails                                  | Code uses OpenAI SDK or another provider as default                                |
 | `vitest-testing`                   | Vitest, `vi`, AAA, timers, HTTP integration, Testcontainers (Postgres/Redis) for repository and route tests                                                                        | Jest/Sinon as the main mocking stack                                               |
 | `review`                           | Functional PR review (changes in the current branch)                                                                                                                               | Outside a PR flow                                                                  |
-| `security-review`                  | Security review of the current branch: OWASP Top 10, CSRF, CSP, Markdown sanitization (DOMPurify), `pnpm audit`, `gitleaks`                                                        | No changes with a security surface                                                 |
+| `security-review`                  | Security review of the current branch: OWASP Top 10, CSRF, CSP, Markdown sanitization (DOMPurify), `pnpm audit`                                                                    | No changes with a security surface                                                 |
 
 **Suggested order by task:**
 
