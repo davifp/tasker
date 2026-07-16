@@ -12,7 +12,7 @@ export interface WorkspaceContext {
 export class WorkspaceContextStore {
   private readonly storage = new AsyncLocalStorage<WorkspaceContext>();
 
-  run<T>(ctx: WorkspaceContext, fn: () => Promise<T>): Promise<T> {
+  run<T>(ctx: WorkspaceContext, fn: () => T): T {
     return this.storage.run(ctx, fn);
   }
 

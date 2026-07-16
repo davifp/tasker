@@ -1,6 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
@@ -21,6 +21,13 @@ import { SessionsModule } from './sessions/sessions.module';
 import { MeModule } from './me/me.module';
 import { BullMQModule } from './queues/bullmq.module';
 import { OAuthModule } from './oauth/oauth.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
+import { InvitationsModule } from './invitations/invitations.module';
+import { ContextModule } from './common/context/context.module';
+import { WorkspaceGuard } from './common/context/workspace.guard';
+import { RolesGuard } from './common/context/roles.guard';
+import { WorkspaceContextInterceptor } from './common/context/workspace-context.interceptor';
+import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import Redis from 'ioredis';
 
 @Module({
@@ -110,6 +117,9 @@ import Redis from 'ioredis';
     MeModule,
     BullMQModule,
     OAuthModule,
+    ContextModule,
+    WorkspacesModule,
+    InvitationsModule,
   ],
   providers: [
     {
@@ -124,9 +134,31 @@ import Redis from 'ioredis';
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    // WorkspaceGuard runs after JwtAuthGuard so req.user is populated. It skips
+    // @Public routes and requests without a workspace signal (header or :slug).
+    {
+      provide: APP_GUARD,
+      useClass: WorkspaceGuard,
+    },
+    // RolesGuard runs after WorkspaceGuard so req.workspaceContext is populated.
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    // WorkspaceContextInterceptor must be registered before IdempotencyInterceptor
+    // so ALS-scoped services called from downstream interceptors and handlers see
+    // the workspace context loaded by WorkspaceGuard.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: WorkspaceContextInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: IdempotencyInterceptor,
     },
   ],
 })
