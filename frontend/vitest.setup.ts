@@ -19,3 +19,19 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => false,
   }),
 });
+
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    writable: true,
+    value: ResizeObserverStub,
+  });
+}
+
+if (!Element.prototype.hasOwnProperty('scrollIntoView')) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
