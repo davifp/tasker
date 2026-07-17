@@ -9,6 +9,9 @@
       "toLight": "Switch to light mode",
       "toDark": "Switch to dark mode",
       "label": "Toggle theme"
+    },
+    "errors": {
+      "unknown": "Something went wrong. Please try again."
     }
   },
   "home": {
@@ -18,6 +21,123 @@
       "primary": "Primary",
       "accent": "Accent",
       "destructive": "Destructive"
+    }
+  },
+  "auth": {
+    "brand": "Tasker",
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your workspace",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "signUpLink": "Sign up"
+    },
+    "signup": {
+      "title": "Create your workspace",
+      "subtitle": "Start collaborating in minutes",
+      "nameLabel": "Full name",
+      "emailLabel": "Work email",
+      "passwordLabel": "Password",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "haveAccount": "Already have an account?",
+      "signInLink": "Sign in"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "We'll email you a reset link",
+      "intro": "Enter the email associated with your account and we'll send a link to reset your password.",
+      "emailLabel": "Email",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "neutralSuccess": "If an account with that email exists, we've sent instructions to reset your password. Check your inbox.",
+      "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "subtitle": "Choose a strong password to secure your account",
+      "passwordLabel": "New password",
+      "confirmLabel": "Confirm password",
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "success": "Password updated. You can sign in now.",
+      "missingTokenTitle": "This reset link is invalid",
+      "missingTokenBody": "The reset link is missing or expired. Request a new one to continue.",
+      "requestNewLink": "Request a new link"
+    },
+    "verifyEmail": {
+      "title": "Verify your email",
+      "subtitle": "Confirm the address on your account",
+      "checkYourEmail": "We've sent a verification link to your email. Open it to continue.",
+      "verifying": "Verifying your email…",
+      "successTitle": "Email verified",
+      "successBody": "You can now access every workspace feature.",
+      "errorTitle": "Verification failed",
+      "errorBody": "The verification link is invalid or expired. Request a new one from the app.",
+      "backToLogin": "Back to sign in"
+    },
+    "oauth": {
+      "signInWith": "Sign in with",
+      "signUpWith": "Sign up with",
+      "or": "or"
+    },
+    "oauthComplete": {
+      "title": "Finishing sign in",
+      "completing": "Completing {provider} sign in…",
+      "errorTitle": "Sign in didn't complete",
+      "errors": {
+        "missingTokens": "The provider didn't return the credentials we need. Please try again.",
+        "exchangeFailed": "We couldn't create your session. Please try again.",
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "verification": {
+      "bannerMessage": "Please verify {email} to unlock every workspace action.",
+      "resend": "Resend verification email",
+      "resending": "Sending…",
+      "resendCooldown": "Resend in {seconds}s",
+      "resendSuccess": "Verification email sent. Check your inbox.",
+      "resendRateLimited": "Please wait a moment before requesting another email.",
+      "resendFailed": "We couldn't send the verification email. Please try again."
+    },
+    "errors": {
+      "invalid-credentials": "Email or password is incorrect.",
+      "email-exists": "This email address is not available. Try signing in.",
+      "not-found": "We couldn't find what you were looking for.",
+      "rate-limited": "Too many attempts. Please wait a moment and try again.",
+      "signInFailed": "We couldn't sign you in. Please check your credentials and try again.",
+      "signUpFailed": "We couldn't create your account. Please try again.",
+      "resetFailed": "We couldn't update your password. The link may have expired.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "validation": {
+      "email": {
+        "required": "Email is required",
+        "invalid": "Enter a valid email"
+      },
+      "password": {
+        "required": "Password is required",
+        "min": "Password must be at least 8 characters",
+        "max": "Password is too long",
+        "mismatch": "Passwords do not match"
+      },
+      "name": {
+        "required": "Name is required",
+        "max": "Name is too long"
+      }
+    },
+    "passwordStrength": {
+      "label": "Password strength",
+      "veryWeak": "Very weak",
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong",
+      "excellent": "Excellent"
     }
   }
 }

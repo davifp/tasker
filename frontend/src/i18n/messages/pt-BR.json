@@ -9,6 +9,9 @@
       "toLight": "Mudar para o modo claro",
       "toDark": "Mudar para o modo escuro",
       "label": "Alternar tema"
+    },
+    "errors": {
+      "unknown": "Algo deu errado. Tente novamente."
     }
   },
   "home": {
@@ -18,6 +21,123 @@
       "primary": "Primária",
       "accent": "Destaque",
       "destructive": "Destrutiva"
+    }
+  },
+  "auth": {
+    "brand": "Tasker",
+    "login": {
+      "title": "Bem-vindo de volta",
+      "subtitle": "Entre no seu workspace",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Senha",
+      "forgotPassword": "Esqueceu a senha?",
+      "submit": "Entrar",
+      "submitting": "Entrando…",
+      "noAccount": "Não tem uma conta?",
+      "signUpLink": "Criar conta"
+    },
+    "signup": {
+      "title": "Crie seu workspace",
+      "subtitle": "Comece a colaborar em minutos",
+      "nameLabel": "Nome completo",
+      "emailLabel": "E-mail corporativo",
+      "passwordLabel": "Senha",
+      "submit": "Criar conta",
+      "submitting": "Criando conta…",
+      "haveAccount": "Já tem uma conta?",
+      "signInLink": "Entrar"
+    },
+    "forgotPassword": {
+      "title": "Redefinir sua senha",
+      "subtitle": "Enviaremos um link por e-mail",
+      "intro": "Informe o e-mail associado à sua conta e enviaremos um link para redefinir a senha.",
+      "emailLabel": "E-mail",
+      "submit": "Enviar link",
+      "submitting": "Enviando…",
+      "neutralSuccess": "Se existir uma conta com este e-mail, enviamos instruções para redefinir a senha. Confira sua caixa de entrada.",
+      "backToLogin": "Voltar ao login"
+    },
+    "resetPassword": {
+      "title": "Defina uma nova senha",
+      "subtitle": "Escolha uma senha forte para proteger sua conta",
+      "passwordLabel": "Nova senha",
+      "confirmLabel": "Confirmar senha",
+      "submit": "Atualizar senha",
+      "submitting": "Atualizando…",
+      "success": "Senha atualizada. Você já pode entrar.",
+      "missingTokenTitle": "Este link de redefinição é inválido",
+      "missingTokenBody": "O link está ausente ou expirou. Solicite um novo para continuar.",
+      "requestNewLink": "Solicitar novo link"
+    },
+    "verifyEmail": {
+      "title": "Verifique seu e-mail",
+      "subtitle": "Confirme o endereço da sua conta",
+      "checkYourEmail": "Enviamos um link de verificação para o seu e-mail. Abra-o para continuar.",
+      "verifying": "Verificando seu e-mail…",
+      "successTitle": "E-mail verificado",
+      "successBody": "Agora você tem acesso a todos os recursos do workspace.",
+      "errorTitle": "Falha na verificação",
+      "errorBody": "O link é inválido ou expirou. Solicite outro pelo app.",
+      "backToLogin": "Voltar ao login"
+    },
+    "oauth": {
+      "signInWith": "Entrar com",
+      "signUpWith": "Criar conta com",
+      "or": "ou"
+    },
+    "oauthComplete": {
+      "title": "Finalizando o login",
+      "completing": "Concluindo login com {provider}…",
+      "errorTitle": "O login não foi concluído",
+      "errors": {
+        "missingTokens": "O provedor não retornou as credenciais necessárias. Tente novamente.",
+        "exchangeFailed": "Não conseguimos criar sua sessão. Tente novamente.",
+        "generic": "Algo deu errado. Tente novamente."
+      }
+    },
+    "verification": {
+      "bannerMessage": "Verifique {email} para liberar todas as ações do workspace.",
+      "resend": "Reenviar e-mail de verificação",
+      "resending": "Enviando…",
+      "resendCooldown": "Reenviar em {seconds}s",
+      "resendSuccess": "E-mail de verificação enviado. Confira sua caixa de entrada.",
+      "resendRateLimited": "Aguarde um momento antes de solicitar outro e-mail.",
+      "resendFailed": "Não conseguimos enviar o e-mail. Tente novamente."
+    },
+    "errors": {
+      "invalid-credentials": "E-mail ou senha incorretos.",
+      "email-exists": "Este endereço de e-mail não está disponível. Tente entrar.",
+      "not-found": "Não encontramos o que você buscava.",
+      "rate-limited": "Muitas tentativas. Aguarde e tente novamente.",
+      "signInFailed": "Não foi possível entrar. Verifique suas credenciais e tente novamente.",
+      "signUpFailed": "Não foi possível criar sua conta. Tente novamente.",
+      "resetFailed": "Não foi possível atualizar sua senha. O link pode ter expirado.",
+      "unknown": "Algo deu errado. Tente novamente."
+    },
+    "validation": {
+      "email": {
+        "required": "E-mail é obrigatório",
+        "invalid": "Informe um e-mail válido"
+      },
+      "password": {
+        "required": "A senha é obrigatória",
+        "min": "A senha deve ter pelo menos 8 caracteres",
+        "max": "A senha é muito longa",
+        "mismatch": "As senhas não coincidem"
+      },
+      "name": {
+        "required": "O nome é obrigatório",
+        "max": "O nome é muito longo"
+      }
+    },
+    "passwordStrength": {
+      "label": "Força da senha",
+      "veryWeak": "Muito fraca",
+      "weak": "Fraca",
+      "fair": "Razoável",
+      "good": "Boa",
+      "strong": "Forte",
+      "excellent": "Excelente"
     }
   }
 }
