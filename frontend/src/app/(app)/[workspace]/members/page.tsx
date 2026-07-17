@@ -15,6 +15,7 @@ interface MembersPageProps {
 }
 
 interface WorkspaceDetail {
+  id: string;
   currentUserRole?: MemberRoleValue;
 }
 
@@ -72,13 +73,18 @@ export default async function MembersPage({ params }: MembersPageProps) {
       {canManage ? (
         <section className="flex flex-col gap-3">
           <h2 className="text-base font-semibold">{t('inviteHeading')}</h2>
-          <InvitePeopleDialog slug={slug} />
+          <InvitePeopleDialog slug={slug} workspaceId={detail?.id} />
         </section>
       ) : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">{t('membersHeading')}</h2>
-        <MembersTable slug={slug} members={members} actorRole={actorRole} />
+        <MembersTable
+          slug={slug}
+          members={members}
+          actorRole={actorRole}
+          workspaceId={detail?.id}
+        />
       </section>
 
       {invitations.length > 0 || canManage ? (

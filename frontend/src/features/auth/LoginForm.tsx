@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { LoginSchema, type LoginInput } from './schemas';
 import { bff } from '@/lib/http/bff';
 import { useProblemMessage } from './useProblemMessage';
+import { useAnalytics } from '@/features/analytics/AnalyticsProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const messageForError = useProblemMessage();
+  const emit = useAnalytics();
 
   const {
     register,
@@ -47,6 +49,7 @@ export function LoginForm() {
     startTransition(async () => {
       try {
         await bff.post<LoginResponse>('/auth/login', values);
+        emit({ name: 'login_completed', provider: 'local' });
         const redirectTo = safeRedirectTarget(searchParams.get('redirectTo'));
         router.replace(redirectTo);
         router.refresh();

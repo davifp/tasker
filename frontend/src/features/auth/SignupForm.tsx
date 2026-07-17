@@ -10,6 +10,7 @@ import { SignupSchema, type SignupInput } from './schemas';
 import { bff } from '@/lib/http/bff';
 import { useProblemMessage } from './useProblemMessage';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
+import { useAnalytics } from '@/features/analytics/AnalyticsProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +25,7 @@ export function SignupForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const messageForError = useProblemMessage();
+  const emit = useAnalytics();
 
   const {
     register,
@@ -41,7 +43,9 @@ export function SignupForm() {
   function onSubmit(values: SignupInput) {
     startTransition(async () => {
       try {
+        emit({ name: 'signup_started', provider: 'local' });
         await bff.post<RegisterResponse>('/auth/register', values);
+        emit({ name: 'signup_completed', provider: 'local' });
         router.replace('/verify-email');
         router.refresh();
       } catch (error) {

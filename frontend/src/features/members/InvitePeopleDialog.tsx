@@ -9,6 +9,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { InviteBatchSchema, type InviteBatchInput } from './schemas';
 import { browserHttp } from '@/lib/http/browser';
+import { useAnalytics } from '@/features/analytics/AnalyticsProvider';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,10 +25,12 @@ import { Label } from '@/components/ui/label';
 
 interface InvitePeopleDialogProps {
   slug: string;
+  workspaceId?: string;
 }
 
-export function InvitePeopleDialog({ slug }: InvitePeopleDialogProps) {
+export function InvitePeopleDialog({ slug, workspaceId }: InvitePeopleDialogProps) {
   const t = useTranslations('members.invite');
+  const emit = useAnalytics();
   const tValidation = useTranslations('members.validation');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -52,6 +55,9 @@ export function InvitePeopleDialog({ slug }: InvitePeopleDialogProps) {
           `/workspaces/${encodeURIComponent(slug)}/invitations`,
           values.invites,
         );
+        if (workspaceId) {
+          emit({ name: 'invite_sent', workspaceId, count: values.invites.length });
+        }
         toast.success(t('success', { count: values.invites.length }));
         reset({ invites: [{ email: '', role: 'MEMBER' }] });
         setOpen(false);

@@ -18,6 +18,7 @@ interface MembersTableProps {
   slug: string;
   members: WorkspaceMember[];
   actorRole: MemberRoleValue | undefined;
+  workspaceId?: string;
 }
 
 function initials(name: string): string {
@@ -29,7 +30,7 @@ function initials(name: string): string {
     .join('');
 }
 
-export function MembersTable({ slug, members, actorRole }: MembersTableProps) {
+export function MembersTable({ slug, members, actorRole, workspaceId }: MembersTableProps) {
   const t = useTranslations('members.table');
 
   if (members.length === 0) {
@@ -91,6 +92,7 @@ export function MembersTable({ slug, members, actorRole }: MembersTableProps) {
                     userId={member.user.id}
                     memberName={member.user.name}
                     editable={editable}
+                    workspaceId={workspaceId}
                   />
                 </td>
               </tr>

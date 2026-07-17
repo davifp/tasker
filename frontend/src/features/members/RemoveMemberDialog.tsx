@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { browserHttp } from '@/lib/http/browser';
+import { useAnalytics } from '@/features/analytics/AnalyticsProvider';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,23 +23,27 @@ interface RemoveMemberDialogProps {
   userId: string;
   memberName: string;
   editable: boolean;
+  workspaceId?: string;
 }
 
 export function RemoveMemberDialog({
   slug,
   userId,
   memberName,
+  workspaceId,
   editable,
 }: RemoveMemberDialogProps) {
   const t = useTranslations('members.remove');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const emit = useAnalytics();
 
   function performRemove() {
     startTransition(async () => {
       try {
         await browserHttp.delete(`/workspaces/${encodeURIComponent(slug)}/members/${userId}`);
+        if (workspaceId) emit({ name: 'member_removed', workspaceId });
         toast.success(t('success'));
         router.refresh();
       } catch {

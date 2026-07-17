@@ -10,6 +10,7 @@ import { CreateWorkspaceSchema, type CreateWorkspaceInput, slugify } from './sch
 import { browserHttp } from '@/lib/http/browser';
 import { HttpError } from '@/lib/http/errors';
 import { bff } from '@/lib/http/bff';
+import { useAnalytics } from '@/features/analytics/AnalyticsProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +44,7 @@ export function CreateWorkspaceForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [slugState, setSlugState] = useState<SlugState>({ kind: 'idle' });
+  const emit = useAnalytics();
 
   const {
     register,
@@ -91,6 +93,7 @@ export function CreateWorkspaceForm() {
     startTransition(async () => {
       try {
         const created = await browserHttp.post<WorkspaceCreatedResponse>('/workspaces', values);
+        emit({ name: 'workspace_created', workspaceId: created.id });
         await bff.post('/workspaces/select', { slug: created.slug }).catch(() => undefined);
         toast.success(t('success'));
         router.replace(`/${created.slug}/projects`);
