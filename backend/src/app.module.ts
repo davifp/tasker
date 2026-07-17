@@ -24,6 +24,7 @@ import { OAuthModule } from './oauth/oauth.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { ProjectsModule } from './projects/projects.module';
+import { LabelsModule } from './labels/labels.module';
 import { ContextModule } from './common/context/context.module';
 import { AuditModule } from './common/audit/audit.module';
 import { WorkspaceGuard } from './common/context/workspace.guard';
@@ -134,6 +135,7 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     WorkspacesModule,
     InvitationsModule,
     ProjectsModule,
+    LabelsModule,
   ],
   providers: [
     {
