@@ -27,12 +27,31 @@ async function fetchWorkspaceDetail(slug: string): Promise<WorkspaceDetail | nul
   }
 }
 
+interface BackendMember {
+  id: string;
+  role: MemberRoleValue;
+  joinedAt?: string;
+  lastActiveAt?: string;
+  user: { id: string; displayName: string; email: string };
+}
+
 async function fetchMembers(slug: string): Promise<WorkspaceMember[]> {
   try {
-    const raw = await serverHttp.get<WorkspaceMember[] | { items?: WorkspaceMember[] }>(
+    const raw = await serverHttp.get<BackendMember[] | { items?: BackendMember[] }>(
       `/api/v1/workspaces/${encodeURIComponent(slug)}/members`,
     );
-    return Array.isArray(raw) ? raw : (raw.items ?? []);
+    const items = Array.isArray(raw) ? raw : (raw.items ?? []);
+    return items.map((member) => ({
+      id: member.id,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      lastActiveAt: member.lastActiveAt,
+      user: {
+        id: member.user.id,
+        name: member.user.displayName,
+        email: member.user.email,
+      },
+    }));
   } catch {
     return [];
   }

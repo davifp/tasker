@@ -1,6 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
 import { requireSession, fetchMe, fetchMyWorkspaces } from '@/lib/session/require';
-import { getWorkspaceCookie, setWorkspaceCookie } from '@/lib/session/workspace';
 import { AppShell } from '@/components/shell/AppShell';
 
 interface WorkspaceLayoutProps {
@@ -22,11 +21,6 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
 
   const active = workspaces.find((membership) => membership.slug === slug);
   if (!active) notFound();
-
-  const currentCookie = await getWorkspaceCookie();
-  if (!currentCookie || currentCookie.slug !== slug) {
-    await setWorkspaceCookie({ id: active.id, slug: active.slug });
-  }
 
   return (
     <AppShell

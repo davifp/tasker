@@ -30,7 +30,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'pnpm --filter api start:dev',
+      command: 'pnpm --filter api dev',
       url: `${API_BASE_URL}/api/v1/health`,
       reuseExistingServer: !process.env['CI'],
       timeout: 120_000,

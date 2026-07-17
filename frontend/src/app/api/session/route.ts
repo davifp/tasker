@@ -17,6 +17,18 @@ interface WorkspaceListItem {
   role?: string;
 }
 
+interface BackendMeResponse {
+  id: string;
+  email: string;
+  displayName: string;
+  emailVerifiedAt: string | null;
+}
+
+interface BackendMembership {
+  role?: string;
+  workspace: { id: string; slug: string; name: string };
+}
+
 async function fetchMe(accessToken: string): Promise<MeResponse | null> {
   try {
     const response = await fetch(apiUrl('/me'), {
@@ -24,7 +36,13 @@ async function fetchMe(accessToken: string): Promise<MeResponse | null> {
       cache: 'no-store',
     });
     if (!response.ok) return null;
-    return (await response.json()) as MeResponse;
+    const raw = (await response.json()) as BackendMeResponse;
+    return {
+      id: raw.id,
+      email: raw.email,
+      name: raw.displayName,
+      emailVerified: raw.emailVerifiedAt !== null,
+    };
   } catch {
     return null;
   }
@@ -37,9 +55,14 @@ async function fetchWorkspaces(accessToken: string): Promise<WorkspaceListItem[]
       cache: 'no-store',
     });
     if (!response.ok) return [];
-    const data = (await response.json()) as { items?: WorkspaceListItem[] } | WorkspaceListItem[];
-    if (Array.isArray(data)) return data;
-    return data.items ?? [];
+    const data = (await response.json()) as { items?: BackendMembership[] } | BackendMembership[];
+    const items = Array.isArray(data) ? data : (data.items ?? []);
+    return items.map((membership) => ({
+      id: membership.workspace.id,
+      slug: membership.workspace.slug,
+      name: membership.workspace.name,
+      role: membership.role,
+    }));
   } catch {
     return [];
   }

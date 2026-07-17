@@ -25,11 +25,41 @@ function coerceExp(raw: RawAuthResponse): number {
     const parsed = Math.floor(Date.parse(raw.accessTokenExpiresAt) / 1000);
     if (!Number.isNaN(parsed)) return parsed;
   }
+  const jwtExp = decodeJwtExp(raw.accessToken);
+  if (jwtExp) return jwtExp;
   return Math.floor(Date.now() / 1000) + 15 * 60;
 }
 
+function decodeJwtExp(token: string | undefined): number | undefined {
+  if (!token) return undefined;
+  const parts = token.split('.');
+  if (parts.length !== 3) return undefined;
+  try {
+    const payloadJson = Buffer.from(parts[1] ?? '', 'base64url').toString('utf8');
+    const payload = JSON.parse(payloadJson) as { exp?: unknown };
+    return typeof payload.exp === 'number' ? payload.exp : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function coerceUserId(raw: RawAuthResponse): string | undefined {
-  return raw.userId ?? raw.user?.id;
+  if (raw.userId) return raw.userId;
+  if (raw.user?.id) return raw.user.id;
+  return decodeJwtSub(raw.accessToken);
+}
+
+function decodeJwtSub(token: string | undefined): string | undefined {
+  if (!token) return undefined;
+  const parts = token.split('.');
+  if (parts.length !== 3) return undefined;
+  try {
+    const payloadJson = Buffer.from(parts[1] ?? '', 'base64url').toString('utf8');
+    const payload = JSON.parse(payloadJson) as { sub?: unknown };
+    return typeof payload.sub === 'string' ? payload.sub : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function backendFetch(path: string, init: RequestInit): Promise<Response> {
@@ -76,7 +106,11 @@ export async function registerBackend(body: {
 }): Promise<{ ok: true; session: SessionPayload } | { ok: false; response: Response }> {
   const response = await backendFetch('/auth/register', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      email: body.email,
+      password: body.password,
+      displayName: body.name,
+    }),
   });
   if (!response.ok) return { ok: false, response };
 

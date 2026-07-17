@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { CommandPalette, useCommandPalette } from '@/features/command-palette/CommandPalette';
 import type { WorkspaceOption } from '@/features/workspace/WorkspaceSwitcher';
 import { MAIN_CONTENT_ID } from '@/components/shell/SkipToContent';
 import { VerificationBanner } from '@/features/verification/VerificationBanner';
+import { bff } from '@/lib/http/bff';
 
 interface AppShellProps {
   workspaceSlug: string;
@@ -16,6 +18,17 @@ interface AppShellProps {
 
 export function AppShell({ workspaceSlug, workspaces, user, children }: AppShellProps) {
   const { open, setOpen } = useCommandPalette();
+  const syncedSlug = useRef<string | null>(null);
+
+  // Keep the tsk_workspace cookie aligned with the URL slug so /api/session and
+  // analytics events report the currently-visited workspace. Fire-and-forget —
+  // the URL slug is authoritative for backend authorization, so a lagging cookie
+  // never causes tenant leakage.
+  useEffect(() => {
+    if (syncedSlug.current === workspaceSlug) return;
+    syncedSlug.current = workspaceSlug;
+    bff.post('/workspaces/select', { slug: workspaceSlug }).catch(() => undefined);
+  }, [workspaceSlug]);
 
   return (
     <div className="flex min-h-dvh w-full bg-background text-foreground">

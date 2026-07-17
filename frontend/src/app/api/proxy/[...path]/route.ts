@@ -1,5 +1,4 @@
 import { clearSession, getSession, setSession } from '@/lib/session/session';
-import { getWorkspaceCookie } from '@/lib/session/workspace';
 import { refreshBackend } from '@/lib/session/auth-backend';
 import { apiUrl } from '@/lib/http/backend';
 
@@ -15,11 +14,7 @@ const HOP_BY_HOP = new Set([
   'host',
 ]);
 
-function forwardHeaders(
-  source: Headers,
-  accessToken: string | undefined,
-  workspaceId: string | undefined,
-): Headers {
+function forwardHeaders(source: Headers, accessToken: string | undefined): Headers {
   const headers = new Headers();
   source.forEach((value, key) => {
     if (HOP_BY_HOP.has(key.toLowerCase())) return;
@@ -28,7 +23,6 @@ function forwardHeaders(
     headers.set(key, value);
   });
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
-  if (workspaceId) headers.set('X-Workspace-Id', workspaceId);
   headers.set('Accept', headers.get('Accept') ?? 'application/json');
   return headers;
 }
@@ -50,7 +44,6 @@ async function forward(request: Request, path: string[]): Promise<Response> {
   upstream.search = url.search;
 
   const session = await getSession();
-  const workspace = await getWorkspaceCookie();
 
   const body =
     request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer();
@@ -58,7 +51,7 @@ async function forward(request: Request, path: string[]): Promise<Response> {
   async function send(accessToken: string | undefined): Promise<Response> {
     const init: RequestInit = {
       method: request.method,
-      headers: forwardHeaders(request.headers, accessToken, workspace?.id),
+      headers: forwardHeaders(request.headers, accessToken),
       body,
       cache: 'no-store',
       redirect: 'manual',

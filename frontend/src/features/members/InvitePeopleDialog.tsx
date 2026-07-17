@@ -51,9 +51,10 @@ export function InvitePeopleDialog({ slug, workspaceId }: InvitePeopleDialogProp
   function onSubmit(values: InviteBatchInput) {
     startTransition(async () => {
       try {
-        await browserHttp.post(
-          `/workspaces/${encodeURIComponent(slug)}/invitations`,
-          values.invites,
+        await Promise.all(
+          values.invites.map((invite) =>
+            browserHttp.post(`/workspaces/${encodeURIComponent(slug)}/invitations`, invite),
+          ),
         );
         if (workspaceId) {
           emit({ name: 'invite_sent', workspaceId, count: values.invites.length });

@@ -7,7 +7,17 @@ const PUBLIC_ROUTES = [
   '/oauth',
 ];
 
-const PUBLIC_API_ROUTES = ['/api/auth', '/api/session', '/api/analytics'];
+const PUBLIC_API_ROUTES = [
+  '/api/auth',
+  '/api/session',
+  '/api/analytics',
+  // Backend auth endpoints that must work without a browser session: password reset
+  // request/confirm, email verification (the caller proves identity via a token).
+  '/api/proxy/auth/password/reset',
+  '/api/proxy/auth/email/verify',
+  // Public invitation actions (accept requires a session; decline does not).
+  '/api/proxy/invitations',
+];
 
 const ALWAYS_PUBLIC_PREFIXES = ['/_next', '/favicon', '/icons', '/images', '/fonts'];
 

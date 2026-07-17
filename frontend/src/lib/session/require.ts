@@ -23,6 +23,18 @@ export async function requireSession(): Promise<SessionPayload> {
   return session;
 }
 
+interface BackendMeResponse {
+  id: string;
+  email: string;
+  displayName: string;
+  emailVerifiedAt: string | null;
+}
+
+interface BackendMembership {
+  role?: string;
+  workspace: { id: string; slug: string; name: string };
+}
+
 export async function fetchMe(accessToken: string): Promise<CurrentUser | null> {
   try {
     const response = await fetch(apiUrl('/me'), {
@@ -30,7 +42,13 @@ export async function fetchMe(accessToken: string): Promise<CurrentUser | null> 
       cache: 'no-store',
     });
     if (!response.ok) return null;
-    return (await response.json()) as CurrentUser;
+    const raw = (await response.json()) as BackendMeResponse;
+    return {
+      id: raw.id,
+      email: raw.email,
+      name: raw.displayName,
+      emailVerified: raw.emailVerifiedAt !== null,
+    };
   } catch {
     return null;
   }
@@ -43,10 +61,14 @@ export async function fetchMyWorkspaces(accessToken: string): Promise<WorkspaceM
       cache: 'no-store',
     });
     if (!response.ok) return [];
-    const data = (await response.json()) as
-      { items?: WorkspaceMembership[] } | WorkspaceMembership[];
-    if (Array.isArray(data)) return data;
-    return data.items ?? [];
+    const data = (await response.json()) as { items?: BackendMembership[] } | BackendMembership[];
+    const items = Array.isArray(data) ? data : (data.items ?? []);
+    return items.map((membership) => ({
+      id: membership.workspace.id,
+      slug: membership.workspace.slug,
+      name: membership.workspace.name,
+      role: membership.role,
+    }));
   } catch {
     return [];
   }

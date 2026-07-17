@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -e
+
+# Full gate before pushing: unit + integration + e2e.
+# Playwright reuses api/web dev servers if they're already running (see
+# playwright.config.ts webServer entries) and boots them otherwise. Docker
+# services (postgres/redis/mailhog) must be up — start with:
+#   docker compose -f infra/docker-compose.yml up -d
+pnpm test:all

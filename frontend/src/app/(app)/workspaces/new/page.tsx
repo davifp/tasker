@@ -1,20 +1,13 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { requireSession, fetchMe, fetchMyWorkspaces } from '@/lib/session/require';
+import { requireSession, fetchMe } from '@/lib/session/require';
 import { CreateWorkspaceForm } from '@/features/workspace/CreateWorkspaceForm';
 import { MAIN_CONTENT_ID } from '@/components/shell/SkipToContent';
 
 export default async function CreateWorkspacePage() {
   const session = await requireSession();
-  const [user, workspaces] = await Promise.all([
-    fetchMe(session.accessToken),
-    fetchMyWorkspaces(session.accessToken),
-  ]);
+  const user = await fetchMe(session.accessToken);
   if (!user) redirect('/login');
-  if (workspaces.length > 0) {
-    const first = workspaces[0];
-    if (first) redirect(`/${first.slug}/projects`);
-  }
 
   const t = await getTranslations('workspace.create');
 

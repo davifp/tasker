@@ -33,7 +33,14 @@ export async function waitForEmail(
 }
 
 export function extractFirstUrl(body: string): string | null {
-  const match = body.match(/https?:\/\/[^\s"'<>]+/);
+  // Undo quoted-printable soft line breaks ("=\r\n" or "=\n") and the ASCII-hex escapes (=3D),
+  // then unescape HTML entities the mail template uses (&#x3D; for '=').
+  const normalized = body
+    .replace(/=\r?\n/g, '')
+    .replace(/=3D/gi, '=')
+    .replace(/&#x3D;/gi, '=')
+    .replace(/&amp;/g, '&');
+  const match = normalized.match(/https?:\/\/[^\s"'<>]+/);
   return match ? match[0] : null;
 }
 

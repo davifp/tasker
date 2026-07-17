@@ -174,13 +174,19 @@ export class WorkspacesService {
   async listMembers(
     workspaceId: string,
     opts: { cursor?: string; limit?: number } = {},
-  ): Promise<{ items: WorkspaceMember[]; nextCursor: string | null }> {
+  ): Promise<{
+    items: Array<WorkspaceMember & { user: { id: string; displayName: string; email: string } }>;
+    nextCursor: string | null;
+  }> {
     const limit = Math.min(Math.max(opts.limit ?? 20, 1), 100);
     const items = await this.prisma.forSystem().workspaceMember.findMany({
       where: { workspaceId },
       orderBy: { joinedAt: 'asc' },
       take: limit + 1,
       ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+      include: {
+        user: { select: { id: true, displayName: true, email: true } },
+      },
     });
 
     const hasMore = items.length > limit;

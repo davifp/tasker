@@ -55,10 +55,13 @@ export class WorkspacesController {
   }
 
   @Get('workspaces/:slug')
-  async getWorkspace(@Param('slug') slug: string) {
+  async getWorkspace(
+    @Param('slug') slug: string,
+    @Request() req: ExpressRequest & { workspaceContext?: WorkspaceContext },
+  ) {
     const workspace = await this.workspaces.findBySlug(slug);
     if (!workspace) throw new NotFoundException('Workspace not found');
-    return workspace;
+    return { ...workspace, currentUserRole: req.workspaceContext?.role };
   }
 
   @Patch('workspaces/:slug')
