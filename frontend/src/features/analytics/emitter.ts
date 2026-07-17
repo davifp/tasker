@@ -2,18 +2,56 @@ import { z } from 'zod';
 
 const provider = z.enum(['local', 'google', 'github']);
 
+// Task status enum kept as a string literal union rather than imported
+// from a shared package: the frontend deliberately avoids depending on
+// the backend Prisma client. Values match `TaskStatus` in
+// `backend/prisma/schema.prisma`.
+const taskStatus = z.enum(['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']);
+
+const workspaceId = z.string().min(1);
+const projectId = z.string().min(1);
+const taskId = z.string().min(1);
+
+// `.strict()` on every variant rejects payloads that carry PII fields
+// beyond the whitelisted keys — the analytics contract keeps events
+// scoped to `userId` (attached server-side from the session) and the
+// non-PII enums listed here.
 export const AnalyticsEventSchema = z.discriminatedUnion('name', [
-  z.object({ name: z.literal('signup_started'), provider }),
-  z.object({ name: z.literal('signup_completed'), provider }),
-  z.object({ name: z.literal('login_completed'), provider }),
-  z.object({ name: z.literal('workspace_created'), workspaceId: z.string().min(1) }),
-  z.object({
-    name: z.literal('invite_sent'),
-    workspaceId: z.string().min(1),
-    count: z.number().int().min(1).max(10),
-  }),
-  z.object({ name: z.literal('member_removed'), workspaceId: z.string().min(1) }),
-  z.object({ name: z.literal('error_boundary'), digest: z.string().optional() }),
+  z.object({ name: z.literal('signup_started'), provider }).strict(),
+  z.object({ name: z.literal('signup_completed'), provider }).strict(),
+  z.object({ name: z.literal('login_completed'), provider }).strict(),
+  z.object({ name: z.literal('workspace_created'), workspaceId }).strict(),
+  z
+    .object({
+      name: z.literal('invite_sent'),
+      workspaceId,
+      count: z.number().int().min(1).max(10),
+    })
+    .strict(),
+  z.object({ name: z.literal('member_removed'), workspaceId }).strict(),
+  z.object({ name: z.literal('error_boundary'), digest: z.string().optional() }).strict(),
+  z.object({ name: z.literal('project_created'), workspaceId, projectId }).strict(),
+  z.object({ name: z.literal('task_created'), workspaceId, projectId, taskId }).strict(),
+  z
+    .object({
+      name: z.literal('task_moved'),
+      workspaceId,
+      projectId,
+      taskId,
+      fromStatus: taskStatus,
+      toStatus: taskStatus,
+    })
+    .strict(),
+  z.object({ name: z.literal('task_completed'), workspaceId, projectId, taskId }).strict(),
+  z
+    .object({
+      name: z.literal('comment_added'),
+      workspaceId,
+      projectId,
+      taskId,
+      commentId: z.string().min(1),
+    })
+    .strict(),
 ]);
 export type AnalyticsEvent = z.infer<typeof AnalyticsEventSchema>;
 

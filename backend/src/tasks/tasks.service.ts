@@ -55,7 +55,12 @@ export interface MoveTaskInput {
   position: string;
   ifUnchangedSince: Date;
   actorUserId: string;
+  overrideBlockers?: boolean;
 }
+
+export type MoveTaskResult =
+  | { kind: 'moved'; task: Task }
+  | { kind: 'blocked'; task: Task; acknowledgedBlockersOpen: string[] };
 
 export interface ListTasksFilters {
   cursor?: string;
@@ -203,7 +208,7 @@ export class TasksService {
     return task;
   }
 
-  async move(input: MoveTaskInput): Promise<Task> {
+  async move(input: MoveTaskInput): Promise<MoveTaskResult> {
     const result = await this.prisma.forSystem().$transaction(async (tx) => {
       // Per-column advisory lock: concurrent movers targeting the same
       // (project, status) column serialise on this key. Different columns
@@ -223,6 +228,23 @@ export class TasksService {
       // the caller last saw it.
       if (existing.updatedAt.getTime() !== input.ifUnchangedSince.getTime()) {
         throw staleWriteError();
+      }
+
+      // DONE-transition blocker gate. If any blocker isn't itself DONE and
+      // the caller hasn't opted in via overrideBlockers, surface the open
+      // blocker WEB-<n> identifiers so the client can show the confirmation
+      // and retry with overrideBlockers=true. Skip the DB probe entirely
+      // when the caller has already opted to override — saves a round trip
+      // on the frequent "yes, close it anyway" path.
+      if (
+        input.status === 'DONE' &&
+        existing.status !== 'DONE' &&
+        input.overrideBlockers !== true
+      ) {
+        const openBlockers = await this.readOpenBlockers(tx, input.taskId);
+        if (openBlockers.length > 0) {
+          return { kind: 'blocked' as const, task: existing, openBlockers };
+        }
       }
 
       // Under the column lock we exclusively see committed writes to this
@@ -250,8 +272,16 @@ export class TasksService {
         where: { id: input.taskId },
         data: { status: input.status, position },
       });
-      return { updated, fromStatus };
+      return { kind: 'moved' as const, updated, fromStatus };
     });
+
+    if (result.kind === 'blocked') {
+      return {
+        kind: 'blocked',
+        task: result.task,
+        acknowledgedBlockersOpen: result.openBlockers,
+      };
+    }
 
     this.events.emit(TaskEvents.MOVED, {
       workspaceId: input.workspaceId,
@@ -262,7 +292,15 @@ export class TasksService {
       toStatus: result.updated.status,
     } satisfies TaskMovedEvent);
 
-    return result.updated;
+    return { kind: 'moved', task: result.updated };
+  }
+
+  private async readOpenBlockers(tx: PrismaTx, taskId: string): Promise<string[]> {
+    const rows = await tx.taskDependency.findMany({
+      where: { taskId, blockedBy: { status: { not: 'DONE' }, deletedAt: null } },
+      select: { blockedBy: { select: { number: true, project: { select: { slug: true } } } } },
+    });
+    return rows.map((r) => `${r.blockedBy.project.slug}-${r.blockedBy.number}`);
   }
 
   async softDelete(params: {

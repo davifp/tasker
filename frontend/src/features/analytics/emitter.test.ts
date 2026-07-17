@@ -87,16 +87,70 @@ describe('analytics client', () => {
     expect(calls).toBe(3);
   });
 
-  it('never carries PII beyond userId and workspaceId at the schema level', () => {
-    // The schema itself constrains the payload — verify no arbitrary key sneaks in.
+  it('rejects payloads that smuggle extra keys (PII guard)', () => {
+    // With `.strict()`, an unknown key (e.g. `email`) fails parsing rather
+    // than being silently stripped — the contract is explicit, not lax.
     const parsed = AnalyticsEventSchema.safeParse({
       name: 'workspace_created',
       workspaceId: 'ws-1',
       email: 'ada@example.com',
     });
-    expect(parsed.success).toBe(true);
-    if (parsed.success) {
-      expect('email' in parsed.data).toBe(false);
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe('AnalyticsEventSchema — Phase 3 variants', () => {
+  it('accepts project_created / task_created / task_completed / comment_added', () => {
+    const events = [
+      { name: 'project_created', workspaceId: 'ws-1', projectId: 'p-1' },
+      { name: 'task_created', workspaceId: 'ws-1', projectId: 'p-1', taskId: 't-1' },
+      { name: 'task_completed', workspaceId: 'ws-1', projectId: 'p-1', taskId: 't-1' },
+      {
+        name: 'comment_added',
+        workspaceId: 'ws-1',
+        projectId: 'p-1',
+        taskId: 't-1',
+        commentId: 'c-1',
+      },
+    ] as const;
+    for (const event of events) {
+      expect(AnalyticsEventSchema.safeParse(event).success).toBe(true);
     }
+  });
+
+  it('accepts task_moved with fromStatus/toStatus and rejects invalid enum values', () => {
+    expect(
+      AnalyticsEventSchema.safeParse({
+        name: 'task_moved',
+        workspaceId: 'ws-1',
+        projectId: 'p-1',
+        taskId: 't-1',
+        fromStatus: 'IN_PROGRESS',
+        toStatus: 'DONE',
+      }).success,
+    ).toBe(true);
+
+    expect(
+      AnalyticsEventSchema.safeParse({
+        name: 'task_moved',
+        workspaceId: 'ws-1',
+        projectId: 'p-1',
+        taskId: 't-1',
+        fromStatus: 'IN_PROGRESS',
+        toStatus: 'ARCHIVED',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a task_created payload that carries an email PII field', () => {
+    expect(
+      AnalyticsEventSchema.safeParse({
+        name: 'task_created',
+        workspaceId: 'ws-1',
+        projectId: 'p-1',
+        taskId: 't-1',
+        email: 'ada@example.com',
+      }).success,
+    ).toBe(false);
   });
 });

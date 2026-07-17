@@ -31,10 +31,15 @@ const taskLabelClient = {
   createMany: vi.fn(),
 };
 
+const taskDependencyClient = {
+  findMany: vi.fn().mockResolvedValue([]),
+};
+
 const rawClient = {
   task: taskClient,
   projectSequence: projectSequenceClient,
   taskLabel: taskLabelClient,
+  taskDependency: taskDependencyClient,
   $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(rawClient)),
   $executeRawUnsafe: vi.fn().mockResolvedValue(0),
 };
@@ -197,7 +202,7 @@ describe('TasksService.move', () => {
       updatedAt: new Date(),
     });
 
-    const task = await service.move({
+    const result = await service.move({
       workspaceId: WS,
       projectId: PROJECT,
       taskId: TASK,
@@ -207,7 +212,10 @@ describe('TasksService.move', () => {
       actorUserId: USER,
     });
 
-    expect(task.status).toBe('IN_PROGRESS');
+    expect(result.kind).toBe('moved');
+    if (result.kind === 'moved') {
+      expect(result.task.status).toBe('IN_PROGRESS');
+    }
     expect(taskClient.update).toHaveBeenCalledTimes(1);
     const updateCall = taskClient.update.mock.calls[0][0] as { data: { position?: string } };
     expect(updateCall.data.position).not.toBe('a2');
@@ -272,6 +280,112 @@ describe('TasksService.move', () => {
         actorUserId: USER,
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("returns kind: 'blocked' with acknowledgedBlockersOpen on DONE transition with open blockers", async () => {
+    const service = await buildService();
+    taskClient.findUnique.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+      status: 'IN_REVIEW',
+      updatedAt: NOW,
+      deletedAt: null,
+    });
+    taskDependencyClient.findMany.mockResolvedValueOnce([
+      { blockedBy: { number: 7, project: { slug: 'web' } } },
+      { blockedBy: { number: 12, project: { slug: 'web' } } },
+    ]);
+
+    const result = await service.move({
+      workspaceId: WS,
+      projectId: PROJECT,
+      taskId: TASK,
+      status: 'DONE',
+      position: 'a2',
+      ifUnchangedSince: NOW,
+      actorUserId: USER,
+    });
+
+    expect(result.kind).toBe('blocked');
+    if (result.kind === 'blocked') {
+      expect(result.acknowledgedBlockersOpen).toEqual(['web-7', 'web-12']);
+    }
+    // The blocked branch must NOT emit MOVED — no state changed.
+    expect(taskClient.update).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('transitions to DONE when overrideBlockers=true, even with open blockers', async () => {
+    const service = await buildService();
+    taskClient.findUnique.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+      status: 'IN_REVIEW',
+      updatedAt: NOW,
+      deletedAt: null,
+    });
+    taskClient.findFirst.mockResolvedValueOnce(null);
+    taskClient.update.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+      status: 'DONE',
+      updatedAt: new Date(),
+    });
+
+    const result = await service.move({
+      workspaceId: WS,
+      projectId: PROJECT,
+      taskId: TASK,
+      status: 'DONE',
+      position: 'a2',
+      ifUnchangedSince: NOW,
+      actorUserId: USER,
+      overrideBlockers: true,
+    });
+
+    expect(result.kind).toBe('moved');
+    // When overrideBlockers=true we skip the blocker probe entirely.
+    expect(taskDependencyClient.findMany).not.toHaveBeenCalled();
+    expect(taskClient.update).toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledWith(
+      TaskEvents.MOVED,
+      expect.objectContaining({ toStatus: 'DONE' }),
+    );
+  });
+
+  it('skips the blocker check when the task is already DONE (no fromStatus change to DONE)', async () => {
+    const service = await buildService();
+    taskClient.findUnique.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+      status: 'DONE',
+      updatedAt: NOW,
+      deletedAt: null,
+    });
+    taskClient.findFirst.mockResolvedValueOnce(null);
+    taskClient.update.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+      status: 'DONE',
+      updatedAt: new Date(),
+    });
+
+    await service.move({
+      workspaceId: WS,
+      projectId: PROJECT,
+      taskId: TASK,
+      status: 'DONE',
+      position: 'a2',
+      ifUnchangedSince: NOW,
+      actorUserId: USER,
+    });
+
+    expect(taskDependencyClient.findMany).not.toHaveBeenCalled();
   });
 });
 

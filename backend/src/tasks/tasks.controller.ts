@@ -148,7 +148,7 @@ export class TasksController {
       parseNumber(numberParam),
     );
     if (!task) throw new NotFoundException('Task not found');
-    return this.tasks.move({
+    const result = await this.tasks.move({
       workspaceId: ctx.workspaceId,
       projectId: project.id,
       taskId: task.id,
@@ -156,7 +156,15 @@ export class TasksController {
       position: dto.position,
       ifUnchangedSince: new Date(dto.ifUnchangedSince),
       actorUserId: ctx.userId,
+      overrideBlockers: dto.overrideBlockers,
     });
+    if (result.kind === 'blocked') {
+      return {
+        ...result.task,
+        acknowledgedBlockersOpen: result.acknowledgedBlockersOpen,
+      };
+    }
+    return result.task;
   }
 
   @Delete(':number')

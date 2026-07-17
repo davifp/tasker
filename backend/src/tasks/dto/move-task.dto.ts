@@ -16,5 +16,10 @@ export class MoveTaskDto extends createZodDto(
     status: taskStatusSchema,
     position: positionKeySchema,
     ifUnchangedSince: z.string().datetime(),
+    // Explicit acknowledgment that the caller understands moving to DONE
+    // will close the task while some blockers remain open. Required to
+    // succeed a DONE transition that would otherwise return
+    // `acknowledgedBlockersOpen`.
+    overrideBlockers: z.boolean().optional(),
   }),
 ) {}
