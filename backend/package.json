@@ -30,6 +30,7 @@
     "argon2": "^0.44.0",
     "bullmq": "^5.80.4",
     "dotenv": "^16.0.0",
+    "fractional-indexing": "^3.2.0",
     "handlebars": "^4.7.9",
     "ioredis": "^5.4.0",
     "nestjs-pino": "^4.1.0",

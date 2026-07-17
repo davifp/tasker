@@ -14,6 +14,13 @@ describe('TENANT_MODELS', () => {
     expect(TENANT_MODELS.has('AuditLog')).toBe(true);
   });
 
+  it('includes the Phase 3 tenant-scoped models', () => {
+    expect(TENANT_MODELS.has('Project')).toBe(true);
+    expect(TENANT_MODELS.has('Label')).toBe(true);
+    expect(TENANT_MODELS.has('Task')).toBe(true);
+    expect(TENANT_MODELS.has('Comment')).toBe(true);
+  });
+
   it('excludes non-tenant models', () => {
     expect(TENANT_MODELS.has('User')).toBe(false);
     expect(TENANT_MODELS.has('OAuthAccount')).toBe(false);
@@ -21,6 +28,15 @@ describe('TENANT_MODELS', () => {
     expect(TENANT_MODELS.has('EmailVerificationToken')).toBe(false);
     expect(TENANT_MODELS.has('PasswordResetToken')).toBe(false);
     expect(TENANT_MODELS.has('Workspace')).toBe(false);
+  });
+
+  it('excludes indirect-scoped models that lack a workspaceId column', () => {
+    // TaskLabel and TaskDependency are join tables — scoped through Task.
+    expect(TENANT_MODELS.has('TaskLabel')).toBe(false);
+    expect(TENANT_MODELS.has('TaskDependency')).toBe(false);
+    // ChecklistItem is task-scoped; ProjectSequence is project-scoped.
+    expect(TENANT_MODELS.has('ChecklistItem')).toBe(false);
+    expect(TENANT_MODELS.has('ProjectSequence')).toBe(false);
   });
 });
 
@@ -36,7 +52,20 @@ describe('applyTenantContext()', () => {
   });
 
   describe('WHERE operations', () => {
-    const WHERE_OPS = ['findFirst', 'findFirstOrThrow', 'findMany', 'findUnique', 'findUniqueOrThrow', 'count', 'aggregate', 'update', 'updateMany', 'delete', 'deleteMany', 'upsert'];
+    const WHERE_OPS = [
+      'findFirst',
+      'findFirstOrThrow',
+      'findMany',
+      'findUnique',
+      'findUniqueOrThrow',
+      'count',
+      'aggregate',
+      'update',
+      'updateMany',
+      'delete',
+      'deleteMany',
+      'upsert',
+    ];
 
     for (const op of WHERE_OPS) {
       it(`injects workspaceId into where for ${op}`, () => {

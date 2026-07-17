@@ -21,6 +21,25 @@ enum WorkspaceRole {
   GUEST
 }
 
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique @db.Citext
@@ -36,9 +55,14 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   sessions                Session[]
   workspaceMembers        WorkspaceMember[]
-  ownedWorkspaces         Workspace[]  @relation("WorkspaceOwner")
-  sentInvitations         Invitation[] @relation("InvitationSender")
-  auditLogs               AuditLog[]   @relation("AuditLogActor")
+  ownedWorkspaces         Workspace[]              @relation("WorkspaceOwner")
+  sentInvitations         Invitation[]             @relation("InvitationSender")
+  auditLogs               AuditLog[]               @relation("AuditLogActor")
+  ownedProjects           Project[]                @relation("ProjectOwner")
+  createdProjects         Project[]                @relation("ProjectCreator")
+  assignedTasks           Task[]                   @relation("TaskAssignee")
+  createdTasks            Task[]                   @relation("TaskCreator")
+  comments                Comment[]
 }
 
 model OAuthAccount {
@@ -89,6 +113,10 @@ model Workspace {
   members     WorkspaceMember[]
   invitations Invitation[]
   auditLogs   AuditLog[]
+  projects    Project[]
+  labels      Label[]
+  tasks       Task[]
+  comments    Comment[]
 }
 
 model WorkspaceMember {
@@ -142,14 +170,14 @@ model Session {
 }
 
 model AuditLog {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   workspaceId String?
   actorUserId String?
   event       String
   targetId    String?
-  metadata    Json      @default("{}")
+  metadata    Json     @default("{}")
   traceId     String?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 
   // SetNull on workspace so hard-deleting a workspace (cleanup cron past
   // purgeAt) preserves the audit trail — the FK falls back to null instead
@@ -159,4 +187,135 @@ model AuditLog {
 
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([event])
+}
+
+model Project {
+  id              String        @id @default(cuid())
+  workspaceId     String
+  slug            String
+  name            String
+  description     String?
+  color           String
+  icon            String
+  status          ProjectStatus @default(ACTIVE)
+  ownerUserId     String
+  createdByUserId String
+  deletedAt       DateTime?
+  purgeAt         DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner     User             @relation("ProjectOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  createdBy User             @relation("ProjectCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  tasks     Task[]
+  sequence  ProjectSequence?
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId, status])
+}
+
+model Label {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taskLinks TaskLabel[]
+
+  @@unique([workspaceId, name])
+}
+
+model Task {
+  id              String     @id @default(cuid())
+  workspaceId     String
+  projectId       String
+  number          Int
+  title           String
+  description     String     @default("")
+  status          TaskStatus @default(BACKLOG)
+  priority        Priority   @default(MEDIUM)
+  position        String
+  assigneeUserId  String?
+  createdByUserId String
+  dueDate         DateTime?
+  deletedAt       DateTime?
+  purgeAt         DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project        Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee       User?            @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  createdBy      User             @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  labels         TaskLabel[]
+  dependencies   TaskDependency[] @relation("TaskDependencies_task")
+  dependents     TaskDependency[] @relation("TaskDependencies_blocker")
+  checklistItems ChecklistItem[]
+  comments       Comment[]
+
+  @@unique([projectId, number])
+  @@index([workspaceId, projectId, status, position])
+  @@index([workspaceId, assigneeUserId, status])
+}
+
+model TaskLabel {
+  taskId  String
+  labelId String
+
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+  @@index([labelId])
+}
+
+model TaskDependency {
+  taskId          String
+  blockedByTaskId String
+
+  task      Task @relation("TaskDependencies_task", fields: [taskId], references: [id], onDelete: Cascade)
+  blockedBy Task @relation("TaskDependencies_blocker", fields: [blockedByTaskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, blockedByTaskId])
+  @@index([blockedByTaskId])
+}
+
+model ChecklistItem {
+  id        String   @id @default(cuid())
+  taskId    String
+  title     String
+  checked   Boolean  @default(false)
+  position  String
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, position])
+}
+
+model Comment {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  taskId       String
+  authorUserId String
+  body         String
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([taskId, createdAt])
+}
+
+model ProjectSequence {
+  projectId  String @id
+  nextNumber Int    @default(1)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
