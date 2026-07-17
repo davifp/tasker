@@ -38,9 +38,9 @@ coverage/
 .verify-hook-*/
 
 #tracked in separate repo (tasker-meta)
-tasks
-spec-driven
-project_scope.md
+/tasks
+/spec-driven
+/project_scope.md
 
 # Claude Code local tooling — not project source
 .claude

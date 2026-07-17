@@ -130,13 +130,16 @@ describe('Tenant auto-injection for Phase-3 models (integration)', () => {
   it('injects workspaceId into a Comment.create without it in data', async () => {
     const tenant = makeTenantClient(raw, store);
 
+    // The first task (from the previous test) sits at Positions.between(null, null)
+    // in BACKLOG; pick a slot after it so we don't hit the per-column partial
+    // unique index on (projectId, status, position).
     const task = await raw.task.create({
       data: {
         workspaceId,
         projectId,
         number: 2,
         title: 'Second task',
-        position: Positions.between(null, null),
+        position: Positions.between(Positions.between(null, null), null),
         createdByUserId: userId,
         updatedAt: new Date(),
       },
