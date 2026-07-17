@@ -139,5 +139,68 @@
       "strong": "Strong",
       "excellent": "Excellent"
     }
+  },
+  "shell": {
+    "nav": {
+      "label": "Main navigation",
+      "openNav": "Open navigation",
+      "collapse": "Collapse sidebar",
+      "expand": "Expand sidebar",
+      "projects": "Projects",
+      "sprints": "Sprints",
+      "roadmap": "Roadmap",
+      "dashboard": "Dashboard",
+      "members": "Members",
+      "settings": "Settings"
+    },
+    "topbar": {
+      "search": "Search",
+      "openPalette": "Open command palette"
+    },
+    "workspaceSwitcher": {
+      "label": "Workspaces",
+      "createNew": "Create workspace",
+      "empty": "No workspaces yet"
+    },
+    "themeMenu": {
+      "label": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "localeSwitcher": {
+      "label": "Language"
+    },
+    "userMenu": {
+      "label": "Account menu for {name}",
+      "profile": "Profile",
+      "logout": "Sign out"
+    },
+    "commandPalette": {
+      "placeholder": "Search projects, tasks, and members…",
+      "empty": "Search is coming soon."
+    },
+    "placeholders": {
+      "projects": {
+        "title": "Projects",
+        "description": "Create Kanban boards, group work into projects, and track flow.",
+        "comingSoon": "Project boards land in Phase 3."
+      },
+      "sprints": {
+        "title": "Sprints",
+        "description": "Plan sprints, assign stories, and monitor sprint burndown.",
+        "comingSoon": "Sprint planning arrives in Phase 3."
+      },
+      "roadmap": {
+        "title": "Roadmap",
+        "description": "See the workspace's initiatives and epics on a quarterly roadmap.",
+        "comingSoon": "The roadmap view is coming in Phase 4."
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Real-time snapshots of throughput, workload, and cycle time.",
+        "comingSoon": "Dashboards ship after the reporting phase."
+      }
+    }
   }
 }

@@ -139,5 +139,68 @@
       "strong": "Forte",
       "excellent": "Excelente"
     }
+  },
+  "shell": {
+    "nav": {
+      "label": "Navegação principal",
+      "openNav": "Abrir navegação",
+      "collapse": "Recolher menu lateral",
+      "expand": "Expandir menu lateral",
+      "projects": "Projetos",
+      "sprints": "Sprints",
+      "roadmap": "Roadmap",
+      "dashboard": "Painel",
+      "members": "Membros",
+      "settings": "Configurações"
+    },
+    "topbar": {
+      "search": "Buscar",
+      "openPalette": "Abrir paleta de comandos"
+    },
+    "workspaceSwitcher": {
+      "label": "Workspaces",
+      "createNew": "Criar workspace",
+      "empty": "Nenhum workspace ainda"
+    },
+    "themeMenu": {
+      "label": "Tema",
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema"
+    },
+    "localeSwitcher": {
+      "label": "Idioma"
+    },
+    "userMenu": {
+      "label": "Menu da conta de {name}",
+      "profile": "Perfil",
+      "logout": "Sair"
+    },
+    "commandPalette": {
+      "placeholder": "Buscar projetos, tarefas e membros…",
+      "empty": "A busca chegará em breve."
+    },
+    "placeholders": {
+      "projects": {
+        "title": "Projetos",
+        "description": "Crie boards Kanban, agrupe trabalho por projeto e acompanhe o fluxo.",
+        "comingSoon": "Os boards de projeto chegam na Fase 3."
+      },
+      "sprints": {
+        "title": "Sprints",
+        "description": "Planeje sprints, atribua histórias e acompanhe o burndown.",
+        "comingSoon": "O planejamento de sprint chega na Fase 3."
+      },
+      "roadmap": {
+        "title": "Roadmap",
+        "description": "Veja as iniciativas e épicos do workspace em um roadmap trimestral.",
+        "comingSoon": "A visão de roadmap chega na Fase 4."
+      },
+      "dashboard": {
+        "title": "Painel",
+        "description": "Recortes em tempo real de throughput, carga e cycle time.",
+        "comingSoon": "Os painéis chegam após a fase de relatórios."
+      }
+    }
   }
 }
