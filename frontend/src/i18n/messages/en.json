@@ -286,5 +286,76 @@
       "restored": "Workspace restored.",
       "restoreFailed": "We couldn't restore the workspace. Try again."
     }
+  },
+  "members": {
+    "title": "Members",
+    "subtitle": "Manage who has access to this workspace.",
+    "inviteHeading": "Invite people",
+    "membersHeading": "Current members",
+    "pendingHeading": "Pending invitations",
+    "table": {
+      "caption": "Workspace members and their roles",
+      "empty": "No members yet.",
+      "columns": {
+        "name": "Member",
+        "role": "Role",
+        "lastActive": "Last active",
+        "actions": "Actions"
+      }
+    },
+    "invite": {
+      "trigger": "Invite people",
+      "title": "Invite people to this workspace",
+      "body": "Add up to 10 teammates at a time. They'll get an email to join.",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "addRow": "Add another",
+      "removeRow": "Remove this row",
+      "cancel": "Cancel",
+      "submit": "Send invitations",
+      "submitting": "Sending…",
+      "success": "{count, plural, one {Invitation sent.} other {# invitations sent.}}",
+      "failed": "We couldn't send the invitations. Try again.",
+      "roles": {
+        "OWNER": "Owner",
+        "ADMIN": "Admin",
+        "MEMBER": "Member",
+        "GUEST": "Guest"
+      }
+    },
+    "validation": {
+      "email": {
+        "required": "Email is required",
+        "invalid": "Enter a valid email"
+      },
+      "invites": {
+        "min": "Add at least one invitation",
+        "max": "You can invite up to 10 people at a time"
+      }
+    },
+    "pending": {
+      "empty": "No pending invitations.",
+      "invitedAt": "Invited on {date}",
+      "resend": "Resend",
+      "resendSuccess": "Invitation resent.",
+      "resendFailed": "We couldn't resend the invitation.",
+      "revoke": "Revoke",
+      "revokeSuccess": "Invitation revoked.",
+      "revokeFailed": "We couldn't revoke the invitation."
+    },
+    "role": {
+      "changed": "Role updated.",
+      "failed": "We couldn't update the role."
+    },
+    "remove": {
+      "trigger": "Remove",
+      "title": "Remove this member?",
+      "body": "{name} will lose access to this workspace. You can re-invite them later.",
+      "cancel": "Cancel",
+      "confirm": "Remove member",
+      "removing": "Removing…",
+      "success": "Member removed.",
+      "failed": "We couldn't remove the member."
+    }
   }
 }

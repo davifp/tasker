@@ -5,6 +5,7 @@ const validEnv = {
   NODE_ENV: 'development' as const,
   DATABASE_URL: 'postgres://tasker:tasker@localhost:5432/tasker',
   REDIS_URL: 'redis://localhost:6379',
+  JWT_SECRET: 'a'.repeat(64),
 };
 
 describe('envSchema', () => {

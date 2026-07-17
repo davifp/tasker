@@ -286,5 +286,76 @@
       "restored": "Workspace restaurado.",
       "restoreFailed": "Não conseguimos restaurar. Tente novamente."
     }
+  },
+  "members": {
+    "title": "Membros",
+    "subtitle": "Gerencie quem tem acesso a este workspace.",
+    "inviteHeading": "Convidar pessoas",
+    "membersHeading": "Membros atuais",
+    "pendingHeading": "Convites pendentes",
+    "table": {
+      "caption": "Membros do workspace e seus papéis",
+      "empty": "Ainda não há membros.",
+      "columns": {
+        "name": "Membro",
+        "role": "Papel",
+        "lastActive": "Última atividade",
+        "actions": "Ações"
+      }
+    },
+    "invite": {
+      "trigger": "Convidar pessoas",
+      "title": "Convidar pessoas para este workspace",
+      "body": "Adicione até 10 pessoas por vez. Elas receberão um e-mail para entrar.",
+      "emailLabel": "E-mail",
+      "roleLabel": "Papel",
+      "addRow": "Adicionar outro",
+      "removeRow": "Remover esta linha",
+      "cancel": "Cancelar",
+      "submit": "Enviar convites",
+      "submitting": "Enviando…",
+      "success": "{count, plural, one {Convite enviado.} other {# convites enviados.}}",
+      "failed": "Não foi possível enviar os convites. Tente novamente.",
+      "roles": {
+        "OWNER": "Owner",
+        "ADMIN": "Admin",
+        "MEMBER": "Membro",
+        "GUEST": "Convidado"
+      }
+    },
+    "validation": {
+      "email": {
+        "required": "E-mail é obrigatório",
+        "invalid": "Informe um e-mail válido"
+      },
+      "invites": {
+        "min": "Adicione pelo menos um convite",
+        "max": "Você pode convidar até 10 pessoas por vez"
+      }
+    },
+    "pending": {
+      "empty": "Sem convites pendentes.",
+      "invitedAt": "Convidado em {date}",
+      "resend": "Reenviar",
+      "resendSuccess": "Convite reenviado.",
+      "resendFailed": "Não foi possível reenviar o convite.",
+      "revoke": "Revogar",
+      "revokeSuccess": "Convite revogado.",
+      "revokeFailed": "Não foi possível revogar o convite."
+    },
+    "role": {
+      "changed": "Papel atualizado.",
+      "failed": "Não foi possível atualizar o papel."
+    },
+    "remove": {
+      "trigger": "Remover",
+      "title": "Remover este membro?",
+      "body": "{name} perderá acesso a este workspace. Você pode convidá-lo novamente depois.",
+      "cancel": "Cancelar",
+      "confirm": "Remover membro",
+      "removing": "Removendo…",
+      "success": "Membro removido.",
+      "failed": "Não foi possível remover o membro."
+    }
   }
 }
