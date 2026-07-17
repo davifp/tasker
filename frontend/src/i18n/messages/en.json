@@ -202,5 +202,89 @@
         "comingSoon": "Dashboards ship after the reporting phase."
       }
     }
+  },
+  "workspace": {
+    "create": {
+      "title": "Create your workspace",
+      "subtitle": "One workspace per team. You can add more later.",
+      "nameLabel": "Workspace name",
+      "slugLabel": "Workspace URL",
+      "slugHint": "Lowercase letters, numbers, and hyphens.",
+      "slugChecking": "Checking availability…",
+      "slugAvailable": "Slug is available.",
+      "slugTaken": "Slug is already taken.",
+      "slugCheckError": "Couldn't check availability. Try again.",
+      "submit": "Create workspace",
+      "submitting": "Creating…",
+      "success": "Workspace created.",
+      "failed": "We couldn't create the workspace. Try again."
+    },
+    "settings": {
+      "title": "Workspace settings",
+      "subtitle": "Manage the details, ownership, and lifecycle of your workspace.",
+      "generalTitle": "General",
+      "nameLabel": "Workspace name",
+      "slugLabel": "Workspace URL",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Workspace updated.",
+      "failed": "We couldn't save your changes. Try again.",
+      "slugTaken": "That slug is already taken.",
+      "slugWarningTitle": "Changing the URL will break existing links",
+      "slugWarningBody": "Anyone who has bookmarks or shared links using the current URL will need the new one. Continue?",
+      "confirmSlugChange": "Change URL",
+      "readOnly": "Only Owners and Admins can edit workspace settings.",
+      "cancel": "Cancel",
+      "transferTitle": "Transfer ownership",
+      "transferBody": "Move Owner privileges to an existing Admin. You'll become an Admin afterward.",
+      "dangerTitle": "Danger zone",
+      "dangerBody": "Deleting a workspace hides it for everyone. You can restore it within 30 days from the section below.",
+      "deletedTitle": "Deleted workspaces"
+    },
+    "validation": {
+      "name": {
+        "min": "Name must have at least 2 characters",
+        "max": "Name is too long"
+      },
+      "slug": {
+        "min": "Slug must have at least 2 characters",
+        "max": "Slug is too long",
+        "format": "Only lowercase letters, numbers, and hyphens"
+      }
+    },
+    "delete": {
+      "trigger": "Delete workspace",
+      "title": "Delete this workspace?",
+      "body": "Type the workspace name to confirm. You can restore {name} within 30 days from the deleted workspaces section.",
+      "typeToConfirm": "Type '{name}' to confirm",
+      "cancel": "Cancel",
+      "confirm": "Delete workspace",
+      "deleting": "Deleting…",
+      "success": "Workspace deleted. You can restore it within 30 days.",
+      "failed": "We couldn't delete the workspace. Try again."
+    },
+    "transfer": {
+      "trigger": "Transfer ownership",
+      "selectTitle": "Choose the new Owner",
+      "selectBody": "The person you pick will become the workspace Owner. You'll keep Admin access.",
+      "confirmTitle": "Confirm the transfer",
+      "confirmBody": "You're about to make {name} the Owner of this workspace. This action can't be undone by them alone.",
+      "summary": "Transferring ownership to {name}.",
+      "noAdmins": "There are no other Admins in this workspace yet.",
+      "continue": "Continue",
+      "cancel": "Cancel",
+      "confirm": "Transfer ownership",
+      "transferring": "Transferring…",
+      "success": "Ownership transferred.",
+      "failed": "We couldn't transfer ownership. Try again."
+    },
+    "deleted": {
+      "empty": "No deleted workspaces.",
+      "deletedOn": "Deleted on {date}",
+      "restoreBefore": "Restore before {date}",
+      "restore": "Restore",
+      "restored": "Workspace restored.",
+      "restoreFailed": "We couldn't restore the workspace. Try again."
+    }
   }
 }

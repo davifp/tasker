@@ -202,5 +202,89 @@
         "comingSoon": "Os painéis chegam após a fase de relatórios."
       }
     }
+  },
+  "workspace": {
+    "create": {
+      "title": "Crie seu workspace",
+      "subtitle": "Um workspace por time. Você pode adicionar mais depois.",
+      "nameLabel": "Nome do workspace",
+      "slugLabel": "URL do workspace",
+      "slugHint": "Letras minúsculas, números e hífens.",
+      "slugChecking": "Verificando disponibilidade…",
+      "slugAvailable": "Slug disponível.",
+      "slugTaken": "Este slug já está em uso.",
+      "slugCheckError": "Não foi possível verificar a disponibilidade. Tente novamente.",
+      "submit": "Criar workspace",
+      "submitting": "Criando…",
+      "success": "Workspace criado.",
+      "failed": "Não conseguimos criar o workspace. Tente novamente."
+    },
+    "settings": {
+      "title": "Configurações do workspace",
+      "subtitle": "Gerencie detalhes, propriedade e ciclo de vida do workspace.",
+      "generalTitle": "Geral",
+      "nameLabel": "Nome do workspace",
+      "slugLabel": "URL do workspace",
+      "save": "Salvar alterações",
+      "saving": "Salvando…",
+      "saved": "Workspace atualizado.",
+      "failed": "Não foi possível salvar. Tente novamente.",
+      "slugTaken": "Este slug já está em uso.",
+      "slugWarningTitle": "Alterar a URL vai quebrar links existentes",
+      "slugWarningBody": "Quem tiver favoritos ou links com a URL atual precisará da nova. Deseja continuar?",
+      "confirmSlugChange": "Alterar URL",
+      "readOnly": "Somente Owners e Admins podem editar as configurações.",
+      "cancel": "Cancelar",
+      "transferTitle": "Transferir propriedade",
+      "transferBody": "Mova a propriedade para um Admin existente. Você se tornará Admin depois.",
+      "dangerTitle": "Zona de perigo",
+      "dangerBody": "Excluir o workspace o oculta para todos. Você pode restaurá-lo em até 30 dias na seção abaixo.",
+      "deletedTitle": "Workspaces excluídos"
+    },
+    "validation": {
+      "name": {
+        "min": "O nome deve ter pelo menos 2 caracteres",
+        "max": "Nome muito longo"
+      },
+      "slug": {
+        "min": "O slug deve ter pelo menos 2 caracteres",
+        "max": "Slug muito longo",
+        "format": "Somente letras minúsculas, números e hífens"
+      }
+    },
+    "delete": {
+      "trigger": "Excluir workspace",
+      "title": "Excluir este workspace?",
+      "body": "Digite o nome do workspace para confirmar. Você pode restaurar {name} em até 30 dias na seção de workspaces excluídos.",
+      "typeToConfirm": "Digite '{name}' para confirmar",
+      "cancel": "Cancelar",
+      "confirm": "Excluir workspace",
+      "deleting": "Excluindo…",
+      "success": "Workspace excluído. Restauração possível em 30 dias.",
+      "failed": "Não foi possível excluir. Tente novamente."
+    },
+    "transfer": {
+      "trigger": "Transferir propriedade",
+      "selectTitle": "Escolha o novo Owner",
+      "selectBody": "A pessoa selecionada se tornará Owner do workspace. Você continua como Admin.",
+      "confirmTitle": "Confirmar transferência",
+      "confirmBody": "Você está prestes a tornar {name} Owner deste workspace. A ação não pode ser desfeita apenas por eles.",
+      "summary": "Transferindo propriedade para {name}.",
+      "noAdmins": "Ainda não há outros Admins neste workspace.",
+      "continue": "Continuar",
+      "cancel": "Cancelar",
+      "confirm": "Transferir propriedade",
+      "transferring": "Transferindo…",
+      "success": "Propriedade transferida.",
+      "failed": "Não conseguimos transferir a propriedade. Tente novamente."
+    },
+    "deleted": {
+      "empty": "Nenhum workspace excluído.",
+      "deletedOn": "Excluído em {date}",
+      "restoreBefore": "Restaure antes de {date}",
+      "restore": "Restaurar",
+      "restored": "Workspace restaurado.",
+      "restoreFailed": "Não conseguimos restaurar. Tente novamente."
+    }
   }
 }
