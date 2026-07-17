@@ -61,7 +61,6 @@ export function SignupForm() {
         <Input
           id="signup-name"
           autoComplete="name"
-          autoFocus
           aria-invalid={Boolean(errors.name)}
           aria-describedby={errors.name ? 'signup-name-error' : undefined}
           {...register('name')}

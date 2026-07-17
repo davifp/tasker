@@ -27,7 +27,7 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
           <p className="text-muted-foreground">{t('missingTokenBody')}</p>
           <Link
             href="/forgot-password"
-            className="mt-3 inline-block text-primary underline-offset-4 hover:underline"
+            className="mt-3 inline-block text-primary underline underline-offset-4"
           >
             {t('requestNewLink')}
           </Link>

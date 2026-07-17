@@ -16,7 +16,7 @@
     --secondary: 221 81% 96%; /* #F1F5FD           */
     --secondary-foreground: 222 47% 11%;
     --muted: 221 81% 96%; /* #F1F5FD           */
-    --muted-foreground: 215 16% 47%; /* #64748B slate-500 */
+    --muted-foreground: 215 25% 35%; /* #435466 — AA on --background (~7.3:1) */
     --accent: 161 94% 30%; /* #059669 emerald-600 */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%; /* #DC2626 red-600   */

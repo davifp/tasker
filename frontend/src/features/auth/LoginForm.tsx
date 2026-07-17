@@ -67,7 +67,6 @@ export function LoginForm() {
           id="login-email"
           type="email"
           autoComplete="email"
-          autoFocus
           aria-invalid={Boolean(errors.email)}
           aria-describedby={errors.email ? 'login-email-error' : undefined}
           {...register('email')}
@@ -84,7 +83,7 @@ export function LoginForm() {
           <Label htmlFor="login-password">{t('passwordLabel')}</Label>
           <Link
             href="/forgot-password"
-            className="text-sm text-primary underline-offset-4 hover:underline"
+            className="text-sm text-primary underline underline-offset-4"
           >
             {t('forgotPassword')}
           </Link>
