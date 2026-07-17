@@ -1,0 +1,23 @@
+{
+  "app": {
+    "name": "Tasker",
+    "tagline": "SaaS multi-tenant de gestão de projetos"
+  },
+  "common": {
+    "skipToContent": "Pular para o conteúdo principal",
+    "themeToggle": {
+      "toLight": "Mudar para o modo claro",
+      "toDark": "Mudar para o modo escuro",
+      "label": "Alternar tema"
+    }
+  },
+  "home": {
+    "title": "Tasker",
+    "subtitle": "SaaS multi-tenant de gestão de projetos — fundação da Fase 2",
+    "swatches": {
+      "primary": "Primária",
+      "accent": "Destaque",
+      "destructive": "Destrutiva"
+    }
+  }
+}

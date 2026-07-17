@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import { getLocale, getMessages } from 'next-intl/server';
 import { Providers } from './providers';
+import { SkipToContent } from '@/components/shell/SkipToContent';
 import './globals.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -13,11 +15,17 @@ export const metadata: Metadata = {
   description: 'Multi-tenant project management SaaS',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers locale={locale} messages={messages}>
+          <SkipToContent />
+          {children}
+        </Providers>
       </body>
     </html>
   );

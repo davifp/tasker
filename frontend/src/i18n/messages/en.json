@@ -1,0 +1,23 @@
+{
+  "app": {
+    "name": "Tasker",
+    "tagline": "Multi-tenant project management SaaS"
+  },
+  "common": {
+    "skipToContent": "Skip to main content",
+    "themeToggle": {
+      "toLight": "Switch to light mode",
+      "toDark": "Switch to dark mode",
+      "label": "Toggle theme"
+    }
+  },
+  "home": {
+    "title": "Tasker",
+    "subtitle": "Multi-tenant project management SaaS — Phase 2 foundation",
+    "swatches": {
+      "primary": "Primary",
+      "accent": "Accent",
+      "destructive": "Destructive"
+    }
+  }
+}
