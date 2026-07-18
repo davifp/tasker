@@ -357,5 +357,82 @@
       "success": "Member removed.",
       "failed": "We couldn't remove the member."
     }
+  },
+  "projects": {
+    "list": {
+      "title": "Projects",
+      "subtitle": "Kanban boards for every stream of work in this workspace.",
+      "newProject": "New project",
+      "empty": {
+        "title": "No projects yet",
+        "body": "Kick off your first project to start a Kanban board and invite teammates to move cards.",
+        "cta": "Create your first project"
+      },
+      "cardOpen": "Open {name}",
+      "loadFailed": "Couldn't load projects. Try again."
+    },
+    "card": {
+      "backlogTasks": "{count, plural, one {# open task} other {# open tasks}}",
+      "updated": "Updated {date}"
+    },
+    "create": {
+      "trigger": "New project",
+      "title": "New project",
+      "subtitle": "A project groups related tasks under a shared board.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Website relaunch",
+      "slugLabel": "URL slug",
+      "slugHint": "Lowercase letters, numbers, and hyphens.",
+      "colorLabel": "Color",
+      "iconLabel": "Icon",
+      "descriptionLabel": "Description",
+      "descriptionHint": "Optional — up to 500 characters.",
+      "cancel": "Cancel",
+      "submit": "Create project",
+      "submitting": "Creating…",
+      "success": "Project created.",
+      "failed": "Couldn't create the project. Try again.",
+      "slugTaken": "That slug is already used in this workspace."
+    },
+    "header": {
+      "tabs": {
+        "board": "Board",
+        "list": "List",
+        "backlog": "Backlog",
+        "timeline": "Timeline"
+      },
+      "openProjectMenu": "Project menu"
+    },
+    "placeholders": {
+      "comingSoon": "Coming in Phase 4",
+      "listBody": "A flat table view of every task in the project — filterable, sortable, exportable.",
+      "backlogBody": "Groom the backlog before it hits the board. Pull cards into upcoming sprints.",
+      "timelineBody": "A Gantt-style timeline view for planning cross-team work."
+    },
+    "switcher": {
+      "label": "Projects in this workspace",
+      "empty": "No projects yet",
+      "openAll": "See all projects"
+    },
+    "validation": {
+      "name": {
+        "min": "Name must have at least 1 character",
+        "max": "Name is too long (max 80)"
+      },
+      "slug": {
+        "min": "Slug must have at least 2 characters",
+        "max": "Slug is too long (max 40)",
+        "format": "Only lowercase letters, numbers, and hyphens"
+      },
+      "color": {
+        "format": "Pick one of the palette colors"
+      },
+      "icon": {
+        "required": "Pick an icon"
+      },
+      "description": {
+        "max": "Description is too long (max 500)"
+      }
+    }
   }
 }

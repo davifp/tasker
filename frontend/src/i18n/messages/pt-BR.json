@@ -357,5 +357,82 @@
       "success": "Membro removido.",
       "failed": "Não foi possível remover o membro."
     }
+  },
+  "projects": {
+    "list": {
+      "title": "Projetos",
+      "subtitle": "Quadros Kanban para cada frente de trabalho deste workspace.",
+      "newProject": "Novo projeto",
+      "empty": {
+        "title": "Ainda não há projetos",
+        "body": "Crie seu primeiro projeto para abrir um quadro Kanban e convidar o time.",
+        "cta": "Criar meu primeiro projeto"
+      },
+      "cardOpen": "Abrir {name}",
+      "loadFailed": "Não foi possível carregar os projetos. Tente novamente."
+    },
+    "card": {
+      "backlogTasks": "{count, plural, one {# tarefa aberta} other {# tarefas abertas}}",
+      "updated": "Atualizado em {date}"
+    },
+    "create": {
+      "trigger": "Novo projeto",
+      "title": "Novo projeto",
+      "subtitle": "Um projeto agrupa tarefas relacionadas em um único quadro.",
+      "nameLabel": "Nome",
+      "namePlaceholder": "Relançamento do site",
+      "slugLabel": "Slug da URL",
+      "slugHint": "Letras minúsculas, números e hífens.",
+      "colorLabel": "Cor",
+      "iconLabel": "Ícone",
+      "descriptionLabel": "Descrição",
+      "descriptionHint": "Opcional — até 500 caracteres.",
+      "cancel": "Cancelar",
+      "submit": "Criar projeto",
+      "submitting": "Criando…",
+      "success": "Projeto criado.",
+      "failed": "Não foi possível criar o projeto. Tente novamente.",
+      "slugTaken": "Esse slug já está em uso neste workspace."
+    },
+    "header": {
+      "tabs": {
+        "board": "Quadro",
+        "list": "Lista",
+        "backlog": "Backlog",
+        "timeline": "Linha do tempo"
+      },
+      "openProjectMenu": "Menu do projeto"
+    },
+    "placeholders": {
+      "comingSoon": "Chega na Fase 4",
+      "listBody": "Uma visão em tabela de todas as tarefas do projeto — filtrável, ordenável, exportável.",
+      "backlogBody": "Refine o backlog antes de mover para o quadro. Puxe cartões para as próximas sprints.",
+      "timelineBody": "Uma visão em linha do tempo estilo Gantt para planejar trabalho entre times."
+    },
+    "switcher": {
+      "label": "Projetos deste workspace",
+      "empty": "Ainda não há projetos",
+      "openAll": "Ver todos os projetos"
+    },
+    "validation": {
+      "name": {
+        "min": "O nome precisa ter pelo menos 1 caractere",
+        "max": "O nome é muito longo (máx. 80)"
+      },
+      "slug": {
+        "min": "O slug precisa ter pelo menos 2 caracteres",
+        "max": "O slug é muito longo (máx. 40)",
+        "format": "Apenas letras minúsculas, números e hífens"
+      },
+      "color": {
+        "format": "Escolha uma cor da paleta"
+      },
+      "icon": {
+        "required": "Escolha um ícone"
+      },
+      "description": {
+        "max": "A descrição é muito longa (máx. 500)"
+      }
+    }
   }
 }

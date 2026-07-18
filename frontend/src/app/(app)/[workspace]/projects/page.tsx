@@ -1,15 +1,10 @@
-import { LayoutDashboard } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
-import { PlaceholderPage } from '@/components/shell/PlaceholderPage';
+import { ProjectListPage } from '@/features/projects/ProjectListPage';
 
-export default async function ProjectsPlaceholder() {
-  const t = await getTranslations('shell.placeholders.projects');
-  return (
-    <PlaceholderPage
-      icon={LayoutDashboard}
-      title={t('title')}
-      description={t('description')}
-      comingSoon={t('comingSoon')}
-    />
-  );
+interface PageProps {
+  params: Promise<{ workspace: string }>;
+}
+
+export default async function ProjectsListRoute({ params }: PageProps) {
+  const { workspace } = await params;
+  return <ProjectListPage workspaceSlug={workspace} />;
 }

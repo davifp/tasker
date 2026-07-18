@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { primaryNavLinks, managementNavLinks, type NavLink } from './nav-links';
+import { ProjectSwitcher } from '@/features/projects/ProjectSwitcher';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'tsk.sidebar.collapsed';
@@ -110,6 +111,8 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
           />
         ))}
       </nav>
+      <Separator className="my-4" />
+      <ProjectSwitcher workspaceSlug={workspaceSlug} collapsed={collapsed} />
       <Separator className="my-4" />
       <nav className="flex flex-col gap-1">
         {management.map((link) => (
