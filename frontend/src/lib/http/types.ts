@@ -46,6 +46,15 @@ export interface Task {
   purgeAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // Populated by list + detail endpoints; empty for create/update responses
+  // that don't reload the labels join.
+  labels?: TaskLabel[];
+}
+
+export interface TaskLabel {
+  id: string;
+  name: string;
+  color: string;
 }
 
 // Server-side move response. On the blocked branch the controller merges

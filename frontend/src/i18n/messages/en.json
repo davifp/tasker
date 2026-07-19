@@ -434,5 +434,172 @@
         "max": "Description is too long (max 500)"
       }
     }
+  },
+  "board": {
+    "loading": "Loading board…",
+    "emptyColumn": "No tasks yet.",
+    "columnCount": "{count, plural, one {# task} other {# tasks}}",
+    "columnLabel": "{column} column",
+    "columns": {
+      "BACKLOG": "Backlog",
+      "TODO": "To do",
+      "IN_PROGRESS": "In progress",
+      "IN_REVIEW": "In review",
+      "DONE": "Done"
+    },
+    "announce": {
+      "moved": "Task {title} moved to {column}.",
+      "moveFailed": "Could not move task {title}. It stayed in place."
+    },
+    "dnd": {
+      "pickedUp": "Picked up task {id}. Use arrow keys to move, Space to drop, Escape to cancel.",
+      "movedOver": "Task {id} is over {over}.",
+      "dropped": "Task {id} dropped on {over}.",
+      "cancelled": "Move of task {id} cancelled.",
+      "dragModeHint": "Drag mode — use arrows to move, Space to drop, Escape to cancel."
+    },
+    "errors": {
+      "loadFailed": "Couldn't load the board. Try again.",
+      "createFailed": "Couldn't create the task. Try again.",
+      "moveFailed": "Couldn't move the task. Try again.",
+      "deleteFailed": "Couldn't delete the task. Try again."
+    },
+    "priority": {
+      "label": "Priority {priority}",
+      "values": {
+        "LOW": "Low",
+        "MEDIUM": "Medium",
+        "HIGH": "High"
+      }
+    },
+    "dueDate": {
+      "label": "Due {date}",
+      "overdueLabel": "Overdue since {date}"
+    },
+    "assignee": {
+      "unassigned": "Unassigned",
+      "assignedTo": "Assigned to {id}"
+    },
+    "card": {
+      "open": "Open task #{number}: {title}",
+      "labelOverflow": "{count, plural, one {# more label} other {# more labels}}"
+    },
+    "labels": {
+      "heading": "Labels",
+      "trigger": "Edit labels",
+      "empty": "No labels",
+      "none": "No labels defined in this workspace."
+    },
+    "quickAdd": {
+      "trigger": "Add task",
+      "placeholder": "What needs to be done?",
+      "titleLabel": "New task title",
+      "cancel": "Cancel",
+      "submit": "Add",
+      "submitting": "Adding…",
+      "created": "Created \"{title}\"."
+    },
+    "undo": {
+      "deleted": "Deleted \"{title}\".",
+      "action": "Undo"
+    },
+    "blockerDialog": {
+      "title": "Move \"{title}\" to Done?",
+      "description": "This task has open blockers. Completing it now overrides the dependencies below.",
+      "cancel": "Cancel",
+      "confirm": "Complete anyway"
+    },
+    "drawer": {
+      "title": "Task",
+      "description": "Task details",
+      "loading": "Loading task…",
+      "taskNumber": "#{number}",
+      "titleLabel": "Task title",
+      "descriptionLabel": "Task description",
+      "descriptionHeading": "Description",
+      "noDescription": "No description yet.",
+      "edit": "Edit",
+      "delete": "Delete",
+      "errors": {
+        "saveTitleFailed": "Couldn't save the title. Try again.",
+        "saveDescriptionFailed": "Couldn't save the description. Try again."
+      }
+    },
+    "description": {
+      "label": "Description",
+      "modeSwitcherLabel": "Description mode",
+      "write": "Write",
+      "preview": "Preview",
+      "placeholder": "Add details in Markdown…",
+      "nothingToPreview": "Nothing to preview yet.",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "metadata": {
+      "label": "Task metadata",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "assigneePlaceholder": "User id",
+      "dueDate": "Due date",
+      "errors": {
+        "updateFailed": "Couldn't update the task. Try again."
+      }
+    },
+    "checklist": {
+      "label": "Checklist",
+      "heading": "Checklist",
+      "loading": "Loading…",
+      "progress": "{done}/{total}",
+      "add": "Add",
+      "addPlaceholder": "New item…",
+      "addLabel": "New checklist item",
+      "renameLabel": "Rename item",
+      "renameAria": "Rename checklist item {title}",
+      "deleteAria": "Delete checklist item {title}",
+      "saveAria": "Save item",
+      "cancelAria": "Cancel edit",
+      "errors": {
+        "addFailed": "Couldn't add the item. Try again.",
+        "renameFailed": "Couldn't rename the item. Try again."
+      }
+    },
+    "comments": {
+      "label": "Comments",
+      "heading": "Comments",
+      "loading": "Loading…",
+      "empty": "No comments yet.",
+      "placeholder": "Write a comment…",
+      "addLabel": "New comment",
+      "add": "Add",
+      "adding": "Adding…",
+      "edit": "Edit",
+      "editLabel": "Edit comment",
+      "editAria": "Edit this comment",
+      "delete": "Delete",
+      "deleteAria": "Delete this comment",
+      "cancel": "Cancel",
+      "save": "Save",
+      "authorSelf": "You",
+      "authorOther": "Author",
+      "errors": {
+        "addFailed": "Couldn't add the comment. Try again.",
+        "editFailed": "Couldn't save the comment. Try again."
+      }
+    },
+    "dependencies": {
+      "label": "Dependencies",
+      "heading": "Blocked by",
+      "loading": "Loading…",
+      "empty": "No blockers.",
+      "addPlaceholder": "Blocker task id…",
+      "addLabel": "Blocker task id",
+      "add": "Add",
+      "removeAria": "Remove blocker",
+      "errors": {
+        "addFailed": "Couldn't add the dependency. Try again.",
+        "cycle": "That would create a dependency cycle."
+      }
+    }
   }
 }

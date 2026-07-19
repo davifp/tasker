@@ -75,6 +75,37 @@ export function useReorderChecklistItem({ workspaceSlug, projectSlug, taskNumber
   });
 }
 
+export function useRenameChecklistItem({ workspaceSlug, projectSlug, taskNumber }: Coords) {
+  const queryClient = useQueryClient();
+  const key = taskKeys.checklist(workspaceSlug, projectSlug, taskNumber);
+  return useMutation<
+    ChecklistItem,
+    unknown,
+    { itemId: string; title: string },
+    { previous: ChecklistItem[] | undefined }
+  >({
+    mutationFn: ({ itemId, title }) =>
+      checklistsHttp.update(workspaceSlug, projectSlug, taskNumber, itemId, { title }),
+    async onMutate({ itemId, title }) {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ChecklistItem[]>(key);
+      if (previous) {
+        queryClient.setQueryData<ChecklistItem[]>(
+          key,
+          previous.map((i) => (i.id === itemId ? { ...i, title } : i)),
+        );
+      }
+      return { previous };
+    },
+    onError(_err, _vars, ctx) {
+      if (ctx?.previous !== undefined) queryClient.setQueryData(key, ctx.previous);
+    },
+    onSettled() {
+      void queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
 export function useAddChecklistItem({ workspaceSlug, projectSlug, taskNumber }: Coords) {
   const queryClient = useQueryClient();
   const key = taskKeys.checklist(workspaceSlug, projectSlug, taskNumber);

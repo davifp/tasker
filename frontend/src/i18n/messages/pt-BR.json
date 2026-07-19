@@ -434,5 +434,172 @@
         "max": "A descrição é muito longa (máx. 500)"
       }
     }
+  },
+  "board": {
+    "loading": "Carregando quadro…",
+    "emptyColumn": "Nenhuma tarefa ainda.",
+    "columnCount": "{count, plural, one {# tarefa} other {# tarefas}}",
+    "columnLabel": "Coluna {column}",
+    "columns": {
+      "BACKLOG": "Backlog",
+      "TODO": "A fazer",
+      "IN_PROGRESS": "Em progresso",
+      "IN_REVIEW": "Em revisão",
+      "DONE": "Concluído"
+    },
+    "announce": {
+      "moved": "Tarefa {title} movida para {column}.",
+      "moveFailed": "Não foi possível mover a tarefa {title}. Ela permaneceu no lugar."
+    },
+    "dnd": {
+      "pickedUp": "Peguei a tarefa {id}. Use as setas para mover, Espaço para soltar, Esc para cancelar.",
+      "movedOver": "Tarefa {id} está sobre {over}.",
+      "dropped": "Tarefa {id} solta em {over}.",
+      "cancelled": "Movimento da tarefa {id} cancelado.",
+      "dragModeHint": "Modo arrastar — use as setas para mover, Espaço para soltar, Esc para cancelar."
+    },
+    "errors": {
+      "loadFailed": "Não foi possível carregar o quadro. Tente novamente.",
+      "createFailed": "Não foi possível criar a tarefa. Tente novamente.",
+      "moveFailed": "Não foi possível mover a tarefa. Tente novamente.",
+      "deleteFailed": "Não foi possível excluir a tarefa. Tente novamente."
+    },
+    "priority": {
+      "label": "Prioridade {priority}",
+      "values": {
+        "LOW": "Baixa",
+        "MEDIUM": "Média",
+        "HIGH": "Alta"
+      }
+    },
+    "dueDate": {
+      "label": "Prazo {date}",
+      "overdueLabel": "Atrasada desde {date}"
+    },
+    "assignee": {
+      "unassigned": "Sem responsável",
+      "assignedTo": "Atribuída a {id}"
+    },
+    "card": {
+      "open": "Abrir tarefa #{number}: {title}",
+      "labelOverflow": "{count, plural, one {mais # etiqueta} other {mais # etiquetas}}"
+    },
+    "labels": {
+      "heading": "Etiquetas",
+      "trigger": "Editar etiquetas",
+      "empty": "Sem etiquetas",
+      "none": "Nenhuma etiqueta definida neste workspace."
+    },
+    "quickAdd": {
+      "trigger": "Adicionar tarefa",
+      "placeholder": "O que precisa ser feito?",
+      "titleLabel": "Título da nova tarefa",
+      "cancel": "Cancelar",
+      "submit": "Adicionar",
+      "submitting": "Adicionando…",
+      "created": "Tarefa \"{title}\" criada."
+    },
+    "undo": {
+      "deleted": "\"{title}\" excluída.",
+      "action": "Desfazer"
+    },
+    "blockerDialog": {
+      "title": "Mover \"{title}\" para Concluído?",
+      "description": "Esta tarefa possui impeditivos em aberto. Concluí-la agora ignora as dependências abaixo.",
+      "cancel": "Cancelar",
+      "confirm": "Concluir mesmo assim"
+    },
+    "drawer": {
+      "title": "Tarefa",
+      "description": "Detalhes da tarefa",
+      "loading": "Carregando tarefa…",
+      "taskNumber": "#{number}",
+      "titleLabel": "Título da tarefa",
+      "descriptionLabel": "Descrição da tarefa",
+      "descriptionHeading": "Descrição",
+      "noDescription": "Sem descrição ainda.",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "errors": {
+        "saveTitleFailed": "Não foi possível salvar o título. Tente novamente.",
+        "saveDescriptionFailed": "Não foi possível salvar a descrição. Tente novamente."
+      }
+    },
+    "description": {
+      "label": "Descrição",
+      "modeSwitcherLabel": "Modo da descrição",
+      "write": "Escrever",
+      "preview": "Visualizar",
+      "placeholder": "Adicione detalhes em Markdown…",
+      "nothingToPreview": "Nada para visualizar ainda.",
+      "save": "Salvar",
+      "saving": "Salvando…",
+      "cancel": "Cancelar"
+    },
+    "metadata": {
+      "label": "Metadados da tarefa",
+      "priority": "Prioridade",
+      "assignee": "Responsável",
+      "assigneePlaceholder": "Id do usuário",
+      "dueDate": "Prazo",
+      "errors": {
+        "updateFailed": "Não foi possível atualizar a tarefa. Tente novamente."
+      }
+    },
+    "checklist": {
+      "label": "Checklist",
+      "heading": "Checklist",
+      "loading": "Carregando…",
+      "progress": "{done}/{total}",
+      "add": "Adicionar",
+      "addPlaceholder": "Novo item…",
+      "addLabel": "Novo item do checklist",
+      "renameLabel": "Renomear item",
+      "renameAria": "Renomear item do checklist {title}",
+      "deleteAria": "Excluir item do checklist {title}",
+      "saveAria": "Salvar item",
+      "cancelAria": "Cancelar edição",
+      "errors": {
+        "addFailed": "Não foi possível adicionar o item. Tente novamente.",
+        "renameFailed": "Não foi possível renomear o item. Tente novamente."
+      }
+    },
+    "comments": {
+      "label": "Comentários",
+      "heading": "Comentários",
+      "loading": "Carregando…",
+      "empty": "Sem comentários ainda.",
+      "placeholder": "Escreva um comentário…",
+      "addLabel": "Novo comentário",
+      "add": "Adicionar",
+      "adding": "Adicionando…",
+      "edit": "Editar",
+      "editLabel": "Editar comentário",
+      "editAria": "Editar este comentário",
+      "delete": "Excluir",
+      "deleteAria": "Excluir este comentário",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "authorSelf": "Você",
+      "authorOther": "Autor",
+      "errors": {
+        "addFailed": "Não foi possível adicionar o comentário. Tente novamente.",
+        "editFailed": "Não foi possível salvar o comentário. Tente novamente."
+      }
+    },
+    "dependencies": {
+      "label": "Dependências",
+      "heading": "Bloqueada por",
+      "loading": "Carregando…",
+      "empty": "Sem impeditivos.",
+      "addPlaceholder": "Id da tarefa impeditiva…",
+      "addLabel": "Id da tarefa impeditiva",
+      "add": "Adicionar",
+      "removeAria": "Remover impeditivo",
+      "errors": {
+        "addFailed": "Não foi possível adicionar a dependência. Tente novamente.",
+        "cycle": "Isso criaria um ciclo de dependências."
+      }
+    }
   }
 }

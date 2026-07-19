@@ -65,7 +65,9 @@ describe('useMoveTask', () => {
       status: 'DONE',
       position: 'a1',
       ifUnchangedSince: '2026-07-17T00:00:00.000Z',
-      targetColumnTail: 'a0',
+      targetBefore: 'a0',
+      targetAfter: null,
+      targetStatus: 'DONE',
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -96,7 +98,9 @@ describe('useMoveTask', () => {
       status: 'IN_PROGRESS',
       position: 'a0',
       ifUnchangedSince: '2026-07-17T00:00:00.000Z',
-      targetColumnTail: 'a4',
+      targetBefore: 'a4',
+      targetAfter: null,
+      targetStatus: 'IN_PROGRESS',
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -125,7 +129,9 @@ describe('useMoveTask', () => {
       status: 'IN_PROGRESS',
       position: 'a0',
       ifUnchangedSince: '2026-07-17T00:00:00.000Z',
-      targetColumnTail: 'a4',
+      targetBefore: 'a4',
+      targetAfter: null,
+      targetStatus: 'IN_PROGRESS',
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Prisma, Task, TaskStatus, WorkspaceRole } from '@prisma/client';
+import { Label, Prisma, Task, TaskStatus, WorkspaceRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Positions } from '../common/ordering/positions';
 import {
@@ -61,6 +61,22 @@ export interface MoveTaskInput {
 export type MoveTaskResult =
   | { kind: 'moved'; task: Task }
   | { kind: 'blocked'; task: Task; acknowledgedBlockersOpen: string[] };
+
+// The board renders label chips on each card, so `findByNumber` and
+// `listForProject` include the labels join. Callers that only need the
+// scalar Task fields can ignore the `labels` property.
+export type TaskWithLabels = Task & { labels: Label[] };
+
+const TASK_WITH_LABELS_INCLUDE = {
+  labels: { include: { label: true } },
+} as const satisfies Prisma.TaskInclude;
+
+function attachLabels(
+  row: Task & { labels: Array<{ label: Label }> },
+): TaskWithLabels {
+  const { labels, ...rest } = row;
+  return { ...rest, labels: labels.map((join) => join.label) };
+}
 
 export interface ListTasksFilters {
   cursor?: string;
@@ -144,14 +160,15 @@ export class TasksService {
     projectId: string,
     number: number,
     includeDeleted = false,
-  ): Promise<Task | null> {
+  ): Promise<TaskWithLabels | null> {
     const task = await this.prisma.forSystem().task.findUnique({
       where: { projectId_number: { projectId, number } },
+      include: TASK_WITH_LABELS_INCLUDE,
     });
     if (!task) return null;
     if (task.workspaceId !== workspaceId) return null;
     if (task.deletedAt && !includeDeleted) return null;
-    return task;
+    return attachLabels(task);
   }
 
   async update(
@@ -399,7 +416,7 @@ export class TasksService {
     workspaceId: string,
     projectId: string,
     filters: ListTasksFilters = {},
-  ): Promise<CursorPage<Task>> {
+  ): Promise<CursorPage<TaskWithLabels>> {
     const limit = Math.min(Math.max(filters.limit ?? DEFAULT_LIST_LIMIT, 1), MAX_LIST_LIMIT);
     const where: Prisma.TaskWhereInput = {
       workspaceId,
@@ -412,6 +429,7 @@ export class TasksService {
 
     const items = await this.prisma.forSystem().task.findMany({
       where,
+      include: TASK_WITH_LABELS_INCLUDE,
       orderBy: [{ status: 'asc' }, { position: 'asc' }, { id: 'asc' }],
       take: limit + 1,
       ...(filters.cursor ? { cursor: { id: filters.cursor }, skip: 1 } : {}),
@@ -421,7 +439,7 @@ export class TasksService {
     const page = hasMore ? items.slice(0, limit) : items;
     const last = page[page.length - 1];
     return {
-      items: page,
+      items: page.map(attachLabels),
       nextCursor: hasMore && last ? last.id : null,
     };
   }
