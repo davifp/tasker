@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { randomBytes } from 'node:crypto';
 import { randomEmail, randomWorkspaceName } from './factories';
-import { extractFirstUrl, purgeMessages, waitForEmail } from './mailhog';
+import { extractFirstUrl, waitForEmail } from './mailhog';
 
 export interface OnboardedAccount {
   email: string;
@@ -34,7 +34,10 @@ export async function onboardAccount(
   page: Page,
   overrides: Partial<OnboardedAccount> = {},
 ): Promise<OnboardedAccount> {
-  await purgeMessages();
+  // Do NOT purge MailHog here — the inbox is shared across every parallel
+  // worker, so wiping it would delete verification mails other workers are
+  // waiting on. `waitForEmail` already filters by the unique per-worker
+  // address, so leftover messages are harmless.
   const email = overrides.email ?? randomEmail('kanban');
   const password = overrides.password ?? 'Sup3r!Passw0rd';
   const displayName = overrides.displayName ?? 'Kanban User';

@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { extractFirstUrl, purgeMessages, waitForEmail } from './support/mailhog';
+import { extractFirstUrl, waitForEmail } from './support/mailhog';
 import { randomEmail, randomWorkspaceName } from './support/factories';
 
 test.describe('signup → verify email → create workspace → invite', () => {
-  test.beforeEach(async () => {
-    await purgeMessages();
-  });
+  // No MailHog purge: the inbox is shared across parallel workers and wiping
+  // it here would delete verification mails other workers are polling for.
+  // `waitForEmail` matches by the unique per-test email address anyway.
 
   test('team lead completes the mandatory onboarding flow', async ({ page }) => {
     const email = randomEmail('lead');
