@@ -240,6 +240,7 @@ model Task {
   position        String
   assigneeUserId  String?
   createdByUserId String
+  startDate       DateTime?
   dueDate         DateTime?
   deletedAt       DateTime?
   purgeAt         DateTime?
@@ -259,6 +260,7 @@ model Task {
   @@unique([projectId, number])
   @@index([workspaceId, projectId, status, position])
   @@index([workspaceId, assigneeUserId, status])
+  @@index([workspaceId, projectId, startDate, dueDate])
 }
 
 model TaskLabel {

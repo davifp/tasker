@@ -36,3 +36,78 @@ describe('ListTasksQueryDto — labels', () => {
     expect((parsed as { labels?: string[] }).labels).toBeUndefined();
   });
 });
+
+describe('ListTasksQueryDto — priority', () => {
+  it('parses a single-value priority query into a one-element array', () => {
+    const parsed = schema.parse({ priority: 'HIGH' });
+    expect((parsed as { priority?: string[] }).priority).toEqual(['HIGH']);
+  });
+
+  it('parses a comma-separated priority query and trims whitespace', () => {
+    const parsed = schema.parse({ priority: 'HIGH, MEDIUM' });
+    expect((parsed as { priority?: string[] }).priority).toEqual(['HIGH', 'MEDIUM']);
+  });
+
+  it('collapses to undefined when the value is an empty string', () => {
+    const parsed = schema.parse({ priority: '' });
+    expect((parsed as { priority?: string[] }).priority).toBeUndefined();
+  });
+
+  it('rejects a priority query containing an unknown enum value', () => {
+    const result = schema.safeParse({ priority: 'HIGH,URGENT' });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('ListTasksQueryDto — sort / sortDir', () => {
+  it('accepts each documented sort field', () => {
+    for (const s of ['dueDate', 'updatedAt', 'priority', 'title', 'position'] as const) {
+      const parsed = schema.parse({ sort: s });
+      expect((parsed as { sort?: string }).sort).toBe(s);
+    }
+  });
+
+  it('accepts asc and desc as sortDir', () => {
+    for (const d of ['asc', 'desc'] as const) {
+      const parsed = schema.parse({ sortDir: d });
+      expect((parsed as { sortDir?: string }).sortDir).toBe(d);
+    }
+  });
+
+  it('rejects an unknown sort value', () => {
+    const result = schema.safeParse({ sort: 'random' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects an unknown sortDir value', () => {
+    const result = schema.safeParse({ sortDir: 'random' });
+    expect(result.success).toBe(false);
+  });
+
+  it('omits sort/sortDir when unset (service applies default)', () => {
+    const parsed = schema.parse({});
+    expect((parsed as { sort?: string }).sort).toBeUndefined();
+    expect((parsed as { sortDir?: string }).sortDir).toBeUndefined();
+  });
+});
+
+describe('ListTasksQueryDto — from / to', () => {
+  it('accepts a valid ISO datetime for from and to', () => {
+    const parsed = schema.parse({
+      from: '2026-07-01T00:00:00.000Z',
+      to: '2026-07-31T23:59:59.999Z',
+    });
+    expect((parsed as { from?: string; to?: string }).from).toBe('2026-07-01T00:00:00.000Z');
+    expect((parsed as { from?: string; to?: string }).to).toBe('2026-07-31T23:59:59.999Z');
+  });
+
+  it('rejects a non-ISO from value', () => {
+    const result = schema.safeParse({ from: '2026/07/01' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a non-ISO to value', () => {
+    const result = schema.safeParse({ to: 'yesterday' });
+    expect(result.success).toBe(false);
+  });
+});

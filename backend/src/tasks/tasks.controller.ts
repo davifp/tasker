@@ -68,6 +68,7 @@ export class TasksController {
       status: dto.status,
       priority: dto.priority,
       assigneeUserId: dto.assigneeUserId,
+      startDate: dto.startDate,
       dueDate: dto.dueDate,
       labelIds: dto.labelIds,
       actorUserId: ctx.userId,
@@ -91,6 +92,11 @@ export class TasksController {
       labelId: query.labelId,
       labelIds: query.labels,
       includeDeleted: query.includeDeleted,
+      sort: query.sort,
+      sortDir: query.sortDir,
+      from: query.from,
+      to: query.to,
+      priority: query.priority,
     });
   }
 

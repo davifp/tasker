@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Label, Prisma, Task, TaskStatus, WorkspaceRole } from '@prisma/client';
+import { Label, Priority, Prisma, Task, TaskStatus, WorkspaceRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Positions } from '../common/ordering/positions';
 import {
@@ -33,6 +33,7 @@ export interface CreateTaskInput {
   status?: TaskStatus;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH';
   assigneeUserId?: string;
+  startDate?: string;
   dueDate?: string;
   labelIds?: string[];
   actorUserId: string;
@@ -43,6 +44,7 @@ export interface UpdateTaskPatch {
   description?: string;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH';
   assigneeUserId?: string | null;
+  startDate?: string | null;
   dueDate?: string | null;
   labelIds?: string[];
 }
@@ -87,6 +89,9 @@ function attachLabels(
   return { ...rest, labels: labels.map((join) => join.label) };
 }
 
+export type TaskSortField = 'dueDate' | 'updatedAt' | 'priority' | 'title' | 'position';
+export type TaskSortDir = 'asc' | 'desc';
+
 export interface ListTasksFilters {
   cursor?: string;
   limit?: number;
@@ -95,6 +100,16 @@ export interface ListTasksFilters {
   labelId?: string;
   labelIds?: string[];
   includeDeleted?: boolean;
+  // Sorting — service defaults keep the Kanban board contract byte-identical.
+  sort?: TaskSortField;
+  sortDir?: TaskSortDir;
+  // Date-window filter (ISO strings). Semantics: a task overlaps `[from, to)`
+  // when (startDate ?? dueDate) < to AND (dueDate ?? startDate) >= from —
+  // Timeline and Calendar tolerate tasks that only have one endpoint.
+  from?: string;
+  to?: string;
+  // Union filter over Priority.
+  priority?: Priority[];
 }
 
 export interface CursorPage<T> {
@@ -136,6 +151,7 @@ export class TasksService {
               position,
               assigneeUserId: input.assigneeUserId,
               createdByUserId: input.actorUserId,
+              startDate: input.startDate ? new Date(input.startDate) : null,
               dueDate: input.dueDate ? new Date(input.dueDate) : null,
               ...(input.labelIds && input.labelIds.length > 0
                 ? { labels: { create: input.labelIds.map((labelId) => ({ labelId })) } }
@@ -195,6 +211,34 @@ export class TasksService {
         throw new NotFoundException('Task not found');
       }
 
+      // Cross-field invariant: when the patch would leave the task with both
+      // endpoints set, enforce `startDate <= dueDate`. Resolve the effective
+      // values by layering the patch over `existing` — this catches the case
+      // where the caller only supplies one side but the other is already
+      // stored. The DTO refine covers requests that supply both fields;
+      // this service-level check catches the interaction with persisted state.
+      const nextStartDate =
+        scalarPatch.startDate !== undefined ? scalarPatch.startDate : existing.startDate;
+      const nextDueDate =
+        scalarPatch.dueDate !== undefined ? scalarPatch.dueDate : existing.dueDate;
+      if (nextStartDate && nextDueDate) {
+        const startMs = nextStartDate instanceof Date
+          ? nextStartDate.getTime()
+          : new Date(nextStartDate).getTime();
+        const dueMs = nextDueDate instanceof Date
+          ? nextDueDate.getTime()
+          : new Date(nextDueDate).getTime();
+        if (startMs > dueMs) {
+          throw new BadRequestException({
+            type: 'https://tasker.dev/problems/task-start-after-due',
+            title: 'startDate must be earlier than or equal to dueDate',
+            detail:
+              'The patched startDate would fall after the persisted dueDate. Update both endpoints together.',
+            status: 400,
+          });
+        }
+      }
+
       const updated = await tx.task.update({
         where: { id: taskId },
         data: {
@@ -205,6 +249,9 @@ export class TasksService {
           ...(scalarPatch.priority !== undefined ? { priority: scalarPatch.priority } : {}),
           ...(scalarPatch.assigneeUserId !== undefined
             ? { assigneeUserId: scalarPatch.assigneeUserId }
+            : {}),
+          ...(scalarPatch.startDate !== undefined
+            ? { startDate: scalarPatch.startDate ? new Date(scalarPatch.startDate) : null }
             : {}),
           ...(scalarPatch.dueDate !== undefined
             ? { dueDate: scalarPatch.dueDate ? new Date(scalarPatch.dueDate) : null }
@@ -439,6 +486,36 @@ export class TasksService {
         : filters.labelId
           ? [filters.labelId]
           : [];
+
+    // Interval-overlap semantics for the `[from, to)` window: a task belongs
+    // in the window when
+    //   (startDate ?? dueDate) <  to   AND
+    //   (dueDate   ?? startDate) >= from
+    // — tolerating tasks that carry only one endpoint. Expressed with Prisma
+    // OR branches because Postgres can't COALESCE inside a Prisma `where`
+    // fragment; the composite index on (workspaceId, projectId, startDate,
+    // dueDate) still services both branches.
+    // Tasks with BOTH startDate = null AND dueDate = null are intentionally excluded from windowed queries — they surface only in the Timeline "no dates" bin.
+    const dateWindow: Prisma.TaskWhereInput[] = [];
+    if (filters.from !== undefined) {
+      const fromDate = new Date(filters.from);
+      dateWindow.push({
+        OR: [
+          { dueDate: { gte: fromDate } },
+          { AND: [{ dueDate: null }, { startDate: { gte: fromDate } }] },
+        ],
+      });
+    }
+    if (filters.to !== undefined) {
+      const toDate = new Date(filters.to);
+      dateWindow.push({
+        OR: [
+          { startDate: { lt: toDate } },
+          { AND: [{ startDate: null }, { dueDate: { lt: toDate } }] },
+        ],
+      });
+    }
+
     const where: Prisma.TaskWhereInput = {
       workspaceId,
       projectId,
@@ -448,12 +525,18 @@ export class TasksService {
       ...(labelIds.length > 0
         ? { labels: { some: { labelId: { in: labelIds } } } }
         : {}),
+      ...(filters.priority && filters.priority.length > 0
+        ? { priority: { in: filters.priority } }
+        : {}),
+      ...(dateWindow.length > 0 ? { AND: dateWindow } : {}),
     };
+
+    const orderBy = this.resolveOrderBy(filters.sort, filters.sortDir);
 
     const items = await this.prisma.forSystem().task.findMany({
       where,
       include: TASK_WITH_LABELS_INCLUDE,
-      orderBy: [{ status: 'asc' }, { position: 'asc' }, { id: 'asc' }],
+      orderBy,
       take: limit + 1,
       ...(filters.cursor ? { cursor: { id: filters.cursor }, skip: 1 } : {}),
     });
@@ -499,6 +582,38 @@ export class TasksService {
   // ---------------------------------------------------------------------------
   // Internal helpers
   // ---------------------------------------------------------------------------
+
+  // Compose a stable `orderBy` array. Every branch tie-breaks on
+  // (position asc, id asc) so cursor pagination is deterministic even when
+  // the primary sort field is non-unique (priority, dueDate, updatedAt).
+  // The default — no `sort` supplied — reproduces the Phase-3 Kanban
+  // contract byte-identically: (status asc, position asc, id asc).
+  private resolveOrderBy(
+    sort?: TaskSortField,
+    sortDir?: TaskSortDir,
+  ): Prisma.TaskOrderByWithRelationInput[] {
+    if (!sort) {
+      return [{ status: 'asc' }, { position: 'asc' }, { id: 'asc' }];
+    }
+    const dir: TaskSortDir = sortDir ?? 'asc';
+    if (sort === 'position') {
+      return [{ position: dir }, { id: 'asc' }];
+    }
+    // Only `dueDate` (and `startDate`, not exposed here) are nullable — the `nulls` clause is a Prisma type error on `title`/`priority`/`updatedAt` and a Postgres no-op. Emit the compact shape for non-nullable keys.
+    if (sort === 'title' || sort === 'priority' || sort === 'updatedAt') {
+      return [{ [sort]: dir } as Prisma.TaskOrderByWithRelationInput, { position: 'asc' }, { id: 'asc' }];
+    }
+    // `nulls: 'last'` keeps rows with a null primary field at the tail on
+    // ascending sorts (and at the head on descending) — matches user
+    // expectation for date sorts on tasks without dueDate. Prisma resolves
+    // this to Postgres NULLS LAST/FIRST accordingly.
+    const nulls: 'first' | 'last' = dir === 'asc' ? 'last' : 'first';
+    return [
+      { [sort]: { sort: dir, nulls } } as Prisma.TaskOrderByWithRelationInput,
+      { position: 'asc' },
+      { id: 'asc' },
+    ];
+  }
 
   private async acquireColumnLock(
     tx: PrismaTx,

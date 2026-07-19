@@ -686,4 +686,204 @@ describe('TasksService.listForProject', () => {
       checklistDone: 0,
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Additional Views (Task 1.0) — filter composition + orderBy
+  // ---------------------------------------------------------------------------
+
+  describe('extended filters', () => {
+    async function callList(filters: Parameters<TasksService['listForProject']>[2]): Promise<
+      Record<string, unknown>
+    > {
+      const service = await buildService();
+      taskClient.findMany = vi.fn().mockResolvedValueOnce([]);
+      (rawClient as unknown as { task: unknown }).task = {
+        ...taskClient,
+        findMany: taskClient.findMany,
+      };
+      await service.listForProject(WS, PROJECT, filters);
+      return (taskClient.findMany as unknown as { mock: { calls: unknown[][] } }).mock
+        .calls[0][0] as Record<string, unknown>;
+    }
+
+    it('composes an OR overlap fragment when only `from` is set', async () => {
+      const call = await callList({ from: '2026-07-01T00:00:00.000Z' });
+      const where = call['where'] as { AND?: unknown[] };
+      expect(Array.isArray(where.AND)).toBe(true);
+      const first = (where.AND as Array<Record<string, unknown>>)[0];
+      expect(first).toEqual({
+        OR: [
+          { dueDate: { gte: new Date('2026-07-01T00:00:00.000Z') } },
+          {
+            AND: [
+              { dueDate: null },
+              { startDate: { gte: new Date('2026-07-01T00:00:00.000Z') } },
+            ],
+          },
+        ],
+      });
+    });
+
+    it('composes both `from` and `to` overlap fragments', async () => {
+      const call = await callList({
+        from: '2026-07-01T00:00:00.000Z',
+        to: '2026-07-31T00:00:00.000Z',
+      });
+      const where = call['where'] as { AND?: unknown[] };
+      expect((where.AND as unknown[]).length).toBe(2);
+    });
+
+    it('applies `priority: { in: [...] }` when priority array is non-empty', async () => {
+      const call = await callList({ priority: ['HIGH', 'MEDIUM'] });
+      expect((call['where'] as { priority?: unknown }).priority).toEqual({
+        in: ['HIGH', 'MEDIUM'],
+      });
+    });
+
+    it('omits priority filter when the array is empty', async () => {
+      const call = await callList({ priority: [] });
+      expect((call['where'] as { priority?: unknown }).priority).toBeUndefined();
+    });
+
+    it('defaults orderBy to (status asc, position asc, id asc) when no sort supplied', async () => {
+      const call = await callList({});
+      expect(call['orderBy']).toEqual([
+        { status: 'asc' },
+        { position: 'asc' },
+        { id: 'asc' },
+      ]);
+    });
+
+    it('emits [{position: dir}, {id:asc}] when sort=position', async () => {
+      const call = await callList({ sort: 'position', sortDir: 'desc' });
+      expect(call['orderBy']).toEqual([{ position: 'desc' }, { id: 'asc' }]);
+    });
+
+    it.each([
+      ['dueDate', 'asc', 'last'],
+      ['dueDate', 'desc', 'first'],
+    ] as const)(
+      'tie-breaks on position/id when sort=%s dir=%s (nulls=%s) — nullable columns keep nulls clause',
+      async (sort, dir, nulls) => {
+        const call = await callList({ sort, sortDir: dir });
+        expect(call['orderBy']).toEqual([
+          { [sort]: { sort: dir, nulls } },
+          { position: 'asc' },
+          { id: 'asc' },
+        ]);
+      },
+    );
+
+    it.each([
+      ['title', 'asc'],
+      ['title', 'desc'],
+      ['priority', 'asc'],
+      ['priority', 'desc'],
+      ['updatedAt', 'asc'],
+      ['updatedAt', 'desc'],
+    ] as const)(
+      'emits compact { %s: %s } (no nulls) for non-nullable columns',
+      async (sort, dir) => {
+        // Prisma rejects `{ sort, nulls }` for non-nullable columns
+        // (title/priority/updatedAt) with "Expected SortOrder, provided
+        // Object." — the service special-cases them to the compact shape.
+        const call = await callList({ sort, sortDir: dir });
+        expect(call['orderBy']).toEqual([
+          { [sort]: dir },
+          { position: 'asc' },
+          { id: 'asc' },
+        ]);
+      },
+    );
+
+    it('defaults sortDir to asc when sort is supplied without sortDir', async () => {
+      const call = await callList({ sort: 'dueDate' });
+      expect(call['orderBy']).toEqual([
+        { dueDate: { sort: 'asc', nulls: 'last' } },
+        { position: 'asc' },
+        { id: 'asc' },
+      ]);
+    });
+
+    it('threads cursor pagination through the extended orderBy', async () => {
+      const call = await callList({ sort: 'priority', sortDir: 'desc', cursor: 't-cursor' });
+      expect(call['cursor']).toEqual({ id: 't-cursor' });
+      expect(call['skip']).toBe(1);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// update — cross-field startDate/dueDate invariant (interaction with persisted state)
+// ---------------------------------------------------------------------------
+
+describe('TasksService.update — startDate/dueDate invariant', () => {
+  it('rejects a patch that would leave startDate > persisted dueDate', async () => {
+    const service = await buildService();
+    taskClient.findUnique.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+      startDate: null,
+      dueDate: new Date('2026-07-01T00:00:00.000Z'),
+    });
+
+    await expect(
+      service.update(
+        WS,
+        TASK,
+        { startDate: '2026-07-15T00:00:00.000Z' },
+        USER,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(taskClient.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts a patch that also clears dueDate alongside a new startDate', async () => {
+    const service = await buildService();
+    taskClient.findUnique.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+      startDate: null,
+      dueDate: new Date('2026-07-01T00:00:00.000Z'),
+    });
+    taskClient.update.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+    });
+
+    await service.update(
+      WS,
+      TASK,
+      { startDate: '2026-07-15T00:00:00.000Z', dueDate: null },
+      USER,
+    );
+    expect(taskClient.update).toHaveBeenCalled();
+  });
+
+  it('accepts an update that sets startDate <= persisted dueDate', async () => {
+    const service = await buildService();
+    taskClient.findUnique.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+      startDate: null,
+      dueDate: new Date('2026-07-31T00:00:00.000Z'),
+    });
+    taskClient.update.mockResolvedValueOnce({
+      id: TASK,
+      workspaceId: WS,
+      projectId: PROJECT,
+    });
+
+    await service.update(
+      WS,
+      TASK,
+      { startDate: '2026-07-01T00:00:00.000Z' },
+      USER,
+    );
+    expect(taskClient.update).toHaveBeenCalled();
+  });
 });

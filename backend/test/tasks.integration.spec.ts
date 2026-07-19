@@ -639,4 +639,440 @@ describe('Tasks module (integration)', () => {
       expect(body.items.every((t) => t.workspaceId === workspaceId)).toBe(true);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // GET /tasks — extended query params: sort, priority, from/to
+  //
+  // Every case here seeds a fresh project so the fixture is isolated from the
+  // POST/PATCH/DELETE suites above. Tasks that need `startDate`, `dueDate` or
+  // a non-default `priority` are created via the create endpoint (the
+  // CreateTaskDto already accepts all three) — no direct Prisma writes.
+  // ---------------------------------------------------------------------------
+
+  describe('GET /tasks — extended filters (integration)', () => {
+    // Two-page cursor sweep under sort=dueDate&sortDir=asc. Three tasks share
+    // the same dueDate to exercise the (dueDate, position, id) tie-break; one
+    // task carries a null dueDate to verify nulls: 'last'.
+    it('two-page cursor sweep under sort=dueDate&sortDir=asc respects tie-break and nulls:last', async () => {
+      const slug = 'sweep-duedate';
+      const projRes = await req(baseUrl, 'POST', `/workspaces/${workspaceSlug}/projects`, {
+        token: owner.accessToken,
+        body: { name: 'Sweep DueDate', slug, color: '#3b82f6', icon: 'Calendar' },
+      });
+      expect(projRes.status).toBe(201);
+
+      // Three tasks share the same dueDate; one has an earlier dueDate; one
+      // has null dueDate. Total = 5, so page 1 (limit=2) + page 2 (limit=2)
+      // + tail (1) exercises the tie-break inside the shared cohort.
+      const sameDay = '2026-08-15T00:00:00.000Z';
+      const earlier = '2026-07-01T00:00:00.000Z';
+      const created: Array<{
+        id: string;
+        number: number;
+        dueDate: string | null;
+        position: string;
+      }> = [];
+      for (const spec of [
+        { title: 'Sweep Earlier', dueDate: earlier },
+        { title: 'Sweep Same A', dueDate: sameDay },
+        { title: 'Sweep Same B', dueDate: sameDay },
+        { title: 'Sweep Same C', dueDate: sameDay },
+        { title: 'Sweep NoDate' },
+      ] as const) {
+        const r = await req(
+          baseUrl,
+          'POST',
+          `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+          {
+            token: owner.accessToken,
+            body: { ...spec },
+          },
+        );
+        expect(r.status).toBe(201);
+        created.push(
+          (await r.json()) as {
+            id: string;
+            number: number;
+            dueDate: string | null;
+            position: string;
+          },
+        );
+      }
+
+      const page1Res = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks?limit=2&sort=dueDate&sortDir=asc`,
+        { token: owner.accessToken },
+      );
+      const page1 = (await page1Res.json()) as {
+        items: Array<{ id: string; dueDate: string | null; position: string }>;
+        nextCursor: string | null;
+      };
+      expect(page1.items).toHaveLength(2);
+      expect(page1.nextCursor).not.toBeNull();
+      // First item is the earliest dueDate. Second item is the earliest of
+      // the shared-dueDate cohort (tie-break falls to position asc).
+      expect(page1.items[0].dueDate).toBe(earlier);
+      expect(page1.items[1].dueDate).toBe(sameDay);
+
+      const page2Res = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks?limit=2&sort=dueDate&sortDir=asc&cursor=${page1.nextCursor}`,
+        { token: owner.accessToken },
+      );
+      const page2 = (await page2Res.json()) as {
+        items: Array<{ id: string; dueDate: string | null; position: string }>;
+        nextCursor: string | null;
+      };
+      expect(page2.items).toHaveLength(2);
+      // Two more shared-dueDate rows on page 2.
+      expect(page2.items[0].dueDate).toBe(sameDay);
+      expect(page2.items[1].dueDate).toBe(sameDay);
+
+      // No duplicate ids across pages.
+      const seen = new Set<string>();
+      for (const row of [...page1.items, ...page2.items]) {
+        expect(seen.has(row.id)).toBe(false);
+        seen.add(row.id);
+      }
+
+      // Monotonically non-decreasing on (dueDate, position, id): the null-
+      // dueDate row must not appear before any non-null row (nulls: 'last').
+      const combined = [...page1.items, ...page2.items];
+      for (let i = 1; i < combined.length; i++) {
+        const prev = combined[i - 1];
+        const curr = combined[i];
+        if (prev.dueDate === null) {
+          expect(curr.dueDate).toBeNull();
+        } else if (curr.dueDate !== null) {
+          expect(prev.dueDate <= curr.dueDate).toBe(true);
+          if (prev.dueDate === curr.dueDate) {
+            expect(
+              prev.position <= curr.position ||
+                (prev.position === curr.position && prev.id < curr.id),
+            ).toBe(true);
+          }
+        }
+      }
+
+      // Tail page picks up the null-dueDate row last.
+      const page3Res = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks?limit=2&sort=dueDate&sortDir=asc&cursor=${page2.nextCursor}`,
+        { token: owner.accessToken },
+      );
+      const page3 = (await page3Res.json()) as {
+        items: Array<{ id: string; dueDate: string | null }>;
+        nextCursor: string | null;
+      };
+      expect(page3.items).toHaveLength(1);
+      expect(page3.items[0].dueDate).toBeNull();
+      expect(page3.nextCursor).toBeNull();
+    });
+
+    it('priority filter returns only HIGH+MEDIUM when priority=HIGH,MEDIUM is supplied', async () => {
+      const slug = 'priority-filter';
+      const projRes = await req(baseUrl, 'POST', `/workspaces/${workspaceSlug}/projects`, {
+        token: owner.accessToken,
+        body: { name: 'Priority Filter', slug, color: '#3b82f6', icon: 'Flag' },
+      });
+      expect(projRes.status).toBe(201);
+
+      for (const spec of [
+        { title: 'Low1', priority: 'LOW' as const },
+        { title: 'Low2', priority: 'LOW' as const },
+        { title: 'Med1', priority: 'MEDIUM' as const },
+        { title: 'Med2', priority: 'MEDIUM' as const },
+        { title: 'High1', priority: 'HIGH' as const },
+        { title: 'High2', priority: 'HIGH' as const },
+      ]) {
+        const r = await req(
+          baseUrl,
+          'POST',
+          `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+          {
+            token: owner.accessToken,
+            body: spec,
+          },
+        );
+        expect(r.status).toBe(201);
+      }
+
+      const res = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks?limit=100&priority=HIGH,MEDIUM`,
+        { token: owner.accessToken },
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        items: Array<{ priority: 'LOW' | 'MEDIUM' | 'HIGH'; title: string }>;
+      };
+      expect(body.items).toHaveLength(4);
+      expect(body.items.every((t) => t.priority === 'HIGH' || t.priority === 'MEDIUM')).toBe(true);
+      expect(body.items.some((t) => t.priority === 'LOW')).toBe(false);
+    });
+
+    // Interval overlap: (startDate ?? dueDate) < to AND (dueDate ?? startDate) >= from.
+    // The window is [from, to). We seed four tasks that map onto the four
+    // "corner" shapes of the semantic and assert exactly the three overlaps
+    // come back.
+    it('date-window overlap: only tasks whose interval intersects [from, to) are returned', async () => {
+      const slug = 'date-window';
+      const projRes = await req(baseUrl, 'POST', `/workspaces/${workspaceSlug}/projects`, {
+        token: owner.accessToken,
+        body: { name: 'Date Window', slug, color: '#3b82f6', icon: 'CalendarRange' },
+      });
+      expect(projRes.status).toBe(201);
+
+      const from = '2026-09-01T00:00:00.000Z';
+      const to = '2026-09-30T00:00:00.000Z';
+
+      // Only startDate inside window.
+      const onlyStart = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+        {
+          token: owner.accessToken,
+          body: { title: 'OnlyStartInside', startDate: '2026-09-10T00:00:00.000Z' },
+        },
+      );
+      expect(onlyStart.status).toBe(201);
+
+      // Only dueDate inside window.
+      const onlyDue = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+        {
+          token: owner.accessToken,
+          body: { title: 'OnlyDueInside', dueDate: '2026-09-20T00:00:00.000Z' },
+        },
+      );
+      expect(onlyDue.status).toBe(201);
+
+      // Both dates straddle the window (start before, due after) — overlap.
+      const straddle = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+        {
+          token: owner.accessToken,
+          body: {
+            title: 'Straddle',
+            startDate: '2026-08-15T00:00:00.000Z',
+            dueDate: '2026-10-15T00:00:00.000Z',
+          },
+        },
+      );
+      expect(straddle.status).toBe(201);
+
+      // Both dates entirely outside window (both before).
+      const outside = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+        {
+          token: owner.accessToken,
+          body: {
+            title: 'OutsideBefore',
+            startDate: '2026-07-01T00:00:00.000Z',
+            dueDate: '2026-07-20T00:00:00.000Z',
+          },
+        },
+      );
+      expect(outside.status).toBe(201);
+
+      const res = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks?limit=100&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        { token: owner.accessToken },
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { items: Array<{ title: string }> };
+      const titles = body.items.map((t) => t.title).sort();
+      expect(titles).toEqual(['OnlyDueInside', 'OnlyStartInside', 'Straddle']);
+      expect(titles).not.toContain('OutsideBefore');
+    });
+
+    it('excludes both-null-date tasks from windowed queries but includes them when the window is omitted', async () => {
+      const slug = 'both-null';
+      const projRes = await req(baseUrl, 'POST', `/workspaces/${workspaceSlug}/projects`, {
+        token: owner.accessToken,
+        body: { name: 'Both Null', slug, color: '#3b82f6', icon: 'CircleDashed' },
+      });
+      expect(projRes.status).toBe(201);
+
+      // No dates at all — belongs to the Timeline "no dates" bin.
+      const nodates = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+        {
+          token: owner.accessToken,
+          body: { title: 'NoDates' },
+        },
+      );
+      expect(nodates.status).toBe(201);
+
+      // A companion task with a date that falls inside the window, so the
+      // windowed query is not empty for reasons unrelated to the assertion.
+      const inside = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+        {
+          token: owner.accessToken,
+          body: { title: 'Inside', dueDate: '2026-10-15T00:00:00.000Z' },
+        },
+      );
+      expect(inside.status).toBe(201);
+
+      const windowed = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks?limit=100&from=${encodeURIComponent('2026-10-01T00:00:00.000Z')}&to=${encodeURIComponent('2026-10-31T00:00:00.000Z')}`,
+        { token: owner.accessToken },
+      );
+      const windowedBody = (await windowed.json()) as { items: Array<{ title: string }> };
+      const windowedTitles = windowedBody.items.map((t) => t.title);
+      expect(windowedTitles).toContain('Inside');
+      expect(windowedTitles).not.toContain('NoDates');
+
+      const unfiltered = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks?limit=100`,
+        { token: owner.accessToken },
+      );
+      const unfilteredBody = (await unfiltered.json()) as { items: Array<{ title: string }> };
+      const unfilteredTitles = unfilteredBody.items.map((t) => t.title);
+      expect(unfilteredTitles).toContain('NoDates');
+      expect(unfilteredTitles).toContain('Inside');
+    });
+
+    // Two-workspace tenant isolation under the extended priority/sort path.
+    // The outsider registered in the top-level beforeAll bootstraps their own
+    // workspace + project + HIGH task; the primary owner then requests HIGH
+    // tasks in their own workspace and must not see the outsider's row.
+    it("two-workspace tenant isolation under ?priority=HIGH&sort=priority&sortDir=desc doesn't leak across workspaces", async () => {
+      // Workspace B (outsider is not a member of workspace A, so they own B).
+      const wsBSlug = 'isolation-b';
+      const wsBRes = await req(baseUrl, 'POST', '/workspaces', {
+        token: outsider.accessToken,
+        body: { name: 'Isolation B', slug: wsBSlug },
+      });
+      expect(wsBRes.status).toBe(201);
+
+      const projBSlug = 'iso-web';
+      const projBRes = await req(baseUrl, 'POST', `/workspaces/${wsBSlug}/projects`, {
+        token: outsider.accessToken,
+        body: { name: 'Iso Web', slug: projBSlug, color: '#3b82f6', icon: 'Shield' },
+      });
+      expect(projBRes.status).toBe(201);
+
+      // Workspace B: seed a HIGH task uniquely titled so leakage is visible.
+      const leakerBRes = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${wsBSlug}/projects/${projBSlug}/tasks`,
+        {
+          token: outsider.accessToken,
+          body: { title: 'WORKSPACE_B_LEAKER', priority: 'HIGH' },
+        },
+      );
+      expect(leakerBRes.status).toBe(201);
+
+      // Workspace A: seed one HIGH task with a distinct title.
+      const slug = 'tenant-isolation-a';
+      const projARes = await req(baseUrl, 'POST', `/workspaces/${workspaceSlug}/projects`, {
+        token: owner.accessToken,
+        body: { name: 'Tenant Isolation A', slug, color: '#3b82f6', icon: 'Lock' },
+      });
+      expect(projARes.status).toBe(201);
+      const seedRes = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+        {
+          token: owner.accessToken,
+          body: { title: 'WORKSPACE_A_HIGH', priority: 'HIGH' },
+        },
+      );
+      expect(seedRes.status).toBe(201);
+
+      // Workspace A sees only its own HIGH task.
+      const aRes = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks?limit=100&priority=HIGH&sort=priority&sortDir=desc`,
+        { token: owner.accessToken },
+      );
+      expect(aRes.status).toBe(200);
+      const aBody = (await aRes.json()) as { items: Array<{ title: string; priority: string }> };
+      expect(aBody.items.some((t) => t.title === 'WORKSPACE_A_HIGH')).toBe(true);
+      expect(aBody.items.some((t) => t.title === 'WORKSPACE_B_LEAKER')).toBe(false);
+      expect(aBody.items.every((t) => t.priority === 'HIGH')).toBe(true);
+
+      // Cross-tenant probe: A's owner asks workspace B under the same shape
+      // — WorkspaceGuard must 4xx (403/404) without leaking any rows.
+      const cross = await req(
+        baseUrl,
+        'GET',
+        `/workspaces/${wsBSlug}/projects/${projBSlug}/tasks?limit=100&priority=HIGH&sort=priority&sortDir=desc`,
+        { token: owner.accessToken },
+      );
+      expect([403, 404]).toContain(cross.status);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // PATCH /tasks/:number — cross-field startDate/dueDate guard against
+  // persisted state. The DTO refine only fires when the request carries BOTH
+  // endpoints; this test drives the service-layer guard by sending only
+  // startDate while dueDate lives on the persisted row.
+  // ---------------------------------------------------------------------------
+
+  describe('PATCH /tasks/:number — startDate after persisted dueDate', () => {
+    it('returns 400 with RFC 7807 task-start-after-due body when patched startDate > persisted dueDate', async () => {
+      const slug = 'cross-field-guard';
+      const projRes = await req(baseUrl, 'POST', `/workspaces/${workspaceSlug}/projects`, {
+        token: owner.accessToken,
+        body: { name: 'Cross Field Guard', slug, color: '#3b82f6', icon: 'AlertTriangle' },
+      });
+      expect(projRes.status).toBe(201);
+
+      const createRes = await req(
+        baseUrl,
+        'POST',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks`,
+        {
+          token: owner.accessToken,
+          body: { title: 'GuardMe', dueDate: '2026-07-01T00:00:00.000Z' },
+        },
+      );
+      expect(createRes.status).toBe(201);
+      const created = (await createRes.json()) as { number: number };
+
+      const patchRes = await req(
+        baseUrl,
+        'PATCH',
+        `/workspaces/${workspaceSlug}/projects/${slug}/tasks/${created.number}`,
+        {
+          token: owner.accessToken,
+          body: { startDate: '2026-07-15T00:00:00.000Z' },
+        },
+      );
+      expect(patchRes.status).toBe(400);
+      const body = (await patchRes.json()) as { type: string; title: string; status: number };
+      expect(body.type).toBe('https://tasker.dev/problems/task-start-after-due');
+      expect(body.title).toContain('startDate must be earlier');
+      expect(body.status).toBe(400);
+    });
+  });
 });
