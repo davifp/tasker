@@ -390,3 +390,75 @@ describe('ProjectsService.list', () => {
     expect(projectClient.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 2 }));
   });
 });
+
+// ---------------------------------------------------------------------------
+// update — BUG-02.M1 regression (defensive Zod parse at service boundary)
+// ---------------------------------------------------------------------------
+
+describe('ProjectsService.update — defensive Zod parse (BUG-02.M1)', () => {
+  it('accepts a valid patch and forwards to Prisma', async () => {
+    const service = await buildService();
+    projectClient.update.mockResolvedValueOnce({
+      id: PROJECT_ID,
+      workspaceId: WORKSPACE_ID,
+      slug: 'web',
+      name: 'Web (Renamed)',
+    });
+
+    const project = await service.update(
+      WORKSPACE_ID,
+      PROJECT_ID,
+      { name: 'Web (Renamed)' },
+      ACTOR_USER_ID,
+    );
+
+    expect(project.name).toBe('Web (Renamed)');
+    expect(projectClient.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: PROJECT_ID, workspaceId: WORKSPACE_ID },
+        data: { name: 'Web (Renamed)' },
+      }),
+    );
+    expect(emit).toHaveBeenCalledWith(ProjectEvents.UPDATED, expect.any(Object));
+  });
+
+  it('rejects a patch that bypasses the DTO with an over-long name', async () => {
+    const service = await buildService();
+    // A raw caller (worker replay, another module, etc.) constructs a
+    // patch that would not survive Zod at the controller layer. The
+    // service must catch it before Prisma sees it.
+    const invalidPatch = { name: 'x'.repeat(200) } as unknown as { name: string };
+
+    await expect(
+      service.update(WORKSPACE_ID, PROJECT_ID, invalidPatch, ACTOR_USER_ID),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(projectClient.update).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalledWith(ProjectEvents.UPDATED, expect.any(Object));
+  });
+
+  it('rejects an empty patch (Zod refine: at least one field required)', async () => {
+    const service = await buildService();
+    await expect(
+      service.update(WORKSPACE_ID, PROJECT_ID, {}, ACTOR_USER_ID),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(projectClient.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown status value that a raw caller could construct', async () => {
+    const service = await buildService();
+    const invalidPatch = { status: 'ARCHIVEDDDD' } as unknown as { status: 'ACTIVE' };
+    await expect(
+      service.update(WORKSPACE_ID, PROJECT_ID, invalidPatch, ACTOR_USER_ID),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(projectClient.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed color value (fails the hex regex)', async () => {
+    const service = await buildService();
+    const invalidPatch = { color: 'not-a-hex' } as unknown as { color: string };
+    await expect(
+      service.update(WORKSPACE_ID, PROJECT_ID, invalidPatch, ACTOR_USER_ID),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(projectClient.update).not.toHaveBeenCalled();
+  });
+});

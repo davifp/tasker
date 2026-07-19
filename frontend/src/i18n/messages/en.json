@@ -482,7 +482,8 @@
     },
     "card": {
       "open": "Open task #{number}: {title}",
-      "labelOverflow": "{count, plural, one {# more label} other {# more labels}}"
+      "labelOverflow": "{count, plural, one {# more label} other {# more labels}}",
+      "checklistProgress": "{done, number} of {total, number} checklist items done"
     },
     "labels": {
       "heading": "Labels",
@@ -584,11 +585,13 @@
       "renameLabel": "Rename item",
       "renameAria": "Rename checklist item {title}",
       "deleteAria": "Delete checklist item {title}",
+      "dragAria": "Reorder checklist item {title}",
       "saveAria": "Save item",
       "cancelAria": "Cancel edit",
       "errors": {
         "addFailed": "Couldn't add the item. Try again.",
-        "renameFailed": "Couldn't rename the item. Try again."
+        "renameFailed": "Couldn't rename the item. Try again.",
+        "reorderFailed": "Couldn't reorder the item. Try again."
       }
     },
     "comments": {

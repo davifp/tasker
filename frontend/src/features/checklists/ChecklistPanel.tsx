@@ -3,17 +3,35 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, Check, X } from 'lucide-react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useChecklist } from './hooks/useChecklist';
 import {
   useAddChecklistItem,
   useDeleteChecklistItem,
   useRenameChecklistItem,
+  useReorderChecklistItem,
   useToggleChecklistItem,
 } from './hooks/useChecklistMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { HttpError } from '@/lib/http/errors';
+import type { ChecklistItem } from '@/lib/http/types';
+import { computeReorderPosition } from './reorderChecklist';
 
 interface ChecklistPanelProps {
   workspaceSlug: string;
@@ -23,6 +41,132 @@ interface ChecklistPanelProps {
 
 const MAX_ITEM_LEN = 200;
 
+interface RowProps {
+  item: ChecklistItem;
+  editing: { id: string; title: string } | null;
+  setEditing: (v: { id: string; title: string } | null) => void;
+  onToggle: (itemId: string, checked: boolean) => void;
+  onRename: () => Promise<void>;
+  onRemove: (itemId: string) => void;
+  t: ReturnType<typeof useTranslations>;
+}
+
+// Split into its own component because `useSortable` must be called
+// once per row (it registers the id with the SortableContext parent).
+function ChecklistRow({ item, editing, setEditing, onToggle, onRename, onRemove, t }: RowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  const inEdit = editing?.id === item.id;
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className="group flex items-center gap-2 rounded-md px-1 py-1"
+    >
+      <button
+        type="button"
+        className="flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+        aria-label={t('dragAria', { title: item.title })}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-3 w-3" aria-hidden="true" />
+      </button>
+      <input
+        id={`checklist-item-${item.id}`}
+        type="checkbox"
+        checked={item.checked}
+        onChange={(event) => onToggle(item.id, event.target.checked)}
+        className="h-4 w-4 rounded border-border"
+      />
+      {inEdit ? (
+        <Input
+          value={editing.title}
+          onChange={(event) =>
+            setEditing({ id: item.id, title: event.target.value.slice(0, MAX_ITEM_LEN) })
+          }
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              void onRename();
+            } else if (event.key === 'Escape') {
+              event.preventDefault();
+              setEditing(null);
+            }
+          }}
+          className="h-7 flex-1 text-sm"
+          aria-label={t('renameLabel')}
+        />
+      ) : (
+        <label
+          htmlFor={`checklist-item-${item.id}`}
+          className={
+            item.checked
+              ? 'flex-1 text-sm text-muted-foreground line-through'
+              : 'flex-1 text-sm text-foreground'
+          }
+        >
+          {item.title}
+        </label>
+      )}
+      {inEdit ? (
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => void onRename()}
+            aria-label={t('saveAria')}
+          >
+            <Check className="h-3 w-3" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => setEditing(null)}
+            aria-label={t('cancelAria')}
+          >
+            <X className="h-3 w-3" aria-hidden="true" />
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            onClick={() => setEditing({ id: item.id, title: item.title })}
+            aria-label={t('renameAria', { title: item.title })}
+          >
+            <Pencil className="h-3 w-3" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            onClick={() => onRemove(item.id)}
+            aria-label={t('deleteAria', { title: item.title })}
+          >
+            <Trash2 className="h-3 w-3" aria-hidden="true" />
+          </Button>
+        </>
+      )}
+    </li>
+  );
+}
+
 export function ChecklistPanel({ workspaceSlug, projectSlug, taskNumber }: ChecklistPanelProps) {
   const t = useTranslations('board.checklist');
   const coords = { workspaceSlug, projectSlug, taskNumber };
@@ -31,8 +175,18 @@ export function ChecklistPanel({ workspaceSlug, projectSlug, taskNumber }: Check
   const toggle = useToggleChecklistItem(coords);
   const remove = useDeleteChecklistItem(coords);
   const rename = useRenameChecklistItem(coords);
+  const reorder = useReorderChecklistItem(coords);
   const [pending, setPending] = useState('');
   const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
+
+  // PointerSensor with a 4px distance threshold matches the Kanban
+  // board's activation constraint so a plain click on the drag handle
+  // doesn't trigger a drag. Keyboard sensor keeps the reorder path
+  // accessible without a mouse.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   async function commitRename() {
     if (!editing) return;
@@ -63,6 +217,21 @@ export function ChecklistPanel({ workspaceSlug, projectSlug, taskNumber }: Check
     }
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const position = computeReorderPosition(items, String(active.id), String(over.id));
+    if (position === null) return;
+    reorder.mutate(
+      { itemId: String(active.id), position },
+      {
+        onError() {
+          toast.error(t('errors.reorderFailed'));
+        },
+      },
+    );
+  }
+
   return (
     <section className="flex flex-col gap-2" aria-label={t('label')}>
       <header className="flex items-center justify-between">
@@ -76,103 +245,24 @@ export function ChecklistPanel({ workspaceSlug, projectSlug, taskNumber }: Check
       {isLoading ? (
         <p className="text-xs text-muted-foreground">{t('loading')}</p>
       ) : (
-        <ul className="flex flex-col gap-1">
-          {items.map((item) => {
-            const inEdit = editing?.id === item.id;
-            return (
-              <li key={item.id} className="group flex items-center gap-2 rounded-md px-1 py-1">
-                <input
-                  id={`checklist-item-${item.id}`}
-                  type="checkbox"
-                  checked={item.checked}
-                  onChange={(event) =>
-                    toggle.mutate({ itemId: item.id, checked: event.target.checked })
-                  }
-                  className="h-4 w-4 rounded border-border"
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+            <ul className="flex flex-col gap-1">
+              {items.map((item) => (
+                <ChecklistRow
+                  key={item.id}
+                  item={item}
+                  editing={editing}
+                  setEditing={setEditing}
+                  onToggle={(itemId, checked) => toggle.mutate({ itemId, checked })}
+                  onRename={commitRename}
+                  onRemove={(itemId) => remove.mutate({ itemId })}
+                  t={t}
                 />
-                {inEdit ? (
-                  <Input
-                    value={editing.title}
-                    onChange={(event) =>
-                      setEditing({ id: item.id, title: event.target.value.slice(0, MAX_ITEM_LEN) })
-                    }
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        void commitRename();
-                      } else if (event.key === 'Escape') {
-                        event.preventDefault();
-                        setEditing(null);
-                      }
-                    }}
-                    className="h-7 flex-1 text-sm"
-                    aria-label={t('renameLabel')}
-                  />
-                ) : (
-                  <label
-                    htmlFor={`checklist-item-${item.id}`}
-                    className={
-                      item.checked
-                        ? 'flex-1 text-sm text-muted-foreground line-through'
-                        : 'flex-1 text-sm text-foreground'
-                    }
-                  >
-                    {item.title}
-                  </label>
-                )}
-                {inEdit ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => void commitRename()}
-                      aria-label={t('saveAria')}
-                    >
-                      <Check className="h-3 w-3" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setEditing(null)}
-                      aria-label={t('cancelAria')}
-                    >
-                      <X className="h-3 w-3" aria-hidden="true" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                      onClick={() => setEditing({ id: item.id, title: item.title })}
-                      aria-label={t('renameAria', { title: item.title })}
-                    >
-                      <Pencil className="h-3 w-3" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                      onClick={() => {
-                        remove.mutate({ itemId: item.id });
-                      }}
-                      aria-label={t('deleteAria', { title: item.title })}
-                    >
-                      <Trash2 className="h-3 w-3" aria-hidden="true" />
-                    </Button>
-                  </>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
       )}
       <div className="flex items-center gap-2">
         <Input

@@ -35,11 +35,16 @@ const taskDependencyClient = {
   findMany: vi.fn().mockResolvedValue([]),
 };
 
+const checklistItemClient = {
+  groupBy: vi.fn().mockResolvedValue([]),
+};
+
 const rawClient = {
   task: taskClient,
   projectSequence: projectSequenceClient,
   taskLabel: taskLabelClient,
   taskDependency: taskDependencyClient,
+  checklistItem: checklistItemClient,
   $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(rawClient)),
   $executeRawUnsafe: vi.fn().mockResolvedValue(0),
 };
@@ -582,5 +587,103 @@ describe('TasksService.listForProject', () => {
         take: 101,
       }),
     );
+  });
+
+  // Regression for BUG-08.H3 — the board card renders a checklist
+  // progress badge (PRD subtask 8.6). The service must hydrate
+  // checklistDone/checklistTotal per task using a pair of grouped
+  // aggregates instead of an N+1 fetch.
+  it('hydrates checklistDone + checklistTotal per task from grouped aggregates', async () => {
+    const service = await buildService();
+    const now = new Date();
+    const taskRow = {
+      id: 't-1',
+      workspaceId: WS,
+      projectId: PROJECT,
+      number: 1,
+      title: 'A',
+      description: '',
+      status: 'TODO',
+      priority: 'MEDIUM',
+      position: 'a0',
+      assigneeUserId: null,
+      createdByUserId: USER,
+      dueDate: null,
+      deletedAt: null,
+      purgeAt: null,
+      createdAt: now,
+      updatedAt: now,
+      labels: [],
+    };
+    taskClient.findMany = vi.fn().mockResolvedValueOnce([taskRow, { ...taskRow, id: 't-2', number: 2 }]);
+    (rawClient as unknown as { task: unknown }).task = {
+      ...taskClient,
+      findMany: taskClient.findMany,
+    };
+    // First groupBy → totals; second → done. Prisma's `_count._all` shape.
+    checklistItemClient.groupBy
+      .mockResolvedValueOnce([
+        { taskId: 't-1', _count: { _all: 3 } },
+        { taskId: 't-2', _count: { _all: 1 } },
+      ])
+      .mockResolvedValueOnce([{ taskId: 't-1', _count: { _all: 2 } }]);
+
+    const page = await service.listForProject(WS, PROJECT);
+
+    expect(checklistItemClient.groupBy).toHaveBeenNthCalledWith(1, {
+      by: ['taskId'],
+      where: { taskId: { in: ['t-1', 't-2'] } },
+      _count: { _all: true },
+    });
+    expect(checklistItemClient.groupBy).toHaveBeenNthCalledWith(2, {
+      by: ['taskId'],
+      where: { taskId: { in: ['t-1', 't-2'] }, checked: true },
+      _count: { _all: true },
+    });
+    expect(page.items).toHaveLength(2);
+    expect(page.items[0]).toMatchObject({ id: 't-1', checklistTotal: 3, checklistDone: 2 });
+    // Task with no `done` groupBy row still gets 0, not undefined.
+    expect(page.items[1]).toMatchObject({ id: 't-2', checklistTotal: 1, checklistDone: 0 });
+  });
+
+  // Second regression case: task with zero checklist items reports
+  // { total: 0, done: 0 } instead of leaking undefined into the response.
+  it('emits checklistTotal=0/checklistDone=0 for tasks with no checklist items', async () => {
+    const service = await buildService();
+    const now = new Date();
+    taskClient.findMany = vi.fn().mockResolvedValueOnce([
+      {
+        id: 't-9',
+        workspaceId: WS,
+        projectId: PROJECT,
+        number: 9,
+        title: 'B',
+        description: '',
+        status: 'TODO',
+        priority: 'MEDIUM',
+        position: 'a0',
+        assigneeUserId: null,
+        createdByUserId: USER,
+        dueDate: null,
+        deletedAt: null,
+        purgeAt: null,
+        createdAt: now,
+        updatedAt: now,
+        labels: [],
+      },
+    ]);
+    (rawClient as unknown as { task: unknown }).task = {
+      ...taskClient,
+      findMany: taskClient.findMany,
+    };
+    checklistItemClient.groupBy.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    const page = await service.listForProject(WS, PROJECT);
+
+    expect(page.items[0]).toMatchObject({
+      id: 't-9',
+      checklistTotal: 0,
+      checklistDone: 0,
+    });
   });
 });

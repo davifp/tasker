@@ -49,6 +49,10 @@ export interface Task {
   // Populated by list + detail endpoints; empty for create/update responses
   // that don't reload the labels join.
   labels?: TaskLabel[];
+  // Populated by the list endpoint only. The drawer loads the full
+  // checklist panel, so per-task fetch skips the aggregate.
+  checklistDone?: number;
+  checklistTotal?: number;
 }
 
 export interface TaskLabel {

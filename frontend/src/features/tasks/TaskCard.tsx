@@ -91,6 +91,18 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
             </span>
           ) : null}
           {task.dueDate ? <DueDatePill dueDate={task.dueDate} /> : null}
+          {typeof task.checklistTotal === 'number' && task.checklistTotal > 0 ? (
+            <span
+              className="inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+              aria-label={t('checklistProgress', {
+                done: task.checklistDone ?? 0,
+                total: task.checklistTotal,
+              })}
+            >
+              <span aria-hidden="true">✓</span>
+              {task.checklistDone ?? 0}/{task.checklistTotal}
+            </span>
+          ) : null}
           <span className="ml-auto text-[10px] font-medium text-muted-foreground">
             #{task.number}
           </span>

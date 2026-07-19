@@ -482,7 +482,8 @@
     },
     "card": {
       "open": "Abrir tarefa #{number}: {title}",
-      "labelOverflow": "{count, plural, one {mais # etiqueta} other {mais # etiquetas}}"
+      "labelOverflow": "{count, plural, one {mais # etiqueta} other {mais # etiquetas}}",
+      "checklistProgress": "{done, number} de {total, number} itens de checklist concluídos"
     },
     "labels": {
       "heading": "Etiquetas",
@@ -584,11 +585,13 @@
       "renameLabel": "Renomear item",
       "renameAria": "Renomear item do checklist {title}",
       "deleteAria": "Excluir item do checklist {title}",
+      "dragAria": "Reordenar item do checklist {title}",
       "saveAria": "Salvar item",
       "cancelAria": "Cancelar edição",
       "errors": {
         "addFailed": "Não foi possível adicionar o item. Tente novamente.",
-        "renameFailed": "Não foi possível renomear o item. Tente novamente."
+        "renameFailed": "Não foi possível renomear o item. Tente novamente.",
+        "reorderFailed": "Não foi possível reordenar o item. Tente novamente."
       }
     },
     "comments": {

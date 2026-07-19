@@ -65,7 +65,16 @@ export type MoveTaskResult =
 // The board renders label chips on each card, so `findByNumber` and
 // `listForProject` include the labels join. Callers that only need the
 // scalar Task fields can ignore the `labels` property.
-export type TaskWithLabels = Task & { labels: Label[] };
+//
+// `listForProject` additionally hydrates `checklistDone` + `checklistTotal`
+// so the board card can render the progress badge (PRD subtask 8.6) without
+// a second round-trip per card. `findByNumber` skips the aggregation
+// because the drawer already loads the full checklist panel.
+export type TaskWithLabels = Task & {
+  labels: Label[];
+  checklistDone?: number;
+  checklistTotal?: number;
+};
 
 const TASK_WITH_LABELS_INCLUDE = {
   labels: { include: { label: true } },
@@ -452,8 +461,37 @@ export class TasksService {
     const hasMore = items.length > limit;
     const page = hasMore ? items.slice(0, limit) : items;
     const last = page[page.length - 1];
+
+    // Two grouped aggregates hydrate the checklist progress badge in one
+    // extra round-trip per page instead of one per card. `_count` does not
+    // support conditional filters in Prisma, so we run one query for total
+    // and one for done; both are indexed by (taskId).
+    const taskIds = page.map((row) => row.id);
+    const totalsByTask = new Map<string, number>();
+    const doneByTask = new Map<string, number>();
+    if (taskIds.length > 0) {
+      const [totals, done] = await Promise.all([
+        this.prisma.forSystem().checklistItem.groupBy({
+          by: ['taskId'],
+          where: { taskId: { in: taskIds } },
+          _count: { _all: true },
+        }),
+        this.prisma.forSystem().checklistItem.groupBy({
+          by: ['taskId'],
+          where: { taskId: { in: taskIds }, checked: true },
+          _count: { _all: true },
+        }),
+      ]);
+      for (const row of totals) totalsByTask.set(row.taskId, row._count._all);
+      for (const row of done) doneByTask.set(row.taskId, row._count._all);
+    }
+
     return {
-      items: page.map(attachLabels),
+      items: page.map((row) => ({
+        ...attachLabels(row),
+        checklistTotal: totalsByTask.get(row.id) ?? 0,
+        checklistDone: doneByTask.get(row.id) ?? 0,
+      })),
       nextCursor: hasMore && last ? last.id : null,
     };
   }

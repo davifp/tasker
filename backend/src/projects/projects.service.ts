@@ -14,6 +14,7 @@ import {
   ProjectRestoredEvent,
   ProjectUpdatedEvent,
 } from './events/project.events';
+import { updateProjectPatchSchema } from './dto/update-project.dto';
 
 const SLUG_RETRY_LIMIT = 3;
 const SOFT_DELETE_WINDOW_DAYS = 30;
@@ -117,14 +118,30 @@ export class ProjectsService {
     patch: UpdateProjectPatch,
     actorUserId: string,
   ): Promise<Project> {
+    // Defense-in-depth (BUG-02.M1): controllers already run this through
+    // ValidationPipe, but the service is reachable from workers, other
+    // modules, and tests — none of which route through Nest. A second
+    // Zod parse here surfaces the same actionable 400-shape error the
+    // HTTP path would produce, instead of a downstream Prisma failure.
+    const parsed = updateProjectPatchSchema.safeParse(patch);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        type: 'https://tasker.dev/problems/invalid-project-patch',
+        title: 'Invalid project update',
+        detail: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+        status: 400,
+      });
+    }
+    const safePatch = parsed.data;
+
     const project = await this.prisma.forSystem().project.update({
       where: { id: projectId, workspaceId },
       data: {
-        ...(patch.name !== undefined ? { name: patch.name } : {}),
-        ...(patch.color !== undefined ? { color: patch.color } : {}),
-        ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
-        ...(patch.description !== undefined ? { description: patch.description } : {}),
-        ...(patch.status !== undefined ? { status: patch.status } : {}),
+        ...(safePatch.name !== undefined ? { name: safePatch.name } : {}),
+        ...(safePatch.color !== undefined ? { color: safePatch.color } : {}),
+        ...(safePatch.icon !== undefined ? { icon: safePatch.icon } : {}),
+        ...(safePatch.description !== undefined ? { description: safePatch.description } : {}),
+        ...(safePatch.status !== undefined ? { status: safePatch.status } : {}),
       },
     });
 

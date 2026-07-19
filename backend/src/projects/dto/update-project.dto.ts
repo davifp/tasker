@@ -2,16 +2,21 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { projectColorSchema, projectIconSchema } from './create-project.dto';
 
-export class UpdateProjectDto extends createZodDto(
-  z
-    .object({
-      name: z.string().trim().min(1).max(80).optional(),
-      color: projectColorSchema.optional(),
-      icon: projectIconSchema.optional(),
-      description: z.string().max(500).nullable().optional(),
-      status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
-    })
-    .refine((v) => Object.values(v).some((f) => f !== undefined), {
-      message: 'At least one field is required',
-    }),
-) {}
+// Exported so the service layer can re-parse the patch defensively.
+// Nest's ValidationPipe already validates at the HTTP boundary, but
+// the service is `@Injectable()` and reachable from workers, tests, and
+// other modules — a second parse at the service catches raw objects that
+// skipped the DTO.
+export const updateProjectPatchSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80).optional(),
+    color: projectColorSchema.optional(),
+    icon: projectIconSchema.optional(),
+    description: z.string().max(500).nullable().optional(),
+    status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+  })
+  .refine((v) => Object.values(v).some((f) => f !== undefined), {
+    message: 'At least one field is required',
+  });
+
+export class UpdateProjectDto extends createZodDto(updateProjectPatchSchema) {}
