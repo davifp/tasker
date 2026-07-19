@@ -490,6 +490,33 @@
       "empty": "No labels",
       "none": "No labels defined in this workspace."
     },
+    "filters": {
+      "groupLabel": "Board filters",
+      "assignee": {
+        "trigger": "Filter by assignee",
+        "any": "Any assignee",
+        "me": "Assigned to me",
+        "someone": "Someone"
+      },
+      "labels": {
+        "trigger": "Filter by labels",
+        "any": "Any labels",
+        "count": "{count, plural, one {# label} other {# labels}}",
+        "empty": "No labels defined in this workspace."
+      },
+      "chips": {
+        "removeAssignee": "Clear assignee filter",
+        "removeLabel": "Remove {name} filter"
+      },
+      "clearAll": "Clear filters"
+    },
+    "deepLink": {
+      "notFound": {
+        "title": "Task not found",
+        "body": "The task #{number} could not be found in this project.",
+        "back": "Back to board"
+      }
+    },
     "quickAdd": {
       "trigger": "Add task",
       "placeholder": "What needs to be done?",

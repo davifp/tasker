@@ -490,6 +490,33 @@
       "empty": "Sem etiquetas",
       "none": "Nenhuma etiqueta definida neste workspace."
     },
+    "filters": {
+      "groupLabel": "Filtros do quadro",
+      "assignee": {
+        "trigger": "Filtrar por responsável",
+        "any": "Qualquer responsável",
+        "me": "Atribuídas a mim",
+        "someone": "Alguém"
+      },
+      "labels": {
+        "trigger": "Filtrar por etiquetas",
+        "any": "Qualquer etiqueta",
+        "count": "{count, plural, one {# etiqueta} other {# etiquetas}}",
+        "empty": "Nenhuma etiqueta definida neste workspace."
+      },
+      "chips": {
+        "removeAssignee": "Limpar filtro de responsável",
+        "removeLabel": "Remover filtro {name}"
+      },
+      "clearAll": "Limpar filtros"
+    },
+    "deepLink": {
+      "notFound": {
+        "title": "Tarefa não encontrada",
+        "body": "A tarefa #{number} não foi encontrada neste projeto.",
+        "back": "Voltar para o quadro"
+      }
+    },
     "quickAdd": {
       "trigger": "Adicionar tarefa",
       "placeholder": "O que precisa ser feito?",

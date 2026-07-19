@@ -7,6 +7,7 @@ import type { Project } from '@/lib/http/types';
 let pathname = '/ws/projects/web/board';
 vi.mock('next/navigation', () => ({
   usePathname: () => pathname,
+  useSearchParams: () => new URLSearchParams(''),
 }));
 
 function makeProject(overrides: Partial<Project> = {}): Project {

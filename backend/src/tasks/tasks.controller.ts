@@ -89,6 +89,7 @@ export class TasksController {
       status: query.status,
       assigneeUserId: query.assigneeUserId,
       labelId: query.labelId,
+      labelIds: query.labels,
       includeDeleted: query.includeDeleted,
     });
   }

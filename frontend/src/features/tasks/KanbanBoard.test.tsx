@@ -9,6 +9,20 @@ import enMessages from '@/i18n/messages/en.json';
 import { HttpError } from '@/lib/http/errors';
 import type { CursorPage, Task, TaskStatus } from '@/lib/http/types';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => '/ws/projects/p/board',
+  useSearchParams: () => new URLSearchParams(''),
+}));
+
+vi.mock('@/features/members/hooks/useWorkspaceMembers', () => ({
+  useWorkspaceMembers: () => ({ data: [] }),
+}));
+
+vi.mock('@/features/labels/hooks/useLabels', () => ({
+  useLabels: () => ({ data: { items: [] } }),
+}));
+
 vi.mock('@/lib/http/tasks', () => ({
   tasksHttp: {
     list: vi.fn(),

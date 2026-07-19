@@ -36,6 +36,7 @@ export const taskKeys = {
       status?: string;
       assigneeUserId?: string;
       labelId?: string;
+      labelIds?: readonly string[];
       includeDeleted?: boolean;
     },
   ) => ['tasks', workspaceSlug, projectSlug, 'list', filters ?? {}] as const,

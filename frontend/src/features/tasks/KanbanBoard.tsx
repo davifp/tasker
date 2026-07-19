@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -28,6 +28,8 @@ import { TaskCard } from './TaskCard';
 import { BlockerOverrideDialog, type BlockerOverrideState } from './BlockerOverrideDialog';
 import { TaskDrawer } from './TaskDrawer';
 import { boardDndAnnouncements } from './dndAnnouncements';
+import { TaskFilters } from './TaskFilters';
+import { useBoardFilters, resolveListFilters } from './useBoardFilters';
 
 interface KanbanBoardProps {
   workspaceSlug: string;
@@ -36,6 +38,9 @@ interface KanbanBoardProps {
   projectId: string;
   currentUserId: string;
   currentUserRole: WorkspaceRole;
+  // Deep-link entry: when set, the drawer opens on mount focused on the
+  // title textarea (per PRD deep-link user story).
+  initialTaskNumber?: number;
 }
 
 interface PendingMove {
@@ -79,9 +84,18 @@ export function KanbanBoard({
   projectId,
   currentUserId,
   currentUserRole,
+  initialTaskNumber,
 }: KanbanBoardProps) {
   const t = useTranslations('board');
-  const { data, isLoading, isError } = useTasks(workspaceSlug, projectSlug, { limit: 100 });
+  const boardFilters = useBoardFilters();
+  const resolvedFilters = useMemo(
+    () => resolveListFilters(boardFilters.filters, currentUserId),
+    [boardFilters.filters, currentUserId],
+  );
+  const { data, isLoading, isError } = useTasks(workspaceSlug, projectSlug, {
+    limit: 100,
+    ...resolvedFilters,
+  });
   const emit = useAnalytics();
 
   const create = useCreateTask(workspaceSlug, projectSlug);
@@ -89,10 +103,16 @@ export function KanbanBoard({
   const del = useDeleteTaskWithUndo(workspaceSlug, projectSlug);
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [openTaskNumber, setOpenTaskNumber] = useState<number | null>(null);
+  const [openTaskNumber, setOpenTaskNumber] = useState<number | null>(initialTaskNumber ?? null);
   const [blockerState, setBlockerState] = useState<BlockerOverrideState | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [liveMessage, setLiveMessage] = useState<string>('');
+
+  // If the deep-link prop changes (client navigation to another task URL
+  // without a full remount), reflect the new target so the drawer follows.
+  useEffect(() => {
+    if (initialTaskNumber !== undefined) setOpenTaskNumber(initialTaskNumber);
+  }, [initialTaskNumber]);
 
   const columnsByStatus = useMemo(() => groupByStatus(data?.items ?? []), [data?.items]);
   const activeTask = useMemo(() => {
@@ -288,6 +308,7 @@ export function KanbanBoard({
       <div aria-live="polite" role="status" className="sr-only">
         {liveMessage}
       </div>
+      <TaskFilters workspaceSlug={workspaceSlug} currentUserId={currentUserId} />
       <DndContext
         sensors={sensors}
         accessibility={{ announcements }}
@@ -344,6 +365,7 @@ export function KanbanBoard({
         taskNumber={openTaskNumber}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
+        focusTitleOnMount={initialTaskNumber !== undefined}
         onClose={() => setOpenTaskNumber(null)}
         onDelete={(task) => {
           setOpenTaskNumber(null);

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { Project } from '@/lib/http/types';
 import { ProjectIcon } from './ProjectIcon';
@@ -26,6 +26,12 @@ export const PROJECT_TABPANEL_ID = 'project-tabpanel';
 export function ProjectHeader({ workspaceSlug, project }: ProjectHeaderProps) {
   const t = useTranslations('projects.header');
   const pathname = usePathname() ?? '';
+  const searchParams = useSearchParams();
+  // Preserve URL-synced filters (assignee, labels) across the four tabs.
+  const preservedQuery = (() => {
+    const raw = searchParams?.toString();
+    return raw && raw.length > 0 ? `?${raw}` : '';
+  })();
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-4">
       <div className="flex items-center gap-3">
@@ -61,14 +67,18 @@ export function ProjectHeader({ workspaceSlug, project }: ProjectHeaderProps) {
       >
         {TABS.map((tab) => {
           const href = `/${workspaceSlug}/projects/${project.slug}/${tab}`;
-          const active = pathname.startsWith(href);
+          // Deep-link to a single task lives under /tasks/[number] and
+          // renders the board with the drawer open — treat it as Board.
+          const taskDeepLink = `/${workspaceSlug}/projects/${project.slug}/tasks/`;
+          const active =
+            pathname.startsWith(href) || (tab === 'board' && pathname.startsWith(taskDeepLink));
           return (
             <Link
               key={tab}
               role="tab"
               aria-selected={active}
               aria-controls={PROJECT_TABPANEL_ID}
-              href={href}
+              href={`${href}${preservedQuery}`}
               className={cn(
                 'inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 active

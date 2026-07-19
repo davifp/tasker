@@ -12,6 +12,7 @@ export function useTasks(
       status: filters.status,
       assigneeUserId: filters.assigneeUserId,
       labelId: filters.labelId,
+      labelIds: filters.labelIds,
       includeDeleted: filters.includeDeleted,
     }),
     queryFn: () => tasksHttp.list(workspaceSlug, projectSlug, filters),

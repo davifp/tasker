@@ -84,6 +84,7 @@ export interface ListTasksFilters {
   status?: TaskStatus;
   assigneeUserId?: string;
   labelId?: string;
+  labelIds?: string[];
   includeDeleted?: boolean;
 }
 
@@ -418,13 +419,26 @@ export class TasksService {
     filters: ListTasksFilters = {},
   ): Promise<CursorPage<TaskWithLabels>> {
     const limit = Math.min(Math.max(filters.limit ?? DEFAULT_LIST_LIMIT, 1), MAX_LIST_LIMIT);
+    // OR (union) semantics for multi-label: a task matches when it carries
+    // at least one of the requested labels. Matches the mainstream Kanban
+    // convention (Linear/GitHub Projects/Trello) — widening a filter set
+    // should reveal more cards, not fewer. `labelId` is retained for
+    // legacy single-value callers; when both are supplied, `labelIds` wins.
+    const labelIds =
+      filters.labelIds && filters.labelIds.length > 0
+        ? filters.labelIds
+        : filters.labelId
+          ? [filters.labelId]
+          : [];
     const where: Prisma.TaskWhereInput = {
       workspaceId,
       projectId,
       ...(filters.includeDeleted ? {} : { deletedAt: null }),
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.assigneeUserId ? { assigneeUserId: filters.assigneeUserId } : {}),
-      ...(filters.labelId ? { labels: { some: { labelId: filters.labelId } } } : {}),
+      ...(labelIds.length > 0
+        ? { labels: { some: { labelId: { in: labelIds } } } }
+        : {}),
     };
 
     const items = await this.prisma.forSystem().task.findMany({

@@ -34,6 +34,10 @@ interface TaskDrawerProps {
   currentUserRole?: WorkspaceRole;
   onClose: () => void;
   onDelete: (task: Task) => void;
+  // Focus the title textarea on first mount. Set true for deep-link entry
+  // (per PRD user story); false for regular card clicks so the caret does
+  // not land in an editable field the user did not ask to edit.
+  focusTitleOnMount?: boolean;
 }
 
 // Right-side slide-in drawer. Open/close state lives in the parent
@@ -51,6 +55,7 @@ export function TaskDrawer({
   currentUserRole,
   onClose,
   onDelete,
+  focusTitleOnMount = false,
 }: TaskDrawerProps) {
   const t = useTranslations('board.drawer');
   const open = taskNumber !== null;
@@ -76,6 +81,7 @@ export function TaskDrawer({
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}
             onDelete={onDelete}
+            focusTitleOnMount={focusTitleOnMount}
           />
         ) : (
           <SheetHeader>
@@ -97,6 +103,7 @@ interface DrawerBodyProps {
   currentUserId?: string;
   currentUserRole?: WorkspaceRole;
   onDelete: (task: Task) => void;
+  focusTitleOnMount: boolean;
 }
 
 function DrawerBody({
@@ -108,6 +115,7 @@ function DrawerBody({
   currentUserId,
   currentUserRole,
   onDelete,
+  focusTitleOnMount,
 }: DrawerBodyProps) {
   const t = useTranslations('board.drawer');
   const { data: task, isLoading } = useTask(workspaceSlug, projectSlug, taskNumber);
@@ -119,15 +127,16 @@ function DrawerBody({
   const [descDraft, setDescDraft] = useState('');
 
   useEffect(() => {
-    // Focus the title textarea exactly once — the first time the task
-    // detail loads for this drawer instance. Never re-focus on subsequent
-    // renders, otherwise Tab-nav gets yanked back to the title after each
-    // save cycle.
-    if (task && !focusedOnce.current) {
+    // Focus the title textarea exactly once — but only when the deep-link
+    // user story asks for it (per PRD). Regular card clicks leave focus on
+    // Radix's default (post-onOpenAutoFocus this is the SheetContent root)
+    // so the caret does not land in an editable field the user did not
+    // explicitly choose to edit.
+    if (task && !focusedOnce.current && focusTitleOnMount) {
       focusedOnce.current = true;
       titleRef.current?.focus();
     }
-  }, [task]);
+  }, [task, focusTitleOnMount]);
 
   if (isLoading || !task) {
     return (
