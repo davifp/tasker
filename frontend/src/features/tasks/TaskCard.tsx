@@ -58,6 +58,15 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
         type="button"
         className="flex w-full flex-col gap-2 text-left focus:outline-none"
         onClick={() => onOpen(task.number)}
+        onKeyDown={(event) => {
+          // Space is dnd-kit's default keyboard drag activation. The
+          // browser default would also fire a click on Space keyup (which
+          // would open the drawer at the same moment the drag begins).
+          // Preempt the click so keyboard drag is unambiguously "grab".
+          if (event.code === 'Space' || event.key === ' ') {
+            event.preventDefault();
+          }
+        }}
         aria-label={t('open', { number: task.number, title: task.title })}
         {...attributes}
         {...listeners}

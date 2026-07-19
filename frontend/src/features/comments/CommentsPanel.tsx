@@ -85,7 +85,7 @@ export function CommentsPanel({
   return (
     <section className="flex flex-col gap-3" aria-label={t('label')}>
       <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('heading')} <span className="ml-1 text-muted-foreground/70">({items.length})</span>
+        {t('heading')} <span className="ml-1 text-muted-foreground">({items.length})</span>
       </h4>
       {isLoading ? (
         <p className="text-xs text-muted-foreground">{t('loading')}</p>

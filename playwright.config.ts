@@ -25,7 +25,11 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      // 1600×900 fits the full Kanban board (sidebar + 5 × 280px columns +
+      // gaps) inside the viewport so mouse drags can reach every column
+      // without needing to trigger horizontal scroll mid-drag. `Desktop
+      // Chrome` (1280×720) leaves ~ 400px of Kanban clipped to the right.
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1600, height: 900 } },
     },
   ],
   webServer: [
@@ -38,6 +42,27 @@ export default defineConfig({
         NODE_ENV: 'test',
         PORT: String(API_PORT),
         OAUTH_SUCCESS_REDIRECT_URL: `${WEB_BASE_URL}/oauth/{provider}/complete`,
+        // Pin the SMTP transport at MailHog so every environment (local dev,
+        // CI runner) delivers verification mails to the same inbox the
+        // `waitForEmail` helper polls. Defaults already point at localhost:1025
+        // but declaring them here prevents silent drift.
+        SMTP_HOST: process.env['SMTP_HOST'] ?? 'localhost',
+        SMTP_PORT: process.env['SMTP_PORT'] ?? '1025',
+        SMTP_FROM: process.env['SMTP_FROM'] ?? '"Tasker E2E" <e2e@tasker.local>',
+        // Relax auth-endpoint throttling for the e2e run — each spec
+        // registers a fresh user through `/api/v1/auth/register` and the
+        // production 5-per-window limit would fail the suite. Dedicated
+        // throttler coverage lives in the auth spec (Task 4.0), not here.
+        THROTTLE_REGISTER_LIMIT: '1000',
+        THROTTLE_REGISTER_TTL_S: '60',
+        THROTTLE_LOGIN_LIMIT: '1000',
+        THROTTLE_LOGIN_TTL_S: '60',
+        THROTTLE_REFRESH_LIMIT: '1000',
+        THROTTLE_REFRESH_TTL_S: '60',
+        THROTTLE_EMAIL_RESEND_LIMIT: '1000',
+        THROTTLE_EMAIL_RESEND_TTL_S: '60',
+        THROTTLE_PASSWORD_RESET_LIMIT: '1000',
+        THROTTLE_PASSWORD_RESET_TTL_S: '60',
       },
     },
     {

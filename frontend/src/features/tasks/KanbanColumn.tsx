@@ -49,6 +49,7 @@ export function KanbanColumn({
       </header>
       <div
         ref={setNodeRef}
+        data-testid={`column-droppable-${status}`}
         className={cn(
           'flex flex-1 flex-col gap-2 p-2 transition-colors',
           isOver && 'bg-primary/5 ring-2 ring-primary/40',

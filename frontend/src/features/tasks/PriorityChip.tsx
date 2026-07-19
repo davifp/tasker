@@ -7,10 +7,14 @@ interface PriorityChipProps {
   className?: string;
 }
 
+// Solid, WCAG-AA-safe pairs. The semi-transparent originals were flagged
+// by axe (light-mode text-amber-700 over an amber-500/15 bg blended into
+// the page background gives < 4.5:1). These solid tones stay legible in
+// both themes.
 const styles: Record<Priority, string> = {
   LOW: 'bg-muted text-muted-foreground',
-  MEDIUM: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
-  HIGH: 'bg-red-500/15 text-red-700 dark:text-red-300',
+  MEDIUM: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100',
+  HIGH: 'bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-100',
 };
 
 export function PriorityChip({ priority, className }: PriorityChipProps) {
