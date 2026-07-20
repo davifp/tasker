@@ -731,5 +731,33 @@
       "week": "Semana {week}",
       "empty": "Nenhuma tarefa neste mês"
     }
+  },
+  "timeline": {
+    "loading": "Carregando linha do tempo…",
+    "errorLoad": "Não foi possível carregar a linha do tempo. Tente novamente.",
+    "window": {
+      "label": "Janela visível",
+      "twoWeeks": "2 semanas",
+      "fourWeeks": "4 semanas"
+    },
+    "bar": {
+      "label": "Tarefa #{number}: {title}. Pressione Enter para abrir."
+    },
+    "lanes": {
+      "label": "Faixas de tarefas",
+      "empty": "Nenhuma tarefa cabe nesta janela."
+    },
+    "noDates": {
+      "title": "Sem datas",
+      "count": "{count, plural, one {# tarefa} other {# tarefas}}"
+    },
+    "outsideWindow": {
+      "count": "{count, plural, one {# tarefa fora desta janela} other {# tarefas fora desta janela}}"
+    },
+    "empty": {
+      "title": "Nenhuma tarefa corresponde aos filtros",
+      "body": "Tente limpar os filtros ou adicione tarefas com data de início e prazo para vê-las na linha do tempo.",
+      "clear": "Limpar filtros"
+    }
   }
 }

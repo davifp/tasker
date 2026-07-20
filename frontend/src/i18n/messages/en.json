@@ -731,5 +731,33 @@
       "week": "Week {week}",
       "empty": "No tasks this month"
     }
+  },
+  "timeline": {
+    "loading": "Loading timeline…",
+    "errorLoad": "Couldn't load the timeline. Try again.",
+    "window": {
+      "label": "Visible window",
+      "twoWeeks": "2 weeks",
+      "fourWeeks": "4 weeks"
+    },
+    "bar": {
+      "label": "Task #{number}: {title}. Press Enter to open."
+    },
+    "lanes": {
+      "label": "Task swimlanes",
+      "empty": "No tasks fit in this window."
+    },
+    "noDates": {
+      "title": "No dates",
+      "count": "{count, plural, one {# task} other {# tasks}}"
+    },
+    "outsideWindow": {
+      "count": "{count, plural, one {# task outside this window} other {# tasks outside this window}}"
+    },
+    "empty": {
+      "title": "No tasks match your filters",
+      "body": "Try clearing filters, or add tasks with start and due dates to see them on the timeline.",
+      "clear": "Clear filters"
+    }
   }
 }
