@@ -15,6 +15,7 @@ function task(id: string, position: string, status: TaskStatus = 'TODO'): Task {
     position,
     assigneeUserId: null,
     createdByUserId: 'u',
+    startDate: null,
     dueDate: null,
     deletedAt: null,
     purgeAt: null,

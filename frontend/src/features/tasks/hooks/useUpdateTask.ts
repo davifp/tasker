@@ -74,6 +74,7 @@ function mergeTaskPatch(task: Task, patch: UpdateTaskInput): Task {
     ...(patch.description !== undefined ? { description: patch.description } : {}),
     ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
     ...(patch.assigneeUserId !== undefined ? { assigneeUserId: patch.assigneeUserId } : {}),
+    ...(patch.startDate !== undefined ? { startDate: patch.startDate } : {}),
     ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : {}),
   };
 }

@@ -20,6 +20,7 @@ function baseTask(overrides: Partial<Task> = {}): Task {
     position: 'a0',
     assigneeUserId: null,
     createdByUserId: 'u-1',
+    startDate: null,
     dueDate: null,
     deletedAt: null,
     purgeAt: null,

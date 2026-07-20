@@ -569,9 +569,11 @@
       "priority": "Prioridade",
       "assignee": "Responsável",
       "assigneePlaceholder": "Id do usuário",
+      "startDate": "Data de início",
       "dueDate": "Prazo",
       "errors": {
-        "updateFailed": "Não foi possível atualizar a tarefa. Tente novamente."
+        "updateFailed": "Não foi possível atualizar a tarefa. Tente novamente.",
+        "startAfterDue": "A data de início deve ser anterior ou igual ao prazo."
       }
     },
     "checklist": {

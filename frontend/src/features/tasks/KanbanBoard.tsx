@@ -14,7 +14,7 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { useTasks } from './hooks/useTasks';
+import { useProjectTasks } from './hooks/useProjectTasks';
 import { useCreateTask } from './hooks/useCreateTask';
 import { useMoveTask, BlockersOpenError } from './hooks/useMoveTask';
 import { useDeleteTaskWithUndo } from './hooks/useDeleteTaskWithUndo';
@@ -29,7 +29,7 @@ import { BlockerOverrideDialog, type BlockerOverrideState } from './BlockerOverr
 import { TaskDrawer } from './TaskDrawer';
 import { boardDndAnnouncements } from './dndAnnouncements';
 import { TaskFilters } from './TaskFilters';
-import { useBoardFilters, resolveListFilters } from './useBoardFilters';
+import { useProjectFilters, toTaskFilters } from './useProjectFilters';
 
 interface KanbanBoardProps {
   workspaceSlug: string;
@@ -87,15 +87,17 @@ export function KanbanBoard({
   initialTaskNumber,
 }: KanbanBoardProps) {
   const t = useTranslations('board');
-  const boardFilters = useBoardFilters();
-  const resolvedFilters = useMemo(
-    () => resolveListFilters(boardFilters.filters, currentUserId),
-    [boardFilters.filters, currentUserId],
+  const projectFilters = useProjectFilters();
+  const taskFilters = useMemo(
+    () => toTaskFilters(projectFilters.filters, currentUserId),
+    [projectFilters.filters, currentUserId],
   );
-  const { data, isLoading, isError } = useTasks(workspaceSlug, projectSlug, {
-    limit: 100,
-    ...resolvedFilters,
-  });
+  const { data, isLoading, isError } = useProjectTasks(
+    workspaceSlug,
+    projectSlug,
+    taskFilters,
+    { limit: 100 },
+  );
   const emit = useAnalytics();
 
   const create = useCreateTask(workspaceSlug, projectSlug);

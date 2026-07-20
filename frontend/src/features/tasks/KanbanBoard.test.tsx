@@ -66,6 +66,7 @@ function taskFactory(overrides: Partial<Task> = {}): Task {
     position: 'a1',
     assigneeUserId: null,
     createdByUserId: 'u',
+    startDate: null,
     dueDate: null,
     deletedAt: null,
     purgeAt: null,

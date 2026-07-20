@@ -1,12 +1,20 @@
 import { browserHttp } from './browser';
 import type { CursorPage, MoveTaskResponse, Priority, Task, TaskStatus } from './types';
 
+// Sort surface mirrored from the backend `ListTasksQueryDto.sort` enum.
+// Kept in sync manually — a shared package would be overkill for two
+// string unions but grep-visible via the type name.
+export type TaskSortField = 'dueDate' | 'updatedAt' | 'priority' | 'title' | 'position';
+
+export type TaskSortDir = 'asc' | 'desc';
+
 export interface CreateTaskInput {
   title: string;
   description?: string;
   status?: TaskStatus;
   priority?: Priority;
   assigneeUserId?: string;
+  startDate?: string;
   dueDate?: string;
   labelIds?: string[];
 }
@@ -16,6 +24,7 @@ export interface UpdateTaskInput {
   description?: string;
   priority?: Priority;
   assigneeUserId?: string | null;
+  startDate?: string | null;
   dueDate?: string | null;
   labelIds?: string[];
 }
@@ -30,10 +39,15 @@ export interface MoveTaskInput {
 export interface ListTasksInput {
   cursor?: string;
   limit?: number;
-  status?: TaskStatus;
+  status?: TaskStatus | readonly TaskStatus[];
   assigneeUserId?: string;
   labelId?: string;
   labelIds?: readonly string[];
+  priority?: readonly Priority[];
+  from?: string;
+  to?: string;
+  sort?: TaskSortField;
+  sortDir?: TaskSortDir;
   includeDeleted?: boolean;
 }
 
@@ -44,7 +58,8 @@ function base(workspaceSlug: string, projectSlug: string): string {
 function toQuery(params: Record<string, unknown>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value === undefined) continue;
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string' && value.length === 0) continue;
     if (Array.isArray(value)) {
       if (value.length === 0) continue;
       search.set(key, value.join(','));
@@ -58,11 +73,15 @@ function toQuery(params: Record<string, unknown>): string {
 
 export const tasksHttp = {
   list(workspaceSlug: string, projectSlug: string, input: ListTasksInput = {}) {
-    // Backend accepts `?labels=id1,id2` (comma-separated) for multi-select;
-    // `labelId` remains the single-value legacy path.
-    const { labelIds, ...rest } = input;
+    // Backend accepts CSV for multi-select filters (`labels`, `status`,
+    // `priority`); the single-value legacy path stays under `labelId`.
+    const { labelIds, status, priority, ...rest } = input;
     const wire: Record<string, unknown> = { ...rest };
     if (labelIds && labelIds.length > 0) wire.labels = Array.from(labelIds);
+    if (status !== undefined) {
+      wire.status = Array.isArray(status) ? Array.from(status) : status;
+    }
+    if (priority && priority.length > 0) wire.priority = Array.from(priority);
     return browserHttp.get<CursorPage<Task>>(`${base(workspaceSlug, projectSlug)}${toQuery(wire)}`);
   },
   findByNumber(workspaceSlug: string, projectSlug: string, number: number) {

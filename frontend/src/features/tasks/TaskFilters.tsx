@@ -16,10 +16,10 @@ import { useLabels } from '@/features/labels/hooks/useLabels';
 import { useWorkspaceMembers } from '@/features/members/hooks/useWorkspaceMembers';
 import type { Label as LabelType } from '@/lib/http/types';
 import {
-  useBoardFilters,
+  useProjectFilters,
   type AssigneeFilter,
-  type UseBoardFiltersResult,
-} from './useBoardFilters';
+  type UseProjectFiltersResult,
+} from './useProjectFilters';
 
 interface TaskFiltersProps {
   workspaceSlug: string;
@@ -27,7 +27,7 @@ interface TaskFiltersProps {
   // Escape hatch so tests can inject a pre-computed hook result without
   // needing to mount the Next.js router context; production callers pass
   // nothing and the hook is read from the URL.
-  hookOverride?: UseBoardFiltersResult;
+  hookOverride?: UseProjectFiltersResult;
 }
 
 function assigneesEqual(a: AssigneeFilter, b: AssigneeFilter): boolean {
@@ -39,8 +39,8 @@ function assigneesEqual(a: AssigneeFilter, b: AssigneeFilter): boolean {
 
 export function TaskFilters({ workspaceSlug, currentUserId, hookOverride }: TaskFiltersProps) {
   const t = useTranslations('board.filters');
-  const boardFilters = useBoardFilters();
-  const state = hookOverride ?? boardFilters;
+  const projectFilters = useProjectFilters();
+  const state = hookOverride ?? projectFilters;
   const { filters, setAssignee, toggleLabel, clear, isEmpty } = state;
 
   const { data: labelsPage } = useLabels(workspaceSlug);

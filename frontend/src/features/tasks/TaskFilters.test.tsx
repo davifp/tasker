@@ -33,21 +33,28 @@ vi.mock('@/features/members/hooks/useWorkspaceMembers', () => ({
 }));
 
 import { TaskFilters } from './TaskFilters';
-import type { UseBoardFiltersResult } from './useBoardFilters';
+import { makeEmptyFilters, type UseProjectFiltersResult } from './useProjectFilters';
 
-function makeHookState(overrides: Partial<UseBoardFiltersResult> = {}): UseBoardFiltersResult {
+function makeHookState(
+  overrides: Partial<UseProjectFiltersResult> = {},
+): UseProjectFiltersResult {
   return {
-    filters: { assignee: null, labels: [] },
+    filters: makeEmptyFilters(),
+    setView: vi.fn(),
     setAssignee: vi.fn(),
     setLabels: vi.fn(),
     toggleLabel: vi.fn(),
+    setStatus: vi.fn(),
+    setPriority: vi.fn(),
+    setDateRange: vi.fn(),
+    setSort: vi.fn(),
     clear: vi.fn(),
     isEmpty: true,
     ...overrides,
   };
 }
 
-function renderFilters(hookOverride: UseBoardFiltersResult) {
+function renderFilters(hookOverride: UseProjectFiltersResult) {
   const queryClient = makeQueryClient();
   return render(
     <NextIntlClientProvider locale="en" messages={enMessages}>
@@ -92,7 +99,7 @@ describe('TaskFilters', () => {
 
   it('renders chips + a clear-all button when a filter is active', async () => {
     const state = makeHookState({
-      filters: { assignee: 'me', labels: ['lbl-urgent'] },
+      filters: { ...makeEmptyFilters(), assignee: 'me', labels: ['lbl-urgent'] },
       isEmpty: false,
     });
     renderFilters(state);
@@ -111,7 +118,7 @@ describe('TaskFilters', () => {
 
   it('shows the current user\'s member displayName when the assignee is another user', async () => {
     const state = makeHookState({
-      filters: { assignee: { userId: 'user-alice' }, labels: [] },
+      filters: { ...makeEmptyFilters(), assignee: { userId: 'user-alice' } },
       isEmpty: false,
     });
     renderFilters(state);

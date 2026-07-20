@@ -1,25 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { tasksHttp, type ListTasksInput } from '@/lib/http/tasks';
+import { tasksHttp } from '@/lib/http/tasks';
 import { taskKeys } from '@/features/queryKeys';
 
-export function useTasks(
-  workspaceSlug: string,
-  projectSlug: string,
-  filters: ListTasksInput = {},
-) {
-  return useQuery({
-    queryKey: taskKeys.list(workspaceSlug, projectSlug, {
-      status: filters.status,
-      assigneeUserId: filters.assigneeUserId,
-      labelId: filters.labelId,
-      labelIds: filters.labelIds,
-      includeDeleted: filters.includeDeleted,
-    }),
-    queryFn: () => tasksHttp.list(workspaceSlug, projectSlug, filters),
-    enabled: Boolean(workspaceSlug && projectSlug),
-  });
-}
-
+/**
+ * Singular task-detail hook. The plural list hook lives in
+ * `./useProjectTasks` and consumes the canonical `TaskFilters` shape so
+ * every view shares a single cache entry per project.
+ */
 export function useTask(workspaceSlug: string, projectSlug: string, number: number) {
   return useQuery({
     queryKey: taskKeys.detail(workspaceSlug, projectSlug, number),

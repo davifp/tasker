@@ -41,6 +41,7 @@ export interface Task {
   position: string;
   assigneeUserId: string | null;
   createdByUserId: string;
+  startDate: string | null;
   dueDate: string | null;
   deletedAt: string | null;
   purgeAt: string | null;

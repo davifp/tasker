@@ -43,6 +43,7 @@ function taskFactory(overrides: Partial<Task> = {}): Task {
     position: 'a1',
     assigneeUserId: null,
     createdByUserId: 'u',
+    startDate: null,
     dueDate: null,
     deletedAt: null,
     purgeAt: null,
@@ -103,5 +104,44 @@ describe('TaskDrawer', () => {
     await user.tab();
     await user.tab();
     expect(document.activeElement).not.toBeNull();
+  });
+
+  it('renders both startDate and dueDate inputs seeded from the task', async () => {
+    vi.mocked(tasksHttp.findByNumber).mockResolvedValueOnce(
+      taskFactory({
+        startDate: '2026-01-01T00:00:00.000Z',
+        dueDate: '2026-01-05T00:00:00.000Z',
+      }),
+    );
+    renderDrawer(1);
+    await waitFor(() => {
+      expect(screen.getByLabelText('Start date')).toHaveValue('2026-01-01');
+      expect(screen.getByLabelText('Due date')).toHaveValue('2026-01-05');
+    });
+  });
+
+  it('rejects startDate > dueDate inline and does not fire the PATCH', async () => {
+    vi.mocked(tasksHttp.findByNumber).mockResolvedValueOnce(
+      taskFactory({
+        startDate: '2026-01-05T00:00:00.000Z',
+        dueDate: '2026-01-10T00:00:00.000Z',
+      }),
+    );
+    renderDrawer(1);
+    await waitFor(() => expect(screen.getByLabelText('Start date')).toBeInTheDocument());
+
+    // Bump dueDate to a value before startDate directly — this is a
+    // single change event with an invalid interval; jsdom does not do
+    // per-keystroke composition on <input type="date">, so we set the
+    // value via fireEvent to simulate a native calendar-picker commit.
+    const dueInput = screen.getByLabelText('Due date') as HTMLInputElement;
+    const { fireEvent } = await import('@testing-library/react');
+    fireEvent.change(dueInput, { target: { value: '2026-01-01' } });
+
+    expect(
+      await screen.findByText('Start date must be on or before the due date.'),
+    ).toBeInTheDocument();
+    expect(dueInput).toHaveAttribute('aria-invalid', 'true');
+    expect(vi.mocked(tasksHttp.update)).not.toHaveBeenCalled();
   });
 });

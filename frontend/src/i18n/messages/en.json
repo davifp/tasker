@@ -569,9 +569,11 @@
       "priority": "Priority",
       "assignee": "Assignee",
       "assigneePlaceholder": "User id",
+      "startDate": "Start date",
       "dueDate": "Due date",
       "errors": {
-        "updateFailed": "Couldn't update the task. Try again."
+        "updateFailed": "Couldn't update the task. Try again.",
+        "startAfterDue": "Start date must be on or before the due date."
       }
     },
     "checklist": {
