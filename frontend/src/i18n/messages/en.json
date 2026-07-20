@@ -399,6 +399,7 @@
         "board": "Board",
         "list": "List",
         "backlog": "Backlog",
+        "calendar": "Calendar",
         "timeline": "Timeline"
       },
       "openProjectMenu": "Project menu"
@@ -699,6 +700,36 @@
     },
     "errors": {
       "moveFailed": "Couldn't reorder the task. Try again."
+    }
+  },
+  "calendar": {
+    "caption": "Task calendar ({locale})",
+    "loading": "Loading calendar…",
+    "errorLoad": "Couldn't load the calendar. Try again.",
+    "empty": {
+      "title": "No dated tasks match your filters",
+      "body": "Tasks without a due date stay in List, Backlog, and Board views. Try clearing filters to see more.",
+      "clear": "Clear filters"
+    },
+    "day": {
+      "badge": "{count, plural, one {# task} other {# tasks}}",
+      "count": "{count, plural, one {# task due on {date}} other {# tasks due on {date}}}",
+      "empty": "No tasks due on {date}"
+    },
+    "dayPanel": {
+      "title": "Tasks due on {date}",
+      "titleEmpty": "Tasks",
+      "count": "{count, plural, one {# task} other {# tasks}}",
+      "empty": "No tasks are due on this day.",
+      "listLabel": "Tasks due on the selected day"
+    },
+    "announce": {
+      "selected": "Selected {date}. {count, plural, one {# task} other {# tasks}} due."
+    },
+    "weeklyRail": {
+      "title": "Weekly overview",
+      "week": "Week {week}",
+      "empty": "No tasks this month"
     }
   }
 }

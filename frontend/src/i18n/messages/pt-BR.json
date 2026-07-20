@@ -399,6 +399,7 @@
         "board": "Quadro",
         "list": "Lista",
         "backlog": "Backlog",
+        "calendar": "Calendário",
         "timeline": "Linha do tempo"
       },
       "openProjectMenu": "Menu do projeto"
@@ -699,6 +700,36 @@
     },
     "errors": {
       "moveFailed": "Não foi possível reordenar a tarefa. Tente novamente."
+    }
+  },
+  "calendar": {
+    "caption": "Calendário de tarefas ({locale})",
+    "loading": "Carregando calendário…",
+    "errorLoad": "Não foi possível carregar o calendário. Tente novamente.",
+    "empty": {
+      "title": "Nenhuma tarefa com prazo corresponde aos filtros",
+      "body": "Tarefas sem prazo continuam nas visões Lista, Backlog e Quadro. Tente limpar os filtros para ver mais.",
+      "clear": "Limpar filtros"
+    },
+    "day": {
+      "badge": "{count, plural, one {# tarefa} other {# tarefas}}",
+      "count": "{count, plural, one {# tarefa com prazo em {date}} other {# tarefas com prazo em {date}}}",
+      "empty": "Sem tarefas com prazo em {date}"
+    },
+    "dayPanel": {
+      "title": "Tarefas com prazo em {date}",
+      "titleEmpty": "Tarefas",
+      "count": "{count, plural, one {# tarefa} other {# tarefas}}",
+      "empty": "Nenhuma tarefa tem prazo neste dia.",
+      "listLabel": "Tarefas com prazo no dia selecionado"
+    },
+    "announce": {
+      "selected": "Selecionado {date}. {count, plural, one {# tarefa} other {# tarefas}} com prazo."
+    },
+    "weeklyRail": {
+      "title": "Visão semanal",
+      "week": "Semana {week}",
+      "empty": "Nenhuma tarefa neste mês"
     }
   }
 }

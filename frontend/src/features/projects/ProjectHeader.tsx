@@ -12,7 +12,7 @@ interface ProjectHeaderProps {
   project: Project;
 }
 
-const TABS = ['board', 'list', 'backlog', 'timeline'] as const;
+const TABS = ['board', 'list', 'backlog', 'calendar', 'timeline'] as const;
 
 // Matched by the `id` on the tabpanel wrapper in [project]/layout.tsx.
 // Kept here so any structural rename fans out from a single constant.
