@@ -27,6 +27,8 @@ import type { TaskSortField } from '@/features/queryKeys';
 import { cn } from '@/lib/utils';
 import { useProjectTasks } from '../hooks/useProjectTasks';
 import { useProjectFilters, toTaskFilters } from '../useProjectFilters';
+import { useViewPreferences } from '../hooks/useViewPreferences';
+import { useEphemeralViewPreferences } from '../hooks/useEphemeralViewPreferences';
 import { PriorityChip } from '../PriorityChip';
 import { DueDatePill } from '../DueDatePill';
 import { AssigneeBubble } from '../AssigneeBubble';
@@ -273,6 +275,47 @@ const DEFAULT_VISIBILITY: VisibilityState = COLUMN_IDS.reduce<VisibilityState>(
 
 const DEFAULT_ORDER: ColumnOrderState = [...COLUMN_IDS];
 
+function hydrateVisibility(hidden: readonly string[] | undefined): VisibilityState {
+  const state: VisibilityState = {};
+  for (const id of COLUMN_IDS) state[id] = true;
+  if (!hidden) return state;
+  for (const id of hidden) {
+    if ((COLUMN_IDS as readonly string[]).includes(id)) state[id] = false;
+  }
+  return state;
+}
+
+function hydrateOrder(order: readonly string[] | undefined): ColumnOrderState {
+  if (!order || order.length === 0) return [...COLUMN_IDS];
+  const filtered = order.filter((id): id is ColumnId =>
+    (COLUMN_IDS as readonly string[]).includes(id),
+  );
+  // Append any known column the persisted order omitted (schema evolution).
+  const missing = COLUMN_IDS.filter((id) => !filtered.includes(id));
+  return [...filtered, ...missing];
+}
+
+function computeHidden(visibility: VisibilityState): string[] {
+  return COLUMN_IDS.filter((id) => visibility[id] === false);
+}
+
+function arraysShallowEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function recordsShallowEqual(
+  a: Record<string, boolean>,
+  b: Record<string, boolean>,
+): boolean {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const k of aKeys) if (a[k] !== b[k]) return false;
+  return true;
+}
+
 /**
  * List view for a project — dense, sortable, configurable-columns table
  * built on shadcn `Table` primitives + `@tanstack/react-table` headless.
@@ -307,14 +350,119 @@ export function ListView({
     { limit: 100 },
   );
 
-  // Persisted only in component state — Task 8.0 will migrate to useViewPreferences.
-  const [density, setDensity] = useState<Density>('compact');
-  const [columnVisibility, setColumnVisibility] =
-    useState<VisibilityState>(DEFAULT_VISIBILITY);
-  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(DEFAULT_ORDER);
+  // Durable slots (columns, order, sort) live on the backend keyed by
+  // (userId, projectId). Density is device-local — it doesn't round-trip
+  // to the server.
+  const { preferences: durable, set: setDurable } = useViewPreferences(
+    workspaceSlug,
+    projectSlug,
+  );
+  const { preferences: ephemeral, set: setEphemeral } =
+    useEphemeralViewPreferences(projectId);
+
+  const persistedOrder = durable.list?.columns;
+  const persistedHidden = durable.list?.hidden;
+  const density: Density = ephemeral.density ?? 'compact';
+  const setDensity = useCallback(
+    (next: Density) => setEphemeral({ density: next }),
+    [setEphemeral],
+  );
+
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+    () => hydrateVisibility(persistedHidden),
+  );
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
+    () => hydrateOrder(persistedOrder),
+  );
   const [openTaskNumber, setOpenTaskNumber] = useState<number | null>(
     initialTaskNumber ?? null,
   );
+
+  // Persist the full `list` slot as one shallow-merged payload — the DTO
+  // requires `columns`, `hidden`, and `sort` together inside `list`.
+  // Callers pass any subset and the current on-screen values fill in the
+  // rest, so a single-field toggle still produces a valid PUT.
+  //
+  // Sort fallback prefers the last durable sort, then the URL, and only
+  // last resort defaults — otherwise hiding a column while the URL has
+  // no `?sort=` would silently overwrite the user's remembered sort.
+  const persistListSlot = useCallback(
+    (partial: {
+      order?: ColumnOrderState;
+      visibility?: VisibilityState;
+      sort?: { by: string; dir: 'asc' | 'desc' };
+    }) => {
+      const nextOrder = partial.order ?? columnOrder;
+      const nextVisibility = partial.visibility ?? columnVisibility;
+      const nextSort =
+        partial.sort ??
+        durable.list?.sort ??
+        {
+          by: filters.sort ?? 'position',
+          dir: filters.sortDir ?? 'asc',
+        };
+      setDurable({
+        list: {
+          columns: [...nextOrder],
+          hidden: computeHidden(nextVisibility),
+          sort: nextSort,
+        },
+      });
+    },
+    [
+      columnOrder,
+      columnVisibility,
+      durable.list?.sort,
+      filters.sort,
+      filters.sortDir,
+      setDurable,
+    ],
+  );
+
+  const handleVisibilityChange = useCallback(
+    (updater: VisibilityState | ((old: VisibilityState) => VisibilityState)) => {
+      setColumnVisibility((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        persistListSlot({ visibility: next });
+        return next;
+      });
+    },
+    [persistListSlot],
+  );
+
+  const handleOrderChange = useCallback(
+    (updater: ColumnOrderState | ((old: ColumnOrderState) => ColumnOrderState)) => {
+      setColumnOrder((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        persistListSlot({ order: next });
+        return next;
+      });
+    },
+    [persistListSlot],
+  );
+
+  // Once the server payload arrives (or a peer tab pushes an update),
+  // reconcile local state so a page refresh restores the last-saved
+  // layout. Guarded by a shallow equality check to avoid a self-triggered
+  // effect loop.
+  const persistedOrderKey = persistedOrder?.join(',');
+  useEffect(() => {
+    // Reacts to *server* changes only — the join-key dep is what actually
+    // changes when a peer tab pushes an update. Local reordering already
+    // updates the state directly.
+    setColumnOrder((current) => {
+      const next = hydrateOrder(persistedOrder);
+      return arraysShallowEqual(next, current) ? current : next;
+    });
+  }, [persistedOrderKey, persistedOrder]);
+
+  const persistedHiddenKey = persistedHidden?.join(',');
+  useEffect(() => {
+    setColumnVisibility((current) => {
+      const next = hydrateVisibility(persistedHidden);
+      return recordsShallowEqual(next, current) ? current : next;
+    });
+  }, [persistedHiddenKey, persistedHidden]);
 
   // If the deep-link prop changes (client navigation to another task URL
   // without a full remount), reflect the new target so the drawer follows.
@@ -417,8 +565,8 @@ export function ListView({
     data: rows,
     columns,
     state: { sorting: sortingState, columnVisibility, columnOrder },
-    onColumnVisibilityChange: setColumnVisibility,
-    onColumnOrderChange: setColumnOrder,
+    onColumnVisibilityChange: handleVisibilityChange,
+    onColumnOrderChange: handleOrderChange,
     getCoreRowModel: getCoreRowModel(),
     // Sorting is server-driven via `useProjectFilters.setSort()`; the
     // table stays "manual" so `@tanstack/react-table` does not re-sort
@@ -435,8 +583,14 @@ export function ListView({
     (clicked: TaskSortField) => {
       const next = nextSortState(clicked, activeSortField, activeSortDir);
       setSort(next.field, next.dir);
+      // Mirror the new sort into the durable slot so a hard refresh with
+      // no `?sort=` in the URL restores the last-used ordering. The
+      // debounced writer coalesces this with any concurrent column edit.
+      if (next.field) {
+        persistListSlot({ sort: { by: next.field, dir: next.dir ?? 'asc' } });
+      }
     },
-    [activeSortField, activeSortDir, setSort],
+    [activeSortField, activeSortDir, persistListSlot, setSort],
   );
 
   const pickerItems: ColumnPickerItem[] = useMemo(
@@ -467,8 +621,8 @@ export function ListView({
             columns={pickerItems}
             order={columnOrder}
             visibility={columnVisibility as Record<string, boolean>}
-            onOrderChange={setColumnOrder}
-            onVisibilityChange={setColumnVisibility}
+            onOrderChange={handleOrderChange}
+            onVisibilityChange={handleVisibilityChange}
           />
         </ToolbarShell>
         <ListSkeleton />
@@ -493,8 +647,8 @@ export function ListView({
           columns={pickerItems}
           order={columnOrder}
           visibility={columnVisibility as Record<string, boolean>}
-          onOrderChange={setColumnOrder}
-          onVisibilityChange={setColumnVisibility}
+          onOrderChange={handleOrderChange}
+          onVisibilityChange={handleVisibilityChange}
         />
       </ToolbarShell>
       {isEmpty ? (

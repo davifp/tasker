@@ -67,6 +67,11 @@ export const browserHttp = {
     body?: unknown,
     options: Omit<BrowserRequestOptions, 'method' | 'body'> = {},
   ) => browserRequest<T>(path, { ...options, method: 'PATCH', body }),
+  put: <T>(
+    path: string,
+    body?: unknown,
+    options: Omit<BrowserRequestOptions, 'method' | 'body'> = {},
+  ) => browserRequest<T>(path, { ...options, method: 'PUT', body }),
   delete: <T>(path: string, options: Omit<BrowserRequestOptions, 'method' | 'body'> = {}) =>
     browserRequest<T>(path, { ...options, method: 'DELETE' }),
 };

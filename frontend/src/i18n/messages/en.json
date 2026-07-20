@@ -759,5 +759,9 @@
       "body": "Try clearing filters, or add tasks with start and due dates to see them on the timeline.",
       "clear": "Clear filters"
     }
+  },
+  "viewPreferences": {
+    "errorLoad": "Couldn't load your view preferences.",
+    "errorSave": "Couldn't save your preferences. Retrying next change."
   }
 }

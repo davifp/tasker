@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { Task, WorkspaceRole } from '@/lib/http/types';
 import { useProjectTasks } from '../hooks/useProjectTasks';
 import { useProjectFilters, toTaskFilters } from '../useProjectFilters';
+import { useViewPreferences } from '../hooks/useViewPreferences';
 import { TaskDrawer } from '../TaskDrawer';
 import { PriorityChip } from '../PriorityChip';
 import { AssigneeBubble } from '../AssigneeBubble';
@@ -165,24 +166,36 @@ export function TimelineView({
 
   const tasks: readonly Task[] = useMemo(() => data?.items ?? [], [data?.items]);
 
-  // TODO(view-prefs): Task 8.0 migrates this into `useViewPreferences`
-  // (durable per-user, per-project). For now the URL param `?window=`
-  // survives refresh; component state mirrors it so the toggle repaints
-  // synchronously without waiting on router.replace round-trip.
+  // Precedence: URL `?window=` (explicit deep link) > durable per-user
+  // pref > DEFAULT_WINDOW. Local state mirrors the resolved value so the
+  // toggle repaints synchronously without waiting on router.replace.
+  const { preferences: durable, set: setDurable } = useViewPreferences(
+    workspaceSlug,
+    projectSlug,
+  );
   const urlWindowRaw = searchParams?.get(WINDOW_PARAM) ?? null;
+  const durableWindow = durable.timeline?.windowWeeks ?? null;
   const [windowWeeks, setWindowWeeks] = useState<WindowWeeks>(() =>
-    parseWindowParam(urlWindowRaw),
+    urlWindowRaw !== null
+      ? parseWindowParam(urlWindowRaw)
+      : (durableWindow ?? DEFAULT_WINDOW),
   );
 
   // Reflect external URL edits (deep link, browser back) into local
   // state. Never write back — writes go through `handleWindowChange`.
-  // Depend on the parsed raw string (stable across re-renders unless
-  // the query actually changes) instead of the `searchParams` object
-  // reference, which `next/navigation` returns fresh every render.
   useEffect(() => {
-    const parsed = parseWindowParam(urlWindowRaw);
-    setWindowWeeks((current) => (current === parsed ? current : parsed));
+    if (urlWindowRaw !== null) {
+      const parsed = parseWindowParam(urlWindowRaw);
+      setWindowWeeks((current) => (current === parsed ? current : parsed));
+    }
   }, [urlWindowRaw]);
+
+  // When the server pref arrives (or a peer tab pushes an update) and
+  // the URL doesn't pin a window, hydrate from the durable slot.
+  useEffect(() => {
+    if (urlWindowRaw !== null || durableWindow === null) return;
+    setWindowWeeks((current) => (current === durableWindow ? current : durableWindow));
+  }, [durableWindow, urlWindowRaw]);
 
   const handleWindowChange = useCallback(
     (next: WindowWeeks) => {
@@ -197,21 +210,24 @@ export function TimelineView({
       router.replace(query ? `${pathname}?${query}` : (pathname ?? '/'), {
         scroll: false,
       });
+      // Also persist so a hard refresh with no `?window=` remembers the
+      // choice. The debounced writer coalesces a rapid double-toggle.
+      setDurable({ timeline: { windowWeeks: next } });
     },
-    [pathname, router, searchParams],
+    [pathname, router, searchParams, setDurable],
   );
 
   // Captured at mount / toggle; does not roll at midnight. Reviewed and accepted.
-  const window = useMemo(
+  const visibleWindow = useMemo(
     () => resolveWindow(new Date(), windowWeeks),
     [windowWeeks],
   );
 
-  const axisCells = useMemo(() => buildAxisCells(window), [window]);
+  const axisCells = useMemo(() => buildAxisCells(visibleWindow), [visibleWindow]);
 
   const { dated, undated, outsideWindow } = useMemo(
-    () => partitionTasks(tasks, window),
-    [tasks, window],
+    () => partitionTasks(tasks, visibleWindow),
+    [tasks, visibleWindow],
   );
 
   const [openTaskNumber, setOpenTaskNumber] = useState<number | null>(
@@ -268,9 +284,9 @@ export function TimelineView({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground" data-testid="timeline-range">
-          {monthFormatter.format(window.start)} –{' '}
+          {monthFormatter.format(visibleWindow.start)} –{' '}
           {monthFormatter.format(
-            new Date(window.end.getTime() - 24 * 60 * 60 * 1000),
+            new Date(visibleWindow.end.getTime() - 24 * 60 * 60 * 1000),
           )}
         </p>
         <WindowToggle value={windowWeeks} onChange={handleWindowChange} />

@@ -759,5 +759,9 @@
       "body": "Tente limpar os filtros ou adicione tarefas com data de início e prazo para vê-las na linha do tempo.",
       "clear": "Limpar filtros"
     }
+  },
+  "viewPreferences": {
+    "errorLoad": "Não foi possível carregar suas preferências de visualização.",
+    "errorSave": "Não foi possível salvar suas preferências. Tentaremos na próxima alteração."
   }
 }
