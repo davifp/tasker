@@ -43,11 +43,26 @@ interface Snapshot {
   lists: Array<{ queryKey: readonly unknown[]; data: CursorPage<Task> | undefined }>;
 }
 
-// Optimistic Kanban move. Snapshots the current state, applies the new
-// status + position locally, rolls back on error. A 409
-// `position-conflict` from the server triggers exactly one client-side
-// retry with a freshly generated key; the second failure is surfaced to
-// the caller so the toast can render the Problem Details.
+// Optimistic move mutation shared by Kanban, List, and Backlog.
+// Snapshots the current state, applies the new status + position locally,
+// rolls back on error. A 409 `position-conflict` triggers exactly one
+// client-side retry with a freshly generated key; the second failure is
+// surfaced to the caller so the toast can render the Problem Details.
+//
+// Optimistic-update contract:
+// - `onMutate` rewrites `position` on the moved task in every cached list
+//   entry, but does NOT re-splice or re-sort the array. Order within the
+//   cached array is left untouched.
+// - Consumers that display tasks in `position` order (Backlog, and List
+//   when sorted by `position`) MUST re-sort in a `useMemo` on top of the
+//   cache entry — otherwise the optimistic patch will read visually
+//   stale until the `onSettled` invalidation refetches.
+// - Kanban buckets tasks by `status` client-side and does not depend on
+//   array order within a bucket, so the no-splice behaviour is safe there.
+// - Same-status reorders (Backlog) still fire the `MOVED` domain event
+//   via `POST /tasks/:number/move`; no in-repo `@OnEvent(TaskEvents.MOVED)`
+//   subscribers exist today. Future subscribers must guard on
+//   `fromStatus !== toStatus` if same-status moves should be ignored.
 export function useMoveTask(workspaceSlug: string, projectSlug: string) {
   const queryClient = useQueryClient();
 

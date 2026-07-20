@@ -680,5 +680,25 @@
       "body": "Try clearing filters, or add a new task to see it here.",
       "clear": "Clear filters"
     }
+  },
+  "backlog": {
+    "caption": "Prioritized task backlog",
+    "loading": "Loading backlog…",
+    "errorLoad": "Couldn't load the backlog. Try again.",
+    "openRow": "Open task #{number}: {title}",
+    "rowLabel": "Task #{number} — {title}. Position {index} of {total}. Press Alt Up or Alt Down to reorder, Enter to open.",
+    "reorderInstructions": "Use Alt + Arrow Up or Alt + Arrow Down to reorder tasks. Press Enter to open a task.",
+    "empty": {
+      "title": "No tasks in this backlog",
+      "body": "Try clearing filters, or add a new task to see it here.",
+      "clear": "Clear filters"
+    },
+    "announce": {
+      "moved": "Moved \"{title}\" to position {index} of {total}.",
+      "moveFailed": "Could not move task {title}. It stayed in place."
+    },
+    "errors": {
+      "moveFailed": "Couldn't reorder the task. Try again."
+    }
   }
 }

@@ -680,5 +680,25 @@
       "body": "Tente limpar os filtros ou adicione uma nova tarefa para vê-la aqui.",
       "clear": "Limpar filtros"
     }
+  },
+  "backlog": {
+    "caption": "Backlog priorizado de tarefas",
+    "loading": "Carregando backlog…",
+    "errorLoad": "Não foi possível carregar o backlog. Tente novamente.",
+    "openRow": "Abrir tarefa #{number}: {title}",
+    "rowLabel": "Tarefa #{number} — {title}. Posição {index} de {total}. Pressione Alt Cima ou Alt Baixo para reordenar, Enter para abrir.",
+    "reorderInstructions": "Use Alt + Seta para Cima ou Alt + Seta para Baixo para reordenar tarefas. Pressione Enter para abrir uma tarefa.",
+    "empty": {
+      "title": "Nenhuma tarefa neste backlog",
+      "body": "Tente limpar os filtros ou adicione uma nova tarefa para vê-la aqui.",
+      "clear": "Limpar filtros"
+    },
+    "announce": {
+      "moved": "Movida \"{title}\" para a posição {index} de {total}.",
+      "moveFailed": "Não foi possível mover a tarefa {title}. Ela permaneceu no lugar."
+    },
+    "errors": {
+      "moveFailed": "Não foi possível reordenar a tarefa. Tente novamente."
+    }
   }
 }
