@@ -633,5 +633,52 @@
         "cycle": "Isso criaria um ciclo de dependências."
       }
     }
+  },
+  "list": {
+    "caption": "Tarefas neste projeto",
+    "loading": "Carregando tarefas…",
+    "errorLoad": "Não foi possível carregar a lista de tarefas. Tente novamente.",
+    "openRow": "Abrir tarefa #{number}: {title}",
+    "sort": {
+      "ariaCurrentAsc": "Ordenado crescente. Ative para ordenar decrescente.",
+      "ariaCurrentDesc": "Ordenado decrescente. Ative para limpar a ordenação.",
+      "ariaNone": "Sem ordenação. Ative para ordenar crescente."
+    },
+    "columns": {
+      "title": "Título",
+      "status": "Status",
+      "assignee": "Responsável",
+      "priority": "Prioridade",
+      "dueDate": "Vencimento",
+      "labels": "Etiquetas",
+      "updated": "Atualizada"
+    },
+    "labels": {
+      "empty": "Sem etiquetas",
+      "overflow": "+{count, number}"
+    },
+    "dueDate": {
+      "empty": "—"
+    },
+    "assignee": {
+      "unassigned": "Sem responsável"
+    },
+    "density": {
+      "trigger": "Densidade das linhas",
+      "compact": "Compacta",
+      "comfortable": "Confortável"
+    },
+    "columnPicker": {
+      "trigger": "Colunas",
+      "heading": "Exibir / reordenar colunas",
+      "moveUp": "Mover {name} para cima",
+      "moveDown": "Mover {name} para baixo",
+      "toggle": "Alternar {name}"
+    },
+    "empty": {
+      "title": "Nenhuma tarefa corresponde aos filtros",
+      "body": "Tente limpar os filtros ou adicione uma nova tarefa para vê-la aqui.",
+      "clear": "Limpar filtros"
+    }
   }
 }

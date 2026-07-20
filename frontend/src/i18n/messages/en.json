@@ -633,5 +633,52 @@
         "cycle": "That would create a dependency cycle."
       }
     }
+  },
+  "list": {
+    "caption": "Tasks in this project",
+    "loading": "Loading tasks…",
+    "errorLoad": "Couldn't load the task list. Try again.",
+    "openRow": "Open task #{number}: {title}",
+    "sort": {
+      "ariaCurrentAsc": "Sorted ascending. Activate to sort descending.",
+      "ariaCurrentDesc": "Sorted descending. Activate to clear sort.",
+      "ariaNone": "Not sorted. Activate to sort ascending."
+    },
+    "columns": {
+      "title": "Title",
+      "status": "Status",
+      "assignee": "Assignee",
+      "priority": "Priority",
+      "dueDate": "Due date",
+      "labels": "Labels",
+      "updated": "Updated"
+    },
+    "labels": {
+      "empty": "No labels",
+      "overflow": "+{count, number}"
+    },
+    "dueDate": {
+      "empty": "—"
+    },
+    "assignee": {
+      "unassigned": "Unassigned"
+    },
+    "density": {
+      "trigger": "Row density",
+      "compact": "Compact",
+      "comfortable": "Comfortable"
+    },
+    "columnPicker": {
+      "trigger": "Columns",
+      "heading": "Show / reorder columns",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "toggle": "Toggle {name}"
+    },
+    "empty": {
+      "title": "No tasks match your filters",
+      "body": "Try clearing filters, or add a new task to see it here.",
+      "clear": "Clear filters"
+    }
   }
 }
