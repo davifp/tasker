@@ -114,6 +114,10 @@ describe('Tasks module (integration)', () => {
     process.env['APP_BASE_URL'] = 'http://localhost:3000';
     process.env['THROTTLE_REGISTER_LIMIT'] = '100';
     process.env['THROTTLE_LOGIN_LIMIT'] = '100';
+    // Lift the global default so the 500-task seed regression below can
+    // burn > 100 POSTs against /tasks without tripping rate limits.
+    process.env['THROTTLE_DEFAULT_LIMIT'] = '10000';
+    process.env['THROTTLE_DEFAULT_TTL_S'] = '60';
 
     execSync('pnpm prisma migrate deploy', {
       cwd: '/home/davi/tasker/backend',
@@ -282,6 +286,44 @@ describe('Tasks module (integration)', () => {
         );
         const numbers = results.map((r) => r.number).sort((a, b) => a - b);
         expect(numbers).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
+      },
+      TEST_TIMEOUT,
+    );
+
+    // Regression for bugs.md BUG-01/02: before the fix the global default
+    // throttler was hardcoded at 100/60s and could not be lifted via env, so
+    // any sequential > 100-write fixture (e2e/views.spec.ts, admin data
+    // migrations, etc.) tripped the guard and every request past #100 got
+    // 429 (masquerading as a 500 through the BFF proxy). This test asserts
+    // that sequential POST /tasks past the 100-req threshold succeeds when
+    // THROTTLE_DEFAULT_LIMIT is lifted, which is the same override the
+    // Playwright config now sets.
+    it(
+      'sequential > 100 task creates succeed when THROTTLE_DEFAULT_LIMIT is lifted (BUG-01 regression)',
+      async () => {
+        const projRes = await req(baseUrl, 'POST', `/workspaces/${workspaceSlug}/projects`, {
+          token: owner.accessToken,
+          body: {
+            name: 'ThrottleRegression',
+            slug: 'throttle-regression',
+            color: '#22c55e',
+            icon: 'Bolt',
+          },
+        });
+        expect(projRes.status).toBe(201);
+
+        const N = 120;
+        for (let i = 0; i < N; i += 1) {
+          const r = await req(
+            baseUrl,
+            'POST',
+            `/workspaces/${workspaceSlug}/projects/throttle-regression/tasks`,
+            { token: owner.accessToken, body: { title: `Regression ${i + 1}` } },
+          );
+          expect(r.status, `task ${i + 1} unexpected status ${r.status}: ${await r.text()}`).toBe(
+            201,
+          );
+        }
       },
       TEST_TIMEOUT,
     );

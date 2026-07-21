@@ -50,4 +50,23 @@ describe('envSchema', () => {
   it('rejects non-URL DATABASE_URL', () => {
     expect(() => envSchema.parse({ ...validEnv, DATABASE_URL: 'not-a-url' })).toThrow();
   });
+
+  // Regression: without env-driven overrides for the default throttler,
+  // E2E fixtures that write > 100 rows in one minute are silently rate-limited
+  // and mask real assertions under a throttler failure. See bugs.md BUG-01/02.
+  it('applies default throttler defaults matching production (100/60s)', () => {
+    const result = envSchema.parse(validEnv);
+    expect(result.THROTTLE_DEFAULT_LIMIT).toBe(100);
+    expect(result.THROTTLE_DEFAULT_TTL_S).toBe(60);
+  });
+
+  it('coerces THROTTLE_DEFAULT_LIMIT + TTL from strings so playwright env can override them', () => {
+    const result = envSchema.parse({
+      ...validEnv,
+      THROTTLE_DEFAULT_LIMIT: '10000',
+      THROTTLE_DEFAULT_TTL_S: '60',
+    });
+    expect(result.THROTTLE_DEFAULT_LIMIT).toBe(10_000);
+    expect(result.THROTTLE_DEFAULT_TTL_S).toBe(60);
+  });
 });

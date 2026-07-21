@@ -80,7 +80,11 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
       inject: [ConfigService, Redis],
       useFactory: (config: ConfigService, redis: Redis) => ({
         throttlers: [
-          { name: 'default', limit: 100, ttl: 60_000 },
+          {
+            name: 'default',
+            limit: config.get<number>('THROTTLE_DEFAULT_LIMIT')!,
+            ttl: config.get<number>('THROTTLE_DEFAULT_TTL_S')! * 1000,
+          },
           // Named throttlers below MUST include a skipIf that matches the
           // exact route they cover — @nestjs/throttler runs every registered
           // throttler on every request unless one opts out. Without skipIf,

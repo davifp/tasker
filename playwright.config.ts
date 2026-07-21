@@ -63,6 +63,13 @@ export default defineConfig({
         THROTTLE_EMAIL_RESEND_TTL_S: '60',
         THROTTLE_PASSWORD_RESET_LIMIT: '1000',
         THROTTLE_PASSWORD_RESET_TTL_S: '60',
+        // Lift the global default throttler. The 500-task seed fixture in
+        // `e2e/views.spec.ts` creates > 500 rows through POST /tasks within
+        // the same window; the production 100/60s default would trip long
+        // before the fixture reaches steady state and mask the real assertions
+        // under a throttler failure.
+        THROTTLE_DEFAULT_LIMIT: '10000',
+        THROTTLE_DEFAULT_TTL_S: '60',
       },
     },
     {

@@ -40,6 +40,12 @@ export const envSchema = z.object({
   GITHUB_CLIENT_ID: z.string().default(''),
   GITHUB_CLIENT_SECRET: z.string().default(''),
 
+  // Throttler — global default (covers every route not opted-out by a named
+  // throttler's skipIf). Production stays at 100/60s; E2E lifts these to
+  // avoid tripping on high-volume seed fixtures (see playwright.config.ts).
+  THROTTLE_DEFAULT_LIMIT: z.coerce.number().default(100),
+  THROTTLE_DEFAULT_TTL_S: z.coerce.number().default(60),
+
   // Throttler (auth endpoints)
   THROTTLE_REGISTER_LIMIT: z.coerce.number().default(5),
   THROTTLE_REGISTER_TTL_S: z.coerce.number().default(60),
