@@ -102,13 +102,31 @@ export async function onboardAccount(
 }
 
 // Fresh sign-in via the login form. Assumes the email is already verified.
+//
+// Pass a `redirectTo` when the caller knows the workspace/project it wants
+// to land on — the login form respects the `redirectTo` search param and
+// falls back to `/` (the demo landing page, not the projects surface) if
+// none is provided. Historically the helper assumed the app auto-routed to
+// `/{workspace}/projects`, which it never did; callers now supply the slug.
 export async function signIn(
   page: Page,
-  credentials: { email: string; password: string },
+  credentials: { email: string; password: string; redirectTo?: string },
 ): Promise<void> {
-  await page.goto('/login');
+  const redirectTo = credentials.redirectTo ?? '/';
+  const loginUrl =
+    redirectTo === '/' ? '/login' : `/login?redirectTo=${encodeURIComponent(redirectTo)}`;
+  await page.goto(loginUrl);
   await page.getByLabel(/^email$/i).fill(credentials.email);
   await page.getByLabel(/^password$/i).fill(credentials.password);
   await page.getByRole('button', { name: /sign in/i }).click();
-  await page.waitForURL(/\/[^/]+\/projects/);
+  // Wait for the redirect the form performs after a successful post. The
+  // form navigates to `redirectTo`, but the destination itself may issue a
+  // server-side redirect (e.g. `/{ws}/projects/{proj}` → landing view like
+  // `/list`), so match on a prefix instead of an exact path.
+  if (redirectTo === '/') {
+    await page.waitForURL('http://localhost:3000/');
+  } else {
+    const target = redirectTo.split('?')[0]!;
+    await page.waitForURL((url) => url.pathname.startsWith(target));
+  }
 }
