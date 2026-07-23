@@ -65,6 +65,26 @@ export const envSchema = z.object({
   // Days after Session.expiresAt to keep the row around before hard-deleting it.
   SESSION_RETENTION_DAYS: z.coerce.number().default(7),
 
+  // Object storage (S3-compatible: AWS S3, Cloudflare R2, MinIO).
+  // The bucket must exist before the API starts writing; docker-compose
+  // provisions a `tasker-attachments` bucket via the `minio-init` job.
+  STORAGE_ENDPOINT: z.string().url().default('http://localhost:9000'),
+  STORAGE_REGION: z.string().default('us-east-1'),
+  STORAGE_BUCKET: z.string().min(1).default('tasker-attachments'),
+  STORAGE_ACCESS_KEY_ID: z.string().min(1).default('minioadmin'),
+  STORAGE_SECRET_ACCESS_KEY: z.string().min(1).default('minioadmin'),
+  // MinIO requires path-style (bucket name in the URL, not the hostname).
+  // AWS S3 accepts both; R2 requires virtual-hosted style — set to 'false'
+  // in production against R2.
+  STORAGE_FORCE_PATH_STYLE: z
+    .union([z.enum(['true', 'false']), z.boolean()])
+    .default('true')
+    .transform((v) => (typeof v === 'boolean' ? v : v === 'true')),
+  // Presigned URL lifetimes; short enough that stolen URLs die fast, long
+  // enough that a chunked upload from a slow client can complete.
+  STORAGE_PUT_URL_TTL_S: z.coerce.number().int().positive().default(60),
+  STORAGE_GET_URL_TTL_S: z.coerce.number().int().positive().default(300),
+
   // BullMQ health thresholds (report degraded above these).
   BULLMQ_HEALTH_MAX_WAITING: z.coerce.number().default(1000),
   BULLMQ_HEALTH_MAX_STALLED: z.coerce.number().default(10),

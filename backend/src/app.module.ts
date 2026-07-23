@@ -13,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { RedisModule } from './common/redis/redis.module';
 import { SecurityModule } from './common/security/security.module';
+import { StorageModule } from './common/storage/storage.module';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -128,6 +129,7 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     }),
     LoggerModule,
     SecurityModule,
+    StorageModule,
     PrismaModule,
     HealthModule,
     UsersModule,
