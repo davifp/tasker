@@ -30,6 +30,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { UserProjectViewPreferencesModule } from './user-project-view-preferences/user-project-view-preferences.module';
 import { ContextModule } from './common/context/context.module';
 import { AuditModule } from './common/audit/audit.module';
+import { ActivityModule } from './common/activity/activity.module';
 import { WorkspaceGuard } from './common/context/workspace.guard';
 import { RolesGuard } from './common/context/roles.guard';
 import { WorkspaceContextInterceptor } from './common/context/workspace-context.interceptor';
@@ -140,6 +141,7 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     OAuthModule,
     ContextModule,
     AuditModule,
+    ActivityModule,
     WorkspacesModule,
     InvitationsModule,
     ProjectsModule,
