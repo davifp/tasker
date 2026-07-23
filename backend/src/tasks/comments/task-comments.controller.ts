@@ -14,6 +14,7 @@ import {
   Request,
 } from '@nestjs/common';
 import type { Request as ExpressRequest } from 'express';
+import { Idempotent } from '../../common/idempotency/idempotency.decorators';
 import { Roles } from '../../common/context/roles.decorator';
 import { WorkspaceContext } from '../../common/context/workspace-context.store';
 import { ProjectsService } from '../../projects/projects.service';
@@ -60,6 +61,7 @@ export class TaskCommentsController {
 
   @Post()
   @Roles('MEMBER')
+  @Idempotent()
   async create(
     @Param('projectSlug') projectSlug: string,
     @Param('number') numberParam: string,
