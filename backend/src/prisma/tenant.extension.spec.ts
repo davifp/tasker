@@ -21,6 +21,13 @@ describe('TENANT_MODELS', () => {
     expect(TENANT_MODELS.has('Comment')).toBe(true);
   });
 
+  it('includes the Phase 5 collaboration tenant-scoped models', () => {
+    expect(TENANT_MODELS.has('CommentMention')).toBe(true);
+    expect(TENANT_MODELS.has('CommentReaction')).toBe(true);
+    expect(TENANT_MODELS.has('Attachment')).toBe(true);
+    expect(TENANT_MODELS.has('Activity')).toBe(true);
+  });
+
   it('excludes non-tenant models', () => {
     expect(TENANT_MODELS.has('User')).toBe(false);
     expect(TENANT_MODELS.has('OAuthAccount')).toBe(false);

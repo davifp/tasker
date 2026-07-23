@@ -246,6 +246,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@tasker/config':
+        specifier: workspace:*
+        version: link:../packages/config
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1

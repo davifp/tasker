@@ -40,6 +40,12 @@ enum Priority {
   HIGH
 }
 
+enum AttachmentStatus {
+  PENDING
+  READY
+  DELETING
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique @db.Citext
@@ -55,15 +61,19 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   sessions                Session[]
   workspaceMembers        WorkspaceMember[]
-  ownedWorkspaces         Workspace[]              @relation("WorkspaceOwner")
-  sentInvitations         Invitation[]             @relation("InvitationSender")
-  auditLogs               AuditLog[]               @relation("AuditLogActor")
-  ownedProjects           Project[]                @relation("ProjectOwner")
-  createdProjects         Project[]                @relation("ProjectCreator")
-  assignedTasks           Task[]                   @relation("TaskAssignee")
-  createdTasks            Task[]                   @relation("TaskCreator")
+  ownedWorkspaces         Workspace[]                 @relation("WorkspaceOwner")
+  sentInvitations         Invitation[]                @relation("InvitationSender")
+  auditLogs               AuditLog[]                  @relation("AuditLogActor")
+  ownedProjects           Project[]                   @relation("ProjectOwner")
+  createdProjects         Project[]                   @relation("ProjectCreator")
+  assignedTasks           Task[]                      @relation("TaskAssignee")
+  createdTasks            Task[]                      @relation("TaskCreator")
   comments                Comment[]
   viewPreferences         UserProjectViewPreference[]
+  commentMentions         CommentMention[]            @relation("MentionedUser")
+  commentReactions        CommentReaction[]           @relation("CommentReactor")
+  uploadedAttachments     Attachment[]                @relation("AttachmentUploader")
+  activities              Activity[]                  @relation("ActivityActor")
 }
 
 model OAuthAccount {
@@ -110,14 +120,18 @@ model Workspace {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  owner       User              @relation("WorkspaceOwner", fields: [ownerUserId], references: [id])
-  members     WorkspaceMember[]
-  invitations Invitation[]
-  auditLogs   AuditLog[]
-  projects    Project[]
-  labels      Label[]
-  tasks       Task[]
-  comments    Comment[]
+  owner            User              @relation("WorkspaceOwner", fields: [ownerUserId], references: [id])
+  members          WorkspaceMember[]
+  invitations      Invitation[]
+  auditLogs        AuditLog[]
+  projects         Project[]
+  labels           Label[]
+  tasks            Task[]
+  comments         Comment[]
+  commentMentions  CommentMention[]
+  commentReactions CommentReaction[]
+  attachments      Attachment[]
+  activities       Activity[]
 }
 
 model WorkspaceMember {
@@ -212,6 +226,7 @@ model Project {
   tasks           Task[]
   sequence        ProjectSequence?
   viewPreferences UserProjectViewPreference[]
+  activities      Activity[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status])
@@ -258,6 +273,8 @@ model Task {
   dependents     TaskDependency[] @relation("TaskDependencies_blocker")
   checklistItems ChecklistItem[]
   comments       Comment[]
+  attachments    Attachment[]
+  activities     Activity[]
 
   @@unique([projectId, number])
   @@index([workspaceId, projectId, status, position])
@@ -306,15 +323,111 @@ model Comment {
   taskId       String
   authorUserId String
   body         String
+  editedAt     DateTime?
   deletedAt    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  author    User      @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task      Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User              @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+  mentions  CommentMention[]
+  reactions CommentReaction[]
 
   @@index([taskId, createdAt])
+}
+
+// One row per (comment, mentioned user). Persisting by userId (not handle)
+// makes mentions survive display-name renames and lets removed members fail
+// closed at render time (mention resolves to plain text). Offset is the byte
+// offset in the comment body of the '@' character, kept so the client can
+// re-derive positions without re-parsing.
+model CommentMention {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  commentId       String
+  mentionedUserId String
+  offset          Int
+  createdAt       DateTime @default(now())
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  comment       Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  mentionedUser User      @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, mentionedUserId])
+  @@index([mentionedUserId, createdAt(sort: Desc)])
+  @@index([workspaceId])
+}
+
+// Idempotent add/remove — the unique triple (comment, user, emoji) blocks
+// duplicates so a second POST is a no-op. Emoji is validated in application
+// code against the shared ReactionsCatalog; storing as a plain string keeps
+// the catalog governance out of the DB layer.
+model CommentReaction {
+  id          String   @id @default(cuid())
+  workspaceId String
+  commentId   String
+  userId      String
+  emoji       String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  comment   Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User      @relation("CommentReactor", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId, emoji])
+  @@index([commentId, emoji])
+  @@index([workspaceId])
+}
+
+// Attachment metadata; the bytes themselves live in object storage. Status
+// tracks the two-phase upload: PENDING after signUpload(), READY after
+// confirm(), DELETING while the janitor sweeps object-storage residue.
+model Attachment {
+  id             String           @id @default(cuid())
+  workspaceId    String
+  taskId         String
+  uploaderUserId String
+  storageKey     String           @unique
+  filename       String
+  mime           String
+  sizeBytes      Int
+  status         AttachmentStatus @default(PENDING)
+  deletedAt      DateTime?
+  createdAt      DateTime         @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader  User      @relation("AttachmentUploader", fields: [uploaderUserId], references: [id], onDelete: Restrict)
+
+  @@index([taskId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@index([workspaceId])
+}
+
+// Product-facing activity feed. Distinct from AuditLog: AuditLog is retained
+// for compliance and is written for every server-side write, while Activity
+// carries denormalized payload snapshots and is optimized for feed reads.
+// payload is a compact JSON snapshot so the feed can render a line without
+// a second fetch (see techspec § Data flow).
+model Activity {
+  id          String   @id @default(cuid())
+  workspaceId String
+  projectId   String
+  taskId      String?
+  actorUserId String?
+  verb        String
+  payload     Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task      Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor     User?     @relation("ActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([taskId, createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
 }
 
 model ProjectSequence {
