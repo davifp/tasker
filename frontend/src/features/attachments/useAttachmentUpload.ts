@@ -40,6 +40,7 @@ export function useAttachmentUpload({
 }: UseAttachmentUploadArgs) {
   const queryClient = useQueryClient();
   const key = taskKeys.attachments(workspaceSlug, projectSlug, taskNumber);
+  const activityKey = taskKeys.activity(workspaceSlug, projectSlug, taskNumber);
   const [items, setItems] = useState<UploadItem[]>([]);
   // AbortControllers keyed by clientId so cancel() only aborts the target.
   const controllers = useRef<Map<string, AbortController>>(new Map());
@@ -84,6 +85,7 @@ export function useAttachmentUpload({
             : { items: [confirmed], nextCursor: null },
         );
         void queryClient.invalidateQueries({ queryKey: key });
+        void queryClient.invalidateQueries({ queryKey: activityKey });
 
         patch(item.clientId, { status: 'ready', loaded: item.file.size, total: item.file.size });
       } catch (err) {
@@ -96,7 +98,7 @@ export function useAttachmentUpload({
         controllers.current.delete(item.clientId);
       }
     },
-    [queryClient, key, workspaceSlug, projectSlug, taskNumber, patch],
+    [queryClient, key, activityKey, workspaceSlug, projectSlug, taskNumber, patch],
   );
 
   const start = useCallback(

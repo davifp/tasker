@@ -16,12 +16,13 @@ interface Coords {
 export function useAddComment({ workspaceSlug, projectSlug, taskNumber }: Coords) {
   const queryClient = useQueryClient();
   const key = taskKeys.comments(workspaceSlug, projectSlug, taskNumber);
+  const activityKey = taskKeys.activity(workspaceSlug, projectSlug, taskNumber);
 
   return useMutation<
     Comment,
     unknown,
     { body: string; authorUserId: string },
-    { previous: Comment[] | undefined }
+    { previous: Comment[] | undefined; optimisticId: string }
   >({
     mutationFn: ({ body }) =>
       commentsHttp.create(workspaceSlug, projectSlug, taskNumber, { body }, crypto.randomUUID()),
@@ -29,8 +30,9 @@ export function useAddComment({ workspaceSlug, projectSlug, taskNumber }: Coords
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<Comment[]>(key);
       const now = new Date().toISOString();
+      const optimisticId = `optimistic-${crypto.randomUUID()}`;
       const optimistic: Comment = {
-        id: `optimistic-${crypto.randomUUID()}`,
+        id: optimisticId,
         workspaceId: '',
         taskId: '',
         authorUserId,
@@ -40,13 +42,22 @@ export function useAddComment({ workspaceSlug, projectSlug, taskNumber }: Coords
         updatedAt: now,
       };
       queryClient.setQueryData<Comment[]>(key, [...(previous ?? []), optimistic]);
-      return { previous };
+      return { previous, optimisticId };
+    },
+    onSuccess(created, _vars, ctx) {
+      // Replace the optimistic row with the server-returned Comment *before*
+      // the invalidate refetch lands. Otherwise a child feature (reactions,
+      // attachments, mentions) fires against the placeholder id and 404s.
+      queryClient.setQueryData<Comment[]>(key, (prev) =>
+        (prev ?? []).map((c) => (c.id === ctx.optimisticId ? created : c)),
+      );
     },
     onError(_err, _vars, ctx) {
       if (ctx?.previous !== undefined) queryClient.setQueryData(key, ctx.previous);
     },
     onSettled() {
       void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: activityKey });
     },
   });
 }
@@ -54,6 +65,7 @@ export function useAddComment({ workspaceSlug, projectSlug, taskNumber }: Coords
 export function useEditComment({ workspaceSlug, projectSlug, taskNumber }: Coords) {
   const queryClient = useQueryClient();
   const key = taskKeys.comments(workspaceSlug, projectSlug, taskNumber);
+  const activityKey = taskKeys.activity(workspaceSlug, projectSlug, taskNumber);
 
   return useMutation<
     Comment,
@@ -79,6 +91,7 @@ export function useEditComment({ workspaceSlug, projectSlug, taskNumber }: Coord
     },
     onSettled() {
       void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: activityKey });
     },
   });
 }
@@ -86,6 +99,7 @@ export function useEditComment({ workspaceSlug, projectSlug, taskNumber }: Coord
 export function useDeleteComment({ workspaceSlug, projectSlug, taskNumber }: Coords) {
   const queryClient = useQueryClient();
   const key = taskKeys.comments(workspaceSlug, projectSlug, taskNumber);
+  const activityKey = taskKeys.activity(workspaceSlug, projectSlug, taskNumber);
 
   return useMutation<void, unknown, { id: string }, { previous: Comment[] | undefined }>({
     mutationFn: ({ id }) => commentsHttp.remove(workspaceSlug, projectSlug, taskNumber, id),
@@ -105,6 +119,7 @@ export function useDeleteComment({ workspaceSlug, projectSlug, taskNumber }: Coo
     },
     onSettled() {
       void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: activityKey });
     },
   });
 }

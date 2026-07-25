@@ -17,6 +17,11 @@ interface Coords {
 export function useDeleteAttachment(coords: Coords) {
   const queryClient = useQueryClient();
   const key = taskKeys.attachments(coords.workspaceSlug, coords.projectSlug, coords.taskNumber);
+  const activityKey = taskKeys.activity(
+    coords.workspaceSlug,
+    coords.projectSlug,
+    coords.taskNumber,
+  );
   return useMutation<
     void,
     unknown,
@@ -46,6 +51,7 @@ export function useDeleteAttachment(coords: Coords) {
     },
     onSettled() {
       void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: activityKey });
     },
   });
 }

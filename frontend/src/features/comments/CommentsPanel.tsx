@@ -76,11 +76,15 @@ export function CommentsPanel({
   async function commitNew() {
     const body = draft.trim();
     if (!body) return;
+    // Clear the composer immediately so the user can queue the next thought.
+    // The mutation is optimistic — a rollback via setDraft(body) on error
+    // restores the buffer without losing what they typed.
+    setDraft('');
     try {
       const created = await add.mutateAsync({ body, authorUserId: currentUserId });
       emit({ name: 'comment_added', workspaceId, projectId, taskId, commentId: created.id });
-      setDraft('');
     } catch (err) {
+      setDraft(body);
       handleError(err, t('errors.addFailed'));
     }
   }
@@ -165,15 +169,17 @@ export function CommentsPanel({
                   ) : (
                     <div className="flex flex-col gap-1">
                       <SafeMarkdown source={comment.body} mentionMap={mentionMap} />
-                      <CommentReactions
-                        workspaceSlug={workspaceSlug}
-                        projectSlug={projectSlug}
-                        taskNumber={taskNumber}
-                        commentId={comment.id}
-                        currentUserId={currentUserId}
-                        currentUserDisplayName={currentUserDisplayName}
-                      />
-                      {editable ? (
+                      {comment.id.startsWith('optimistic-') ? null : (
+                        <CommentReactions
+                          workspaceSlug={workspaceSlug}
+                          projectSlug={projectSlug}
+                          taskNumber={taskNumber}
+                          commentId={comment.id}
+                          currentUserId={currentUserId}
+                          currentUserDisplayName={currentUserDisplayName}
+                        />
+                      )}
+                      {editable && !comment.id.startsWith('optimistic-') ? (
                         <div className="flex gap-1">
                           <Button
                             type="button"

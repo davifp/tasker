@@ -20,7 +20,7 @@ test.describe('Attachments — policy limits', () => {
     await onboardAccount(page);
     await createProject(page);
     const card = await quickAddTask(page, 'To do', 'Attachment gate');
-    const drawer = await openDrawer(page, card);
+    const drawer = await openDrawer(card);
 
     let signCalls = 0;
     await page.route('**/attachments/sign', (route) => {
@@ -44,7 +44,7 @@ test.describe('Attachments — policy limits', () => {
     await onboardAccount(page);
     await createProject(page);
     const card = await quickAddTask(page, 'To do', 'Mime gate');
-    const drawer = await openDrawer(page, card);
+    const drawer = await openDrawer(card);
 
     let signCalls = 0;
     await page.route('**/attachments/sign', (route) => {

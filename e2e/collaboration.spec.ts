@@ -27,17 +27,18 @@ test.describe('Collaboration flow', () => {
     await onboardAccount(page);
     const project = await createProject(page);
     const card = await quickAddTask(page, 'To do', 'Collab target');
-    const drawer = await openDrawer(page, card);
+    const drawer = await openDrawer(card);
 
     // ---- 1) Comment with mention --------------------------------------
-    // The composer's mention popover queries the backend; the first-reactor
-    // path is enough for this smoke — just type the body straight in.
-    const composer = drawer.getByLabel(/write a comment/i);
+    // Scope every locator to the Comments section — the drawer also has
+    // Checklist + Dependencies sections with their own "Add" buttons.
+    const commentsSection = drawer.getByRole('region', { name: /^comments$/i });
+    const composer = commentsSection.getByLabel(/write a comment/i);
     await composer.fill('Ship it 🚀');
-    await drawer.getByRole('button', { name: /^add$/i }).click();
+    await commentsSection.getByRole('button', { name: /^add$/i }).click();
     // The comment text ends up inside the drawer via SafeMarkdown; look for
     // the emoji rather than 'Ship' (which also appears in status names).
-    await expect(drawer.getByText('🚀')).toBeVisible();
+    await expect(commentsSection.getByText('🚀')).toBeVisible();
 
     // ---- 2) Toggle a reaction ----------------------------------------
     const heartBtn = drawer.getByRole('button', { name: /^heart$/i }).first();

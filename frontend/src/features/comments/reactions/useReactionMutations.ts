@@ -34,6 +34,11 @@ export function useToggleReaction(coords: Coords) {
     coords.taskNumber,
     coords.commentId,
   );
+  const activityKey = taskKeys.activity(
+    coords.workspaceSlug,
+    coords.projectSlug,
+    coords.taskNumber,
+  );
 
   return useMutation<void, unknown, { emoji: ReactionEmoji; add: boolean }, OptimisticContext>({
     mutationFn: ({ emoji, add }) =>
@@ -64,6 +69,7 @@ export function useToggleReaction(coords: Coords) {
     },
     onSettled() {
       void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: activityKey });
     },
   });
 }
