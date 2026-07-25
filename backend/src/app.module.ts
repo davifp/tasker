@@ -27,6 +27,7 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { ProjectsModule } from './projects/projects.module';
 import { LabelsModule } from './labels/labels.module';
 import { TasksModule } from './tasks/tasks.module';
+import { AttachmentsModule } from './tasks/attachments/attachments.module';
 import { UserProjectViewPreferencesModule } from './user-project-view-preferences/user-project-view-preferences.module';
 import { ContextModule } from './common/context/context.module';
 import { AuditModule } from './common/audit/audit.module';
@@ -147,6 +148,7 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     ProjectsModule,
     LabelsModule,
     TasksModule,
+    AttachmentsModule,
     UserProjectViewPreferencesModule,
   ],
   providers: [
