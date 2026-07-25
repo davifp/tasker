@@ -114,6 +114,15 @@ export const ACTIVITY_VERBS = [
   'reaction.removed',
   'attachment.uploaded',
   'attachment.removed',
+  // Planning (Fase 6).
+  'sprint.created',
+  'sprint.started',
+  'sprint.completed',
+  'sprint.task_added',
+  'sprint.task_removed',
+  'epic.created',
+  'epic.updated',
+  'epic.deleted',
 ] as const;
 
 export const activityVerbSchema = z.enum(ACTIVITY_VERBS);

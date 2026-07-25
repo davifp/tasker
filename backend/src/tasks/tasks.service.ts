@@ -110,6 +110,11 @@ export interface ListTasksFilters {
   to?: string;
   // Union filter over Priority.
   priority?: Priority[];
+  // Sprint scoping for the planner's backlog pane:
+  //   - `null` — only tasks NOT in any sprint (backlog).
+  //   - string — only tasks in the given sprint.
+  //   - undefined — unfiltered.
+  sprintId?: string | null;
 }
 
 export interface CursorPage<T> {
@@ -527,6 +532,9 @@ export class TasksService {
         : {}),
       ...(filters.priority && filters.priority.length > 0
         ? { priority: { in: filters.priority } }
+        : {}),
+      ...(filters.sprintId !== undefined
+        ? { sprintId: filters.sprintId }
         : {}),
       ...(dateWindow.length > 0 ? { AND: dateWindow } : {}),
     };
