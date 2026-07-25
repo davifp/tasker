@@ -615,6 +615,7 @@
       "save": "Save",
       "authorSelf": "You",
       "authorOther": "Author",
+      "edited": "(edited)",
       "errors": {
         "addFailed": "Couldn't add the comment. Try again.",
         "editFailed": "Couldn't save the comment. Try again."

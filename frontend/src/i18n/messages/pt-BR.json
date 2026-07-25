@@ -615,6 +615,7 @@
       "save": "Salvar",
       "authorSelf": "Você",
       "authorOther": "Autor",
+      "edited": "(editado)",
       "errors": {
         "addFailed": "Não foi possível adicionar o comentário. Tente novamente.",
         "editFailed": "Não foi possível salvar o comentário. Tente novamente."
