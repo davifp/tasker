@@ -620,6 +620,71 @@
         "editFailed": "Não foi possível salvar o comentário. Tente novamente."
       }
     },
+    "composer": {
+      "label": "Escrever comentário",
+      "placeholder": "Escreva um comentário… (Markdown suportado)",
+      "write": "Escrever",
+      "preview": "Prévia",
+      "previewEmpty": "Nada para pré-visualizar ainda.",
+      "submit": "Adicionar",
+      "submitting": "Adicionando…"
+    },
+    "mentions": {
+      "label": "Mencionar membro do workspace",
+      "loading": "Buscando…",
+      "empty": "Nenhum membro encontrado."
+    },
+    "reactions": {
+      "label": "Reações",
+      "add": "Adicionar reação",
+      "emoji": {
+        "thumbs_up": "Positivo",
+        "thumbs_down": "Negativo",
+        "heart": "Coração",
+        "tada": "Comemorar",
+        "rocket": "Foguete",
+        "eyes": "Observando",
+        "check": "Aprovado",
+        "thinking": "Pensando"
+      }
+    },
+    "attachments": {
+      "label": "Anexos",
+      "heading": "Anexos",
+      "loading": "Carregando…",
+      "empty": "Nenhum anexo ainda.",
+      "add": "Anexar arquivos",
+      "drop": "Solte arquivos aqui",
+      "cancel": "Cancelar",
+      "delete": "Remover",
+      "download": "Baixar",
+      "progress": "{loaded}/{total} bytes",
+      "errors": {
+        "tooLarge": "Este arquivo passa do limite de 25 MB.",
+        "mimeBlocked": "Tipo de arquivo não permitido.",
+        "uploadFailed": "Falha no upload. Tente novamente."
+      }
+    },
+    "activity": {
+      "label": "Atividade",
+      "heading": "Atividade",
+      "loading": "Carregando…",
+      "empty": "Sem atividade ainda.",
+      "loadMore": "Carregar mais",
+      "verbs": {
+        "task.created": "criou esta tarefa",
+        "task.updated": "atualizou esta tarefa",
+        "task.deleted": "removeu esta tarefa",
+        "task.status_changed": "moveu esta tarefa de {from} para {to}",
+        "comment.created": "comentou",
+        "comment.edited": "editou um comentário",
+        "comment.deleted": "removeu um comentário",
+        "reaction.added": "reagiu com {emoji}",
+        "reaction.removed": "removeu uma reação {emoji}",
+        "attachment.uploaded": "anexou {filename}",
+        "attachment.removed": "removeu {filename}"
+      }
+    },
     "dependencies": {
       "label": "Dependências",
       "heading": "Bloqueada por",

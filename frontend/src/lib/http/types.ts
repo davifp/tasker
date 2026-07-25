@@ -87,6 +87,9 @@ export interface Comment {
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // Populated by Phase 5 endpoints. Older payloads may omit these fields.
+  editedAt?: string | null;
+  mentions?: Array<{ userId: string; offset: number }>;
 }
 
 export interface ChecklistItem {
@@ -101,4 +104,79 @@ export interface ChecklistItem {
 export interface TaskDependency {
   taskId: string;
   blockedByTaskId: string;
+}
+
+// ---------------------------------------------------------------------------
+// Collaboration (Phase 5): mentions, reactions, attachments, activity feed.
+// Shapes mirror the backend one-to-one — see @tasker/config schemas + the
+// service view types under backend/src/tasks/**/*.service.ts.
+// ---------------------------------------------------------------------------
+
+export interface MentionSuggestion {
+  userId: string;
+  displayName: string;
+  slug: string;
+  avatarUrl?: string | null;
+}
+
+export type AttachmentStatus = 'PENDING' | 'READY' | 'DELETING';
+
+export interface Attachment {
+  id: string;
+  filename: string;
+  mime: string;
+  sizeBytes: number;
+  status: AttachmentStatus;
+  uploaderUserId: string;
+  createdAt: string;
+}
+
+export interface SignedUpload {
+  attachmentId: string;
+  uploadUrl: string;
+  storageKey: string;
+  expiresAt: string;
+}
+
+export interface ReactionSummary {
+  emoji: string;
+  count: number;
+  reactorSample: Array<{ userId: string; displayName: string }>;
+  reactedByMe: boolean;
+}
+
+export type ActivityVerb =
+  | 'task.created'
+  | 'task.updated'
+  | 'task.deleted'
+  | 'task.status_changed'
+  | 'comment.created'
+  | 'comment.edited'
+  | 'comment.deleted'
+  | 'reaction.added'
+  | 'reaction.removed'
+  | 'attachment.uploaded'
+  | 'attachment.removed';
+
+export interface ActivityPayload {
+  actorDisplayName?: string;
+  targetTitle?: string;
+  from?: string;
+  to?: string;
+  commentId?: string;
+  commentExcerpt?: string;
+  emoji?: string;
+  attachmentId?: string;
+  attachmentFilename?: string;
+}
+
+export interface Activity {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  taskId: string | null;
+  actorUserId: string | null;
+  verb: ActivityVerb;
+  payload: ActivityPayload;
+  createdAt: string;
 }

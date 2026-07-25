@@ -620,6 +620,71 @@
         "editFailed": "Couldn't save the comment. Try again."
       }
     },
+    "composer": {
+      "label": "Write a comment",
+      "placeholder": "Write a comment… (Markdown supported)",
+      "write": "Write",
+      "preview": "Preview",
+      "previewEmpty": "Nothing to preview yet.",
+      "submit": "Add",
+      "submitting": "Adding…"
+    },
+    "mentions": {
+      "label": "Mention a workspace member",
+      "loading": "Searching…",
+      "empty": "No matching members."
+    },
+    "reactions": {
+      "label": "Reactions",
+      "add": "Add reaction",
+      "emoji": {
+        "thumbs_up": "Thumbs up",
+        "thumbs_down": "Thumbs down",
+        "heart": "Heart",
+        "tada": "Celebrate",
+        "rocket": "Rocket",
+        "eyes": "Watching",
+        "check": "Approved",
+        "thinking": "Thinking"
+      }
+    },
+    "attachments": {
+      "label": "Attachments",
+      "heading": "Attachments",
+      "loading": "Loading…",
+      "empty": "No attachments yet.",
+      "add": "Attach files",
+      "drop": "Drop files here",
+      "cancel": "Cancel",
+      "delete": "Remove",
+      "download": "Download",
+      "progress": "{loaded}/{total} bytes",
+      "errors": {
+        "tooLarge": "This file is larger than the 25 MB limit.",
+        "mimeBlocked": "This file type is not allowed.",
+        "uploadFailed": "Upload failed. Try again."
+      }
+    },
+    "activity": {
+      "label": "Activity",
+      "heading": "Activity",
+      "loading": "Loading…",
+      "empty": "No activity yet.",
+      "loadMore": "Load more",
+      "verbs": {
+        "task.created": "created this task",
+        "task.updated": "updated this task",
+        "task.deleted": "deleted this task",
+        "task.status_changed": "moved this task from {from} to {to}",
+        "comment.created": "commented",
+        "comment.edited": "edited a comment",
+        "comment.deleted": "removed a comment",
+        "reaction.added": "reacted with {emoji}",
+        "reaction.removed": "removed a {emoji} reaction",
+        "attachment.uploaded": "attached {filename}",
+        "attachment.removed": "removed {filename}"
+      }
+    },
     "dependencies": {
       "label": "Dependencies",
       "heading": "Blocked by",

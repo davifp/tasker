@@ -117,6 +117,21 @@ export const taskKeys = {
     ['tasks', workspaceSlug, projectSlug, 'detail', number, 'checklist'] as const,
   dependencies: (workspaceSlug: string, projectSlug: string, number: number) =>
     ['tasks', workspaceSlug, projectSlug, 'detail', number, 'dependencies'] as const,
+  attachments: (workspaceSlug: string, projectSlug: string, number: number) =>
+    ['tasks', workspaceSlug, projectSlug, 'detail', number, 'attachments'] as const,
+  activity: (workspaceSlug: string, projectSlug: string, number: number) =>
+    ['tasks', workspaceSlug, projectSlug, 'detail', number, 'activity'] as const,
+  reactions: (workspaceSlug: string, projectSlug: string, number: number, commentId: string) =>
+    [
+      'tasks',
+      workspaceSlug,
+      projectSlug,
+      'detail',
+      number,
+      'comments',
+      commentId,
+      'reactions',
+    ] as const,
 };
 
 // ---------------------------------------------------------------------------
