@@ -673,17 +673,25 @@
       "empty": "Sem atividade ainda.",
       "loadMore": "Carregar mais",
       "verbs": {
-        "task.created": "criou esta tarefa",
-        "task.updated": "atualizou esta tarefa",
-        "task.deleted": "removeu esta tarefa",
-        "task.status_changed": "moveu esta tarefa de {from} para {to}",
-        "comment.created": "comentou",
-        "comment.edited": "editou um comentário",
-        "comment.deleted": "removeu um comentário",
-        "reaction.added": "reagiu com {emoji}",
-        "reaction.removed": "removeu uma reação {emoji}",
-        "attachment.uploaded": "anexou {filename}",
-        "attachment.removed": "removeu {filename}"
+        "task": {
+          "created": "criou esta tarefa",
+          "updated": "atualizou esta tarefa",
+          "deleted": "removeu esta tarefa",
+          "status_changed": "moveu esta tarefa de {from} para {to}"
+        },
+        "comment": {
+          "created": "comentou",
+          "edited": "editou um comentário",
+          "deleted": "removeu um comentário"
+        },
+        "reaction": {
+          "added": "reagiu com {emoji}",
+          "removed": "removeu uma reação {emoji}"
+        },
+        "attachment": {
+          "uploaded": "anexou {filename}",
+          "removed": "removeu {filename}"
+        }
       }
     },
     "dependencies": {

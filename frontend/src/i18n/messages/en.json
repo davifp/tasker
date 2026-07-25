@@ -673,17 +673,25 @@
       "empty": "No activity yet.",
       "loadMore": "Load more",
       "verbs": {
-        "task.created": "created this task",
-        "task.updated": "updated this task",
-        "task.deleted": "deleted this task",
-        "task.status_changed": "moved this task from {from} to {to}",
-        "comment.created": "commented",
-        "comment.edited": "edited a comment",
-        "comment.deleted": "removed a comment",
-        "reaction.added": "reacted with {emoji}",
-        "reaction.removed": "removed a {emoji} reaction",
-        "attachment.uploaded": "attached {filename}",
-        "attachment.removed": "removed {filename}"
+        "task": {
+          "created": "created this task",
+          "updated": "updated this task",
+          "deleted": "deleted this task",
+          "status_changed": "moved this task from {from} to {to}"
+        },
+        "comment": {
+          "created": "commented",
+          "edited": "edited a comment",
+          "deleted": "removed a comment"
+        },
+        "reaction": {
+          "added": "reacted with {emoji}",
+          "removed": "removed a {emoji} reaction"
+        },
+        "attachment": {
+          "uploaded": "attached {filename}",
+          "removed": "removed {filename}"
+        }
       }
     },
     "dependencies": {

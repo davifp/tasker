@@ -23,6 +23,8 @@ import { TaskMetadataPanel } from './TaskMetadataPanel';
 import { ChecklistPanel } from '@/features/checklists/ChecklistPanel';
 import { CommentsPanel } from '@/features/comments/CommentsPanel';
 import { DependenciesPanel } from '@/features/dependencies/DependenciesPanel';
+import { AttachmentsPanel } from '@/features/attachments/AttachmentsPanel';
+import { ActivityFeed } from '@/features/activity/ActivityFeed';
 
 interface TaskDrawerProps {
   workspaceSlug: string;
@@ -257,16 +259,30 @@ function DrawerBody({
       />
 
       {currentUserId && currentUserRole ? (
-        <CommentsPanel
-          workspaceSlug={workspaceSlug}
-          workspaceId={workspaceId}
-          projectId={projectId}
-          projectSlug={projectSlug}
-          taskNumber={task.number}
-          taskId={task.id}
-          currentUserId={currentUserId}
-          currentUserRole={currentUserRole}
-        />
+        <>
+          <CommentsPanel
+            workspaceSlug={workspaceSlug}
+            workspaceId={workspaceId}
+            projectId={projectId}
+            projectSlug={projectSlug}
+            taskNumber={task.number}
+            taskId={task.id}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+          />
+          <AttachmentsPanel
+            workspaceSlug={workspaceSlug}
+            projectSlug={projectSlug}
+            taskNumber={task.number}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+          />
+          <ActivityFeed
+            workspaceSlug={workspaceSlug}
+            projectSlug={projectSlug}
+            taskNumber={task.number}
+          />
+        </>
       ) : null}
 
       <footer className="mt-2 flex justify-end border-t border-border pt-3">
