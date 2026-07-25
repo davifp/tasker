@@ -134,14 +134,21 @@ export function MarkdownComposer({
     <div className={cn('flex flex-col gap-1', className)}>
       <div className="flex items-center justify-between">
         <div className="flex gap-1 text-xs">
+          {/*
+           * Active tab uses foreground text + a bottom border rather than
+           * a filled accent background: bg-accent/text-accent-foreground
+           * (white on emerald-600) only clears 3.86:1, below WCAG AA 4.5:1.
+           * Foreground text on the panel bg is well above 4.5:1 and the
+           * bottom border still signals the active state.
+           */}
           <button
             type="button"
             onClick={() => setShowPreview(false)}
             className={cn(
-              'rounded px-2 py-0.5',
+              'rounded px-2 py-0.5 border-b-2',
               !showPreview
-                ? 'bg-accent text-accent-foreground'
-                : 'text-muted-foreground hover:text-foreground',
+                ? 'border-foreground text-foreground font-medium'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
             )}
             aria-pressed={!showPreview}
           >
@@ -151,10 +158,10 @@ export function MarkdownComposer({
             type="button"
             onClick={() => setShowPreview(true)}
             className={cn(
-              'rounded px-2 py-0.5',
+              'rounded px-2 py-0.5 border-b-2',
               showPreview
-                ? 'bg-accent text-accent-foreground'
-                : 'text-muted-foreground hover:text-foreground',
+                ? 'border-foreground text-foreground font-medium'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
             )}
             aria-pressed={showPreview}
           >
