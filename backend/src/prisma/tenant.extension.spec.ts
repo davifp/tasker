@@ -28,6 +28,18 @@ describe('TENANT_MODELS', () => {
     expect(TENANT_MODELS.has('Activity')).toBe(true);
   });
 
+  it('includes the Phase 6 planning tenant-scoped models', () => {
+    expect(TENANT_MODELS.has('Sprint')).toBe(true);
+    expect(TENANT_MODELS.has('SprintCapacity')).toBe(true);
+    expect(TENANT_MODELS.has('SprintTaskSnapshot')).toBe(true);
+    expect(TENANT_MODELS.has('Epic')).toBe(true);
+    // MetricJobLog has a workspaceId field (nullable — global refresh jobs
+    // write null), so the DMMF derivation auto-includes it. Metrics reads
+    // ("asOf") are always workspace-scoped; the processor's global writes
+    // must go through an unscoped Prisma client to avoid the extension.
+    expect(TENANT_MODELS.has('MetricJobLog')).toBe(true);
+  });
+
   it('excludes non-tenant models', () => {
     expect(TENANT_MODELS.has('User')).toBe(false);
     expect(TENANT_MODELS.has('OAuthAccount')).toBe(false);
