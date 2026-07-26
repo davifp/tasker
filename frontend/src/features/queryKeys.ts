@@ -142,3 +142,84 @@ export const labelKeys = {
   all: (workspaceSlug: string) => ['labels', workspaceSlug] as const,
   list: (workspaceSlug: string) => ['labels', workspaceSlug, 'list'] as const,
 };
+
+// ---------------------------------------------------------------------------
+// Planning (Fase 6) — sprints, epics, dashboard.
+// ---------------------------------------------------------------------------
+//
+// Keys are scoped by (workspaceSlug, projectSlug where relevant) so switching
+// workspaces or projects resets the affected slices. Filter shapes go through
+// `canonicalizePlanning()` — a lighter cousin of `canonicalize()` above —
+// so cache-key permutations of the same filter set hash equal.
+
+interface SprintListFilters {
+  state?: 'PLANNED' | 'ACTIVE' | 'COMPLETED';
+  cursor?: string;
+  limit?: number;
+}
+
+interface EpicListFilters {
+  status?: 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELED';
+  cursor?: string;
+  limit?: number;
+}
+
+interface RoadmapFilters {
+  fromQuarter?: string;
+  toQuarter?: string;
+  projectId?: string;
+}
+
+interface CycleLeadTimeFilters {
+  window?: 'last_week' | 'last_month' | 'last_quarter' | 'last_year';
+  from?: string;
+  to?: string;
+  projectId?: string;
+}
+
+function canonicalizePlanning<T extends object>(filters: T): T {
+  const source = filters as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const key of Object.keys(source).sort()) {
+    const raw = source[key];
+    if (raw === undefined || raw === null) continue;
+    if (typeof raw === 'string' && raw.length === 0) continue;
+    next[key] = raw;
+  }
+  return Object.freeze(next) as T;
+}
+
+export const sprintKeys = {
+  all: (workspaceSlug: string, projectSlug: string) =>
+    ['sprints', workspaceSlug, projectSlug] as const,
+  list: (workspaceSlug: string, projectSlug: string, filters?: SprintListFilters) =>
+    ['sprints', workspaceSlug, projectSlug, 'list', canonicalizePlanning(filters ?? {})] as const,
+  detail: (workspaceSlug: string, projectSlug: string, sprintNumber: number) =>
+    ['sprints', workspaceSlug, projectSlug, 'detail', sprintNumber] as const,
+  backlog: (workspaceSlug: string, projectSlug: string) =>
+    ['sprints', workspaceSlug, projectSlug, 'backlog'] as const,
+  members: (workspaceSlug: string, projectSlug: string, sprintNumber: number) =>
+    ['sprints', workspaceSlug, projectSlug, 'detail', sprintNumber, 'members'] as const,
+  capacity: (workspaceSlug: string, projectSlug: string, sprintNumber: number) =>
+    ['sprints', workspaceSlug, projectSlug, 'detail', sprintNumber, 'capacity'] as const,
+};
+
+export const epicKeys = {
+  all: (workspaceSlug: string) => ['epics', workspaceSlug] as const,
+  list: (workspaceSlug: string, projectSlug: string, filters?: EpicListFilters) =>
+    ['epics', workspaceSlug, 'list', projectSlug, canonicalizePlanning(filters ?? {})] as const,
+  detail: (workspaceSlug: string, epicId: string) =>
+    ['epics', workspaceSlug, 'detail', epicId] as const,
+  roadmap: (workspaceSlug: string, filters?: RoadmapFilters) =>
+    ['epics', workspaceSlug, 'roadmap', canonicalizePlanning(filters ?? {})] as const,
+};
+
+export const dashboardKeys = {
+  all: (workspaceSlug: string) => ['dashboard', workspaceSlug] as const,
+  burndown: (workspaceSlug: string, projectSlug: string, sprintNumber: number) =>
+    ['dashboard', workspaceSlug, 'burndown', projectSlug, sprintNumber] as const,
+  cycleLeadTime: (workspaceSlug: string, filters?: CycleLeadTimeFilters) =>
+    ['dashboard', workspaceSlug, 'cycle-lead-time', canonicalizePlanning(filters ?? {})] as const,
+  sprintClose: (workspaceSlug: string, sprintId: string) =>
+    ['dashboard', workspaceSlug, 'sprint-close', sprintId] as const,
+};
