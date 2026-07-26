@@ -31,6 +31,7 @@ import { AttachmentsModule } from './tasks/attachments/attachments.module';
 import { UserProjectViewPreferencesModule } from './user-project-view-preferences/user-project-view-preferences.module';
 import { SprintsModule } from './sprints/sprints.module';
 import { EpicsModule } from './epics/epics.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { ContextModule } from './common/context/context.module';
 import { AuditModule } from './common/audit/audit.module';
 import { ActivityModule } from './common/activity/activity.module';
@@ -154,6 +155,7 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     UserProjectViewPreferencesModule,
     SprintsModule,
     EpicsModule,
+    MetricsModule,
   ],
   providers: [
     {

@@ -5,7 +5,7 @@ import { MailModule } from '../common/mail/mail.module';
 import { MailProcessor } from './mail.processor';
 import { CleanupProcessor } from './cleanup.processor';
 import { NotificationsProcessor } from './notifications.processor';
-import { CLEANUP_QUEUE, MAIL_QUEUE, NOTIFICATIONS_QUEUE } from './constants';
+import { CLEANUP_QUEUE, MAIL_QUEUE, METRICS_QUEUE, NOTIFICATIONS_QUEUE } from './constants';
 
 @Module({
   imports: [
@@ -13,6 +13,7 @@ import { CLEANUP_QUEUE, MAIL_QUEUE, NOTIFICATIONS_QUEUE } from './constants';
       { name: MAIL_QUEUE },
       { name: CLEANUP_QUEUE },
       { name: NOTIFICATIONS_QUEUE },
+      { name: METRICS_QUEUE },
     ),
     PrismaModule,
     MailModule,
