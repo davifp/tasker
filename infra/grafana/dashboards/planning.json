@@ -1,0 +1,207 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "row",
+      "title": "SLOs",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Dashboard endpoint P95 vs 300ms SLO",
+      "description": "P95 latency of the workspace planning-dashboard reads. SLO threshold from techspec: P95 < 300 ms.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 1,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tasker_dashboard_read_ms{quantile=\"0.95\"}",
+          "legendFormat": "P95 · {{endpoint}}"
+        },
+        {
+          "refId": "B",
+          "expr": "vector(300)",
+          "legendFormat": "SLO · 300 ms"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 300 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Matview refresh latency (P95)",
+      "description": "REFRESH MATERIALIZED VIEW CONCURRENTLY duration per matview. Sustained increases are the earliest signal of matview contention.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 2,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tasker_metrics_refresh_ms{quantile=\"0.95\"}",
+          "legendFormat": "P95 · {{matview}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "title": "Reliability",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "id": 101,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Matview refresh failure rate (5m)",
+      "description": "Per-matview failure count over 5 minutes. Any non-zero value warrants a look at the refresh processor logs.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 10 },
+      "id": 3,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (matview, reason) (increase(tasker_metrics_refresh_failed_total[5m]))",
+          "legendFormat": "{{matview}} · {{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }
+    },
+    {
+      "type": "timeseries",
+      "title": "Snapshot rows written per phase",
+      "description": "Counts SprintTaskSnapshot inserts. START rows land on sprint start, COMPLETE rows land on sprint complete. Zero-slope means no active sprint traffic.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 10 },
+      "id": 4,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (phase) (rate(tasker_sprint_snapshot_rows_total[5m]))",
+          "legendFormat": "{{phase}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sprint transitions (5m rate)",
+      "description": "State transitions per sprint. Steady stream on ACTIVE→COMPLETED tracks sprint cadence.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 10 },
+      "id": 5,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (from, to) (rate(tasker_sprint_transition_total[5m]))",
+          "legendFormat": "{{from}} → {{to}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "title": "Planner activity",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "id": 102,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Epic writes (5m rate)",
+      "description": "Epic CRUD volume broken out by action; useful for roadmap-usage adoption tracking.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+      "id": 6,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (action) (rate(tasker_epic_write_total[5m]))",
+          "legendFormat": "{{action}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Backlog move batch size (P95)",
+      "description": "Tasks per planner mutation. Sudden spikes indicate bulk drag operations; sustained large batches may motivate a capacity guardrail.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+      "id": 7,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tasker_backlog_move_batch_size{quantile=\"0.95\"}",
+          "legendFormat": "P95"
+        },
+        {
+          "refId": "B",
+          "expr": "tasker_backlog_move_batch_size{quantile=\"0.5\"}",
+          "legendFormat": "median"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["planning", "tasker"],
+  "templating": {
+    "list": [
+      {
+        "type": "datasource",
+        "name": "DS_PROMETHEUS",
+        "label": "Prometheus",
+        "query": "prometheus",
+        "hide": 0,
+        "current": {},
+        "regex": ""
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Tasker · Planning",
+  "uid": "tasker-planning",
+  "version": 1,
+  "weekStart": ""
+}

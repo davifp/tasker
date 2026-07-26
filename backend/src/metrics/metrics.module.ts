@@ -5,6 +5,7 @@ import { SprintsModule } from '../sprints/sprints.module';
 import { RedisModule } from '../common/redis/redis.module';
 import { METRICS_QUEUE } from '../queues/constants';
 import { DashboardController } from './dashboard.controller';
+import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
 import { MetricsRefreshProcessor } from './metrics-refresh.processor';
 import { TaskStatusChangedListener } from './task-status-changed.listener';
@@ -17,7 +18,7 @@ import { PlanningMetricsCollector } from './planning.metrics';
     RedisModule,
     BullModule.registerQueue({ name: METRICS_QUEUE }),
   ],
-  controllers: [DashboardController],
+  controllers: [DashboardController, MetricsController],
   providers: [
     MetricsService,
     MetricsRefreshProcessor,

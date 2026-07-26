@@ -181,6 +181,7 @@ function QuarterDropCell({ quarterId }: { quarterId: string }) {
   return (
     <div
       ref={setNodeRef}
+      role="region"
       aria-label={`Drop zone for ${quarterId}`}
       className={cn(
         'h-8 rounded border border-dashed border-transparent',
