@@ -41,6 +41,7 @@ import { WorkspaceGuard } from './common/context/workspace.guard';
 import { RolesGuard } from './common/context/roles.guard';
 import { WorkspaceContextInterceptor } from './common/context/workspace-context.interceptor';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
+import { AuditMutationInterceptor } from './common/audit/audit-mutation.interceptor';
 import type { ExecutionContext } from '@nestjs/common';
 import Redis from 'ioredis';
 
@@ -199,6 +200,13 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     {
       provide: APP_INTERCEPTOR,
       useClass: IdempotencyInterceptor,
+    },
+    // AuditMutationInterceptor runs after IdempotencyInterceptor so that
+    // idempotency-replayed responses do not double-write audit entries.
+    // Records only after 2xx; failures inside the interceptor are swallowed.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditMutationInterceptor,
     },
   ],
 })

@@ -17,6 +17,8 @@ import type { Request as ExpressRequest } from 'express';
 import { Idempotent } from '../common/idempotency/idempotency.decorators';
 import { Roles } from '../common/context/roles.decorator';
 import { WorkspaceContext } from '../common/context/workspace-context.store';
+import { Auditable } from '../common/audit/auditable.decorator';
+import { AuditEvent } from '../common/audit/audit.events';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSprintDto } from './dto/create-sprint.dto';
 import { UpdateSprintDto } from './dto/update-sprint.dto';
@@ -46,6 +48,11 @@ export class SprintsController {
   @Post()
   @Idempotent()
   @Roles('ADMIN')
+  @Auditable({
+    event: AuditEvent.SPRINT_CREATED,
+    targetType: 'sprint',
+    targetIdFrom: (_req, body) => (body as { id?: string } | null)?.id,
+  })
   async create(
     @Param('projectSlug') projectSlug: string,
     @Body() dto: CreateSprintDto,
@@ -94,6 +101,11 @@ export class SprintsController {
 
   @Patch(':sprintNumber')
   @Roles('ADMIN')
+  @Auditable({
+    event: AuditEvent.SPRINT_UPDATED,
+    targetType: 'sprint',
+    targetIdFrom: (_req, body) => (body as { id?: string } | null)?.id,
+  })
   async update(
     @Param('projectSlug') projectSlug: string,
     @Param('sprintNumber', ParseIntPipe) sprintNumber: number,
@@ -139,6 +151,11 @@ export class SprintsController {
   @Post(':sprintNumber/start')
   @Idempotent()
   @Roles('ADMIN')
+  @Auditable({
+    event: AuditEvent.SPRINT_STARTED,
+    targetType: 'sprint',
+    targetIdFrom: (_req, body) => (body as { id?: string } | null)?.id,
+  })
   async start(
     @Param('projectSlug') projectSlug: string,
     @Param('sprintNumber', ParseIntPipe) sprintNumber: number,
@@ -154,6 +171,11 @@ export class SprintsController {
   @Post(':sprintNumber/complete')
   @Idempotent()
   @Roles('ADMIN')
+  @Auditable({
+    event: AuditEvent.SPRINT_COMPLETED,
+    targetType: 'sprint',
+    targetIdFrom: (_req, body) => (body as { id?: string } | null)?.id,
+  })
   async complete(
     @Param('projectSlug') projectSlug: string,
     @Param('sprintNumber', ParseIntPipe) sprintNumber: number,

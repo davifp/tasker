@@ -18,6 +18,8 @@ import type { Request as ExpressRequest } from 'express';
 import { Idempotent } from '../common/idempotency/idempotency.decorators';
 import { Roles } from '../common/context/roles.decorator';
 import { WorkspaceContext } from '../common/context/workspace-context.store';
+import { Auditable } from '../common/audit/auditable.decorator';
+import { AuditEvent } from '../common/audit/audit.events';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
@@ -52,6 +54,11 @@ export class TasksController {
   @Post()
   @Roles('MEMBER')
   @Idempotent()
+  @Auditable({
+    event: AuditEvent.TASK_CREATED,
+    targetType: 'task',
+    targetIdFrom: (_req, body) => (body as { id?: string } | null)?.id,
+  })
   async create(
     @Param('projectSlug') projectSlug: string,
     @Body() dto: CreateTaskDto,
@@ -120,6 +127,11 @@ export class TasksController {
 
   @Patch(':number')
   @Roles('MEMBER')
+  @Auditable({
+    event: AuditEvent.TASK_UPDATED,
+    targetType: 'task',
+    targetIdFrom: (_req, body) => (body as { id?: string } | null)?.id,
+  })
   async update(
     @Param('projectSlug') projectSlug: string,
     @Param('number') numberParam: string,
@@ -177,6 +189,15 @@ export class TasksController {
   @Delete(':number')
   @Roles('MEMBER')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Auditable({
+    event: AuditEvent.TASK_DELETED,
+    targetType: 'task',
+    // 204 body is empty; capture the number from the URL param instead.
+    targetIdFrom: (req) => {
+      const v = req.params?.number;
+      return typeof v === 'string' ? v : undefined;
+    },
+  })
   async remove(
     @Param('projectSlug') projectSlug: string,
     @Param('number') numberParam: string,

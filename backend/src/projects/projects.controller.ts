@@ -17,6 +17,8 @@ import type { Request as ExpressRequest } from 'express';
 import { Idempotent } from '../common/idempotency/idempotency.decorators';
 import { Roles } from '../common/context/roles.decorator';
 import { WorkspaceContext } from '../common/context/workspace-context.store';
+import { Auditable } from '../common/audit/auditable.decorator';
+import { AuditEvent } from '../common/audit/audit.events';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ListProjectsQueryDto } from './dto/list-projects-query.dto';
@@ -38,6 +40,11 @@ export class ProjectsController {
   @Post()
   @Roles('ADMIN')
   @Idempotent()
+  @Auditable({
+    event: AuditEvent.PROJECT_CREATED,
+    targetType: 'project',
+    targetIdFrom: (_req, body) => (body as { id?: string } | null)?.id,
+  })
   async create(
     @Body() dto: CreateProjectDto,
     @Request() req: ExpressRequest & { workspaceContext?: WorkspaceContext },
@@ -81,6 +88,11 @@ export class ProjectsController {
 
   @Patch(':projectSlug')
   @Roles('ADMIN')
+  @Auditable({
+    event: AuditEvent.PROJECT_UPDATED,
+    targetType: 'project',
+    targetIdFrom: (_req, body) => (body as { id?: string } | null)?.id,
+  })
   async update(
     @Param('projectSlug') projectSlug: string,
     @Body() dto: UpdateProjectDto,
@@ -95,6 +107,14 @@ export class ProjectsController {
   @Delete(':projectSlug')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Auditable({
+    event: AuditEvent.PROJECT_DELETED,
+    targetType: 'project',
+    targetIdFrom: (req) => {
+      const v = req.params?.projectSlug;
+      return typeof v === 'string' ? v : undefined;
+    },
+  })
   async remove(
     @Param('projectSlug') projectSlug: string,
     @Request() req: ExpressRequest & { workspaceContext?: WorkspaceContext },
