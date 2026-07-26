@@ -8,6 +8,7 @@ export interface AuditEntry {
   event: AuditEventName;
   actorUserId?: string;
   workspaceId?: string;
+  targetType?: string;
   targetId?: string;
   metadata?: Prisma.InputJsonValue;
 }
@@ -29,6 +30,7 @@ export class AuditService {
           event: entry.event,
           actorUserId: entry.actorUserId ?? null,
           workspaceId: entry.workspaceId ?? null,
+          targetType: entry.targetType ?? null,
           targetId: entry.targetId ?? null,
           metadata: entry.metadata ?? {},
           traceId: TraceContext.get() ?? null,

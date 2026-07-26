@@ -221,6 +221,7 @@ model AuditLog {
   workspaceId String?
   actorUserId String?
   event       String
+  targetType  String?
   targetId    String?
   metadata    Json     @default("{}")
   traceId     String?
@@ -233,6 +234,7 @@ model AuditLog {
   actor     User?      @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, targetType, createdAt(sort: Desc)])
   @@index([event])
 }
 
