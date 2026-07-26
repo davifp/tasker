@@ -56,7 +56,14 @@ const TAB_LABEL = {
 type ViewName = keyof typeof LANDMARK;
 
 test.describe.serial('Additional views — E2E, accessibility, performance', () => {
+  // Onboard + verify email + create project + seed 500 tasks. Under a
+  // full `pnpm test:all` run this can push past the default 60 s hook
+  // timeout when parallel workers contend on the shared `next dev`
+  // server (Turbopack compile stalls surface as ECONNRESET on the
+  // in-flight request). Isolated runs finish in ~15 s; 180 s absorbs
+  // the worst observed contention while still catching a genuine hang.
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(180_000);
     const context = await browser.newContext();
     const page = await boot(context);
     const account = await onboardAccount(page);
