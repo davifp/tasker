@@ -49,7 +49,7 @@ export function AppShell({ workspaceSlug, workspaces, user, children }: AppShell
           {children}
         </main>
       </div>
-      <CommandPalette open={open} onOpenChange={setOpen} />
+      <CommandPalette open={open} onOpenChange={setOpen} workspaceSlug={workspaceSlug} />
     </div>
   );
 }

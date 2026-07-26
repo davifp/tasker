@@ -178,7 +178,17 @@
     },
     "commandPalette": {
       "placeholder": "Buscar projetos, tarefas e membros…",
-      "empty": "A busca chegará em breve."
+      "empty": "A busca chegará em breve.",
+      "loading": "Buscando…",
+      "noResults": "Nenhum resultado — tente termos mais amplos.",
+      "recent": "Recentes",
+      "seeAll": "Ver todos os resultados de \"{q}\"",
+      "groups": {
+        "tasks": "Tarefas",
+        "projects": "Projetos",
+        "sprints": "Sprints",
+        "members": "Membros"
+      }
     },
     "placeholders": {
       "projects": {

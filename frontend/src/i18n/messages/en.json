@@ -178,7 +178,17 @@
     },
     "commandPalette": {
       "placeholder": "Search projects, tasks, and members…",
-      "empty": "Search is coming soon."
+      "empty": "Search is coming soon.",
+      "loading": "Searching…",
+      "noResults": "No results — try broader terms.",
+      "recent": "Recent",
+      "seeAll": "See all results for \"{q}\"",
+      "groups": {
+        "tasks": "Tasks",
+        "projects": "Projects",
+        "sprints": "Sprints",
+        "members": "Members"
+      }
     },
     "placeholders": {
       "projects": {
