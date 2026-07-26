@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SearchAuditMetricsCollector } from '../metrics/search-audit.metrics';
 import { maskSensitiveMetadata } from './mask-sensitive';
 
 export interface AuditListFilter {
@@ -43,9 +44,20 @@ interface CursorPayload {
 // by `workspaceId` from the guarded controller context.
 @Injectable()
 export class AuditReadService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly metrics?: SearchAuditMetricsCollector,
+  ) {}
 
   async list(filter: AuditListFilter): Promise<AuditListResult> {
+    const started = Date.now();
+    const hasFilter = Boolean(
+      filter.actorUserId ||
+      filter.event?.length ||
+      filter.targetType?.length ||
+      filter.from ||
+      filter.to,
+    );
     const cursor = this.decodeCursor(filter.cursor);
     const where = this.buildWhere(filter, cursor);
 
@@ -78,6 +90,7 @@ export class AuditReadService {
     const nextCursor =
       hasMore && last ? this.encodeCursor({ c: last.createdAt.toISOString(), i: last.id }) : null;
 
+    this.metrics?.observeAuditReadMs(hasFilter, Date.now() - started);
     return { rows, nextCursor };
   }
 

@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { Writable } from 'node:stream';
 import { AUDIT_CSV_ROW_CAP } from '@tasker/config';
+import { SearchAuditMetricsCollector } from '../metrics/search-audit.metrics';
 import { AuditReadService, type AuditListFilter, type AuditRow } from './audit-read.service';
 
 export interface CsvExportResult {
@@ -24,7 +25,10 @@ const HEADER = [
 
 @Injectable()
 export class AuditCsvExporter {
-  constructor(private readonly reads: AuditReadService) {}
+  constructor(
+    private readonly reads: AuditReadService,
+    @Optional() private readonly metrics?: SearchAuditMetricsCollector,
+  ) {}
 
   /**
    * Streams audit rows matching the given filter as CSV. Emits at most
@@ -55,6 +59,8 @@ export class AuditCsvExporter {
       out.write(`# capped=true, row_cap=${AUDIT_CSV_ROW_CAP}\n`);
     }
 
+    this.metrics?.incrementAuditCsvExport(capped);
+    this.metrics?.observeAuditCsvExportRows(count);
     return { rows: count, capped };
   }
 

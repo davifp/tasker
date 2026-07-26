@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SearchAuditMetricsCollector } from '../../metrics/search-audit.metrics';
 import { TraceContext } from '../trace/trace-context';
 import { AuditEventName } from './audit.events';
 
@@ -21,7 +22,10 @@ export interface AuditEntry {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly metrics?: SearchAuditMetricsCollector,
+  ) {}
 
   async record(entry: AuditEntry): Promise<void> {
     try {
@@ -36,7 +40,9 @@ export class AuditService {
           traceId: TraceContext.get() ?? null,
         },
       });
+      this.metrics?.incrementAuditWrite(entry.event, 'success');
     } catch (err) {
+      this.metrics?.incrementAuditWrite(entry.event, 'failure');
       this.logger.warn({ err, event: entry.event }, 'Failed to persist audit log entry');
     }
   }

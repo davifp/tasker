@@ -1,24 +1,30 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MetricsController } from './metrics.controller';
 import { PlanningMetricsCollector } from './planning.metrics';
+import { SearchAuditMetricsCollector } from './search-audit.metrics';
 
 describe('MetricsController', () => {
-  let collector: PlanningMetricsCollector;
+  let planning: PlanningMetricsCollector;
+  let searchAudit: SearchAuditMetricsCollector;
   let controller: MetricsController;
 
   beforeEach(() => {
-    collector = new PlanningMetricsCollector();
-    controller = new MetricsController(collector);
+    planning = new PlanningMetricsCollector();
+    searchAudit = new SearchAuditMetricsCollector();
+    controller = new MetricsController(planning, searchAudit);
   });
 
-  it('returns the collector render output verbatim', () => {
-    collector.incrementSprintTransition('PLANNED', 'ACTIVE');
-    collector.incrementEpicWrite('created');
+  it('concatenates output from both collectors', () => {
+    planning.incrementSprintTransition('PLANNED', 'ACTIVE');
+    planning.incrementEpicWrite('created');
+    searchAudit.incrementSearchQuery('task', 'success');
+    searchAudit.incrementAuditWrite('task.created', 'success');
 
     const body = controller.scrape();
     expect(body).toContain('tasker_sprint_transition_total{from="PLANNED",to="ACTIVE"} 1');
     expect(body).toContain('tasker_epic_write_total{action="created"} 1');
-    // Content is line-oriented Prometheus text; the render trails with a newline.
+    expect(body).toContain('tasker_search_query_total{type_set="task",outcome="success"} 1');
+    expect(body).toContain('tasker_audit_write_total{event="task.created",outcome="success"} 1');
     expect(body.endsWith('\n')).toBe(true);
   });
 });

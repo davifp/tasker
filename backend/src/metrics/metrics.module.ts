@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SprintsModule } from '../sprints/sprints.module';
@@ -10,7 +10,9 @@ import { MetricsService } from './metrics.service';
 import { MetricsRefreshProcessor } from './metrics-refresh.processor';
 import { TaskStatusChangedListener } from './task-status-changed.listener';
 import { PlanningMetricsCollector } from './planning.metrics';
+import { SearchAuditMetricsCollector } from './search-audit.metrics';
 
+@Global()
 @Module({
   imports: [
     PrismaModule,
@@ -24,7 +26,8 @@ import { PlanningMetricsCollector } from './planning.metrics';
     MetricsRefreshProcessor,
     TaskStatusChangedListener,
     PlanningMetricsCollector,
+    SearchAuditMetricsCollector,
   ],
-  exports: [MetricsService, PlanningMetricsCollector],
+  exports: [MetricsService, PlanningMetricsCollector, SearchAuditMetricsCollector],
 })
 export class MetricsModule {}

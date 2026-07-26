@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SEARCH_ENTITY_TYPES, type SearchEntityType } from '@tasker/config';
+import { SearchAuditMetricsCollector } from '../metrics/search-audit.metrics';
 import type { SearchCursor, SearchHit, SearchQueryOptions, SearchResult } from './search.types';
 
 // PostgreSQL full-text search fan-out.
@@ -16,32 +17,48 @@ import type { SearchCursor, SearchHit, SearchQueryOptions, SearchResult } from '
 // composed, so the tenant contract stays auditable in one file.
 @Injectable()
 export class SearchService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly metrics?: SearchAuditMetricsCollector,
+  ) {}
 
   async query(options: SearchQueryOptions): Promise<SearchResult> {
     const types = this.resolveTypes(options.types);
-    const cursor = this.decodeCursor(options.cursor);
-
-    // Fetch limit+1 per query so we can detect a next page after merge.
-    const perTypeLimit = Math.min(options.limit + 1, 50);
-    const perTypeQueries = types.map((type) =>
-      this.runForType(type, options, perTypeLimit, cursor),
+    const typeSet = [...types].sort().join(',');
+    const hasFilter = Boolean(
+      options.projectId || options.authorUserId || options.from || options.to,
     );
-    const perTypeResults = await Promise.all(perTypeQueries);
+    const started = Date.now();
 
-    // Merge, sort by rank DESC then id ASC to break ties deterministically.
-    const merged = perTypeResults
-      .flat()
-      .sort((a, b) => (b.rank !== a.rank ? b.rank - a.rank : a.id.localeCompare(b.id)))
-      .filter((hit) => !cursor || this.beyondCursor(hit, cursor));
+    try {
+      const cursor = this.decodeCursor(options.cursor);
+      const perTypeLimit = Math.min(options.limit + 1, 50);
+      const perTypeQueries = types.map((type) =>
+        this.runForType(type, options, perTypeLimit, cursor),
+      );
+      const perTypeResults = await Promise.all(perTypeQueries);
 
-    const page = merged.slice(0, options.limit);
-    const hasMore = merged.length > options.limit;
-    const last = page[page.length - 1];
-    const nextCursor =
-      hasMore && last ? this.encodeCursor({ r: last.rank, i: last.id, t: last.type }) : null;
+      const merged = perTypeResults
+        .flat()
+        .sort((a, b) => (b.rank !== a.rank ? b.rank - a.rank : a.id.localeCompare(b.id)))
+        .filter((hit) => !cursor || this.beyondCursor(hit, cursor));
 
-    return { hits: page, nextCursor };
+      const page = merged.slice(0, options.limit);
+      const hasMore = merged.length > options.limit;
+      const last = page[page.length - 1];
+      const nextCursor =
+        hasMore && last ? this.encodeCursor({ r: last.rank, i: last.id, t: last.type }) : null;
+
+      this.metrics?.observeSearchQueryMs(typeSet, hasFilter, Date.now() - started);
+      this.metrics?.incrementSearchQuery(typeSet, 'success');
+      if (page.length === 0) this.metrics?.incrementSearchZeroResult(typeSet);
+
+      return { hits: page, nextCursor };
+    } catch (err) {
+      this.metrics?.observeSearchQueryMs(typeSet, hasFilter, Date.now() - started);
+      this.metrics?.incrementSearchQuery(typeSet, 'error');
+      throw err;
+    }
   }
 
   // ---------------------------------------------------------------------------
