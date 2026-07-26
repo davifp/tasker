@@ -8,6 +8,7 @@ import { DashboardController } from './dashboard.controller';
 import { MetricsService } from './metrics.service';
 import { MetricsRefreshProcessor } from './metrics-refresh.processor';
 import { TaskStatusChangedListener } from './task-status-changed.listener';
+import { PlanningMetricsCollector } from './planning.metrics';
 
 @Module({
   imports: [
@@ -17,7 +18,12 @@ import { TaskStatusChangedListener } from './task-status-changed.listener';
     BullModule.registerQueue({ name: METRICS_QUEUE }),
   ],
   controllers: [DashboardController],
-  providers: [MetricsService, MetricsRefreshProcessor, TaskStatusChangedListener],
-  exports: [MetricsService],
+  providers: [
+    MetricsService,
+    MetricsRefreshProcessor,
+    TaskStatusChangedListener,
+    PlanningMetricsCollector,
+  ],
+  exports: [MetricsService, PlanningMetricsCollector],
 })
 export class MetricsModule {}
