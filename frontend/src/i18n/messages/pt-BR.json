@@ -848,6 +848,52 @@
     "errorLoad": "Não foi possível carregar suas preferências de visualização.",
     "errorSave": "Não foi possível salvar suas preferências. Tentaremos na próxima alteração."
   },
+  "audit": {
+    "page": {
+      "title": "Log de auditoria",
+      "subtitle": "Todo evento sensível deste workspace — quem fez o quê, e quando.",
+      "forbiddenTitle": "Log de auditoria restrito",
+      "forbiddenBody": "Apenas Owners e Admins podem visualizar o log. Fale com seu admin se precisar de acesso."
+    },
+    "filters": {
+      "actor": "Autor",
+      "actorPlaceholder": "id do usuário",
+      "event": "Evento",
+      "eventPlaceholder": "task.created, invitation.revoked…",
+      "targetType": "Tipo de alvo",
+      "targetTypePlaceholder": "task, project…",
+      "from": "De",
+      "to": "Até",
+      "clear": "Limpar",
+      "exportCsv": "Exportar CSV"
+    },
+    "table": {
+      "when": "Quando",
+      "actor": "Autor",
+      "action": "Ação",
+      "target": "Alvo",
+      "detail": "",
+      "open": "Abrir",
+      "empty": "Nenhum registro corresponde a estes filtros.",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando…",
+      "system": "Sistema"
+    },
+    "drawer": {
+      "title": "Registro de auditoria",
+      "systemActor": "Sistema",
+      "readOnly": "Somente leitura",
+      "field": {
+        "event": "Evento",
+        "actor": "Autor",
+        "when": "Quando",
+        "targetType": "Tipo de alvo",
+        "targetId": "ID do alvo",
+        "traceId": "Trace id",
+        "metadata": "Metadados"
+      }
+    }
+  },
   "search": {
     "title": "Busca",
     "subtitle": "Encontre tarefas, projetos, sprints e membros deste workspace.",

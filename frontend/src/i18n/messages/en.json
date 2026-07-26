@@ -848,6 +848,52 @@
     "errorLoad": "Couldn't load your view preferences.",
     "errorSave": "Couldn't save your preferences. Retrying next change."
   },
+  "audit": {
+    "page": {
+      "title": "Audit log",
+      "subtitle": "Every sensitive event in this workspace — who did what, and when.",
+      "forbiddenTitle": "Audit log is restricted",
+      "forbiddenBody": "Only Owners and Admins can view the audit log. Contact your workspace admin if you need access."
+    },
+    "filters": {
+      "actor": "Actor",
+      "actorPlaceholder": "user id",
+      "event": "Event",
+      "eventPlaceholder": "task.created, invitation.revoked…",
+      "targetType": "Target type",
+      "targetTypePlaceholder": "task, project…",
+      "from": "From",
+      "to": "To",
+      "clear": "Clear",
+      "exportCsv": "Export CSV"
+    },
+    "table": {
+      "when": "When",
+      "actor": "Actor",
+      "action": "Action",
+      "target": "Target",
+      "detail": "",
+      "open": "Open",
+      "empty": "No audit entries match these filters.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "system": "System"
+    },
+    "drawer": {
+      "title": "Audit entry",
+      "systemActor": "System",
+      "readOnly": "Read-only",
+      "field": {
+        "event": "Event",
+        "actor": "Actor",
+        "when": "When",
+        "targetType": "Target type",
+        "targetId": "Target id",
+        "traceId": "Trace id",
+        "metadata": "Metadata"
+      }
+    }
+  },
   "search": {
     "title": "Search",
     "subtitle": "Find tasks, projects, sprints, and members across this workspace.",
