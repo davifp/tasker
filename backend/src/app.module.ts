@@ -32,6 +32,7 @@ import { UserProjectViewPreferencesModule } from './user-project-view-preference
 import { SprintsModule } from './sprints/sprints.module';
 import { EpicsModule } from './epics/epics.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { SearchModule } from './search/search.module';
 import { ContextModule } from './common/context/context.module';
 import { AuditModule } from './common/audit/audit.module';
 import { ActivityModule } from './common/activity/activity.module';
@@ -156,6 +157,7 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     SprintsModule,
     EpicsModule,
     MetricsModule,
+    SearchModule,
   ],
   providers: [
     {
