@@ -847,5 +847,36 @@
   "viewPreferences": {
     "errorLoad": "Couldn't load your view preferences.",
     "errorSave": "Couldn't save your preferences. Retrying next change."
+  },
+  "search": {
+    "title": "Search",
+    "subtitle": "Find tasks, projects, sprints, and members across this workspace.",
+    "filters": {
+      "query": "Query",
+      "placeholder": "Search…",
+      "type": "Type",
+      "clear": "Clear filters",
+      "entity": {
+        "task": "Task",
+        "project": "Project",
+        "sprint": "Sprint",
+        "member": "Member"
+      }
+    },
+    "results": {
+      "typeToStart": "Type in the search box to begin.",
+      "empty": "No results for \"{q}\".",
+      "emptyHint": "Try broader terms or clear a filter.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "error": "Search failed. Please try again.",
+      "retry": "Retry",
+      "type": {
+        "task": "Task",
+        "project": "Project",
+        "sprint": "Sprint",
+        "member": "Member"
+      }
+    }
   }
 }

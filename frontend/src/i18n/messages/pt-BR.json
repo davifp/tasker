@@ -847,5 +847,36 @@
   "viewPreferences": {
     "errorLoad": "Não foi possível carregar suas preferências de visualização.",
     "errorSave": "Não foi possível salvar suas preferências. Tentaremos na próxima alteração."
+  },
+  "search": {
+    "title": "Busca",
+    "subtitle": "Encontre tarefas, projetos, sprints e membros deste workspace.",
+    "filters": {
+      "query": "Consulta",
+      "placeholder": "Buscar…",
+      "type": "Tipo",
+      "clear": "Limpar filtros",
+      "entity": {
+        "task": "Tarefa",
+        "project": "Projeto",
+        "sprint": "Sprint",
+        "member": "Membro"
+      }
+    },
+    "results": {
+      "typeToStart": "Digite na caixa de busca para começar.",
+      "empty": "Nenhum resultado para \"{q}\".",
+      "emptyHint": "Tente termos mais amplos ou remova um filtro.",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando…",
+      "error": "A busca falhou. Tente novamente.",
+      "retry": "Tentar novamente",
+      "type": {
+        "task": "Tarefa",
+        "project": "Projeto",
+        "sprint": "Sprint",
+        "member": "Membro"
+      }
+    }
   }
 }
