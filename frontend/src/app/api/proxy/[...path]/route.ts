@@ -1,5 +1,6 @@
 import { clearSession, getSession, setSession } from '@/lib/session/session';
 import { refreshBackend } from '@/lib/session/auth-backend';
+import { getWorkspaceCookie } from '@/lib/session/workspace';
 import { apiUrl } from '@/lib/http/backend';
 
 const HOP_BY_HOP = new Set([
@@ -14,7 +15,28 @@ const HOP_BY_HOP = new Set([
   'host',
 ]);
 
-function forwardHeaders(source: Headers, accessToken: string | undefined): Headers {
+// Paths that operate across workspace boundaries — the caller may not (yet)
+// be a member of the workspace stored in their cookie, so injecting
+// X-Workspace-Id would trip WorkspaceGuard's membership check with a 403.
+// The invitation-accept flow is the canonical example: the recipient
+// redeems a token *before* their WorkspaceMember row exists.
+// `workspaces/:slug/...` still needs the header (matches the URL slug); it's
+// only the bare `workspaces` collection that is cross-workspace.
+function isWorkspaceCrossing(path: string[]): boolean {
+  const first = path[0] ?? '';
+  if (first === 'invitations') return true;
+  if (first === 'me') return true;
+  if (first === 'auth') return true;
+  if (first === 'workspaces' && path.length === 1) return true;
+  return false;
+}
+
+function forwardHeaders(
+  source: Headers,
+  accessToken: string | undefined,
+  workspaceId: string | undefined,
+  crossWorkspace: boolean,
+): Headers {
   const headers = new Headers();
   source.forEach((value, key) => {
     if (HOP_BY_HOP.has(key.toLowerCase())) return;
@@ -23,6 +45,14 @@ function forwardHeaders(source: Headers, accessToken: string | undefined): Heade
     headers.set(key, value);
   });
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  // Workspace-scoped endpoints without a `:slug` in the URL rely on the
+  // X-Workspace-Id header to resolve WorkspaceGuard. Browser callers never
+  // set it themselves (they only know the slug); we mirror the server-side
+  // `serverHttp` behaviour and inject it from the workspace cookie unless
+  // the client explicitly supplied one or the route is workspace-crossing.
+  if (workspaceId && !headers.has('x-workspace-id') && !crossWorkspace) {
+    headers.set('X-Workspace-Id', workspaceId);
+  }
   headers.set('Accept', headers.get('Accept') ?? 'application/json');
   return headers;
 }
@@ -44,6 +74,8 @@ async function forward(request: Request, path: string[]): Promise<Response> {
   upstream.search = url.search;
 
   const session = await getSession();
+  const workspace = await getWorkspaceCookie();
+  const crossWorkspace = isWorkspaceCrossing(path);
 
   const body =
     request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer();
@@ -51,7 +83,7 @@ async function forward(request: Request, path: string[]): Promise<Response> {
   async function send(accessToken: string | undefined): Promise<Response> {
     const init: RequestInit = {
       method: request.method,
-      headers: forwardHeaders(request.headers, accessToken),
+      headers: forwardHeaders(request.headers, accessToken, workspace?.id, crossWorkspace),
       body,
       cache: 'no-store',
       redirect: 'manual',

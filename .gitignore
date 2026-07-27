@@ -47,3 +47,4 @@ coverage/
 .agents
 skills-lock.json
 test-results
+.playwright-mcp/
