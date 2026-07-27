@@ -94,7 +94,12 @@ export function CommandPalette({ open, onOpenChange, workspaceSlug }: CommandPal
   }
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      label={t('placeholder')}
+      shouldFilter={false}
+    >
       <CommandInput
         placeholder={t('placeholder')}
         aria-label={t('placeholder')}

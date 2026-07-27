@@ -23,13 +23,24 @@ Command.displayName = 'Command';
 
 interface CommandDialogProps extends React.ComponentPropsWithoutRef<typeof Dialog> {
   children: React.ReactNode;
+  // Forwarded to the inner cmdk Command root. `label` populates the internal
+  // <label cmdk-label> element that cmdk points aria-labelledby at, so the
+  // input receives a stable accessible name across every AT (see cmdk's
+  // CommandInput primitive). `shouldFilter=false` disables cmdk's default
+  // client-side fuzzy filter — required whenever the caller performs the
+  // ranking server-side and does not want cmdk to hide hits whose match
+  // sits outside the item's value string.
+  label?: string;
+  shouldFilter?: boolean;
 }
 
-function CommandDialog({ children, ...props }: CommandDialogProps) {
+function CommandDialog({ children, label, shouldFilter, ...props }: CommandDialogProps) {
   return (
     <Dialog {...props}>
       <DialogContent className="overflow-hidden p-0">
-        <Command className="[&_[cmdk-input]]:h-12">{children}</Command>
+        <Command className="[&_[cmdk-input]]:h-12" label={label} shouldFilter={shouldFilter}>
+          {children}
+        </Command>
       </DialogContent>
     </Dialog>
   );
