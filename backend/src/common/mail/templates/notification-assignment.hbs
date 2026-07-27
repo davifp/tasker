@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A task was assigned to you</title>
+  <style>
+    body { font-family: sans-serif; background: #f4f4f5; margin: 0; padding: 24px; }
+    .card { background: #fff; border-radius: 8px; max-width: 480px; margin: 0 auto; padding: 40px; }
+    h1 { font-size: 24px; margin: 0 0 16px; color: #111827; }
+    p { font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px; }
+    .btn { display: inline-block; background: #6366f1; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 15px; font-weight: 600; }
+    .footer { font-size: 12px; color: #9ca3af; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>{{actorName}} assigned you a task</h1>
+    <p><strong>{{taskTitle}}</strong> in {{projectName}}.</p>
+    <a class="btn" href="{{sourceUrl}}">Open the task</a>
+    <p class="footer">You can adjust your notification preferences at {{preferencesUrl}}.</p>
+  </div>
+</body>
+</html>

@@ -155,15 +155,24 @@ export const notificationCommentMentionJobSchema = z.object({
 // Fan-out orchestrator: produced by `NotificationsService.notify` once per
 // (event × recipient) after the in-app row is written. Spawns per-channel
 // sub-jobs subject to the recipient's preferences.
+//
+// `notificationId` may be an empty string when the recipient disabled IN_APP
+// but kept EMAIL/PUSH — the row is skipped in that case, so downstream
+// channels rely on the denormalised `payload` copy carried below rather than
+// re-hydrating from Postgres.
 export const notificationFanoutJobSchema = z.object({
   type: z.literal('notification.fanout'),
   workspaceId: z.string().min(1),
   eventType: notificationEventTypeSchema,
   recipientUserId: z.string().min(1),
-  notificationId: z.string().min(1),
+  notificationId: z.string(),
   sourceKind: notificationSourceKindSchema,
   sourceId: z.string().min(1),
   actorUserId: z.string().min(1).optional(),
+  // Denormalised render context — actor display name, task title, project
+  // name, excerpt, workspace slug. Every consumer treats the shape as
+  // opaque and reads named leaves defensively.
+  payload: z.record(z.unknown()).default({}),
 });
 
 // Periodic drain of the per-recipient email buffer. When `recipientUserId`

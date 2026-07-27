@@ -108,6 +108,9 @@ export class NotificationsService {
             sourceKind: input.sourceEntity.kind,
             sourceId: input.sourceEntity.id,
             ...(input.actorUserId ? { actorUserId: input.actorUserId } : {}),
+            // Denormalised copy so the email/push workers do not need to
+            // hit Postgres per item to render.
+            payload: input.payload,
           },
           {
             jobId: `fanout:${input.eventType}:${recipientUserId}:${input.sourceEntity.id}`,

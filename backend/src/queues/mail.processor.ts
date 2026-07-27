@@ -16,6 +16,11 @@ const SUBJECTS: Record<MailTemplate, string> = {
   'password-reset': 'Reset your password',
   invitation: "You've been invited to a workspace",
   'workspace-purge-warning': 'Your workspace will be permanently deleted',
+  'notification-mention': 'You were mentioned in a comment',
+  'notification-assignment': 'A task was assigned to you',
+  'notification-comment-followed': 'New comment on a task you follow',
+  'notification-sprint-lifecycle': 'Sprint status update',
+  'notification-batch': 'You have new notifications on Tasker',
 };
 
 type CompiledPair = { html: HandlebarsTemplateDelegate; text: HandlebarsTemplateDelegate };
