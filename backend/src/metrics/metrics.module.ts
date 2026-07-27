@@ -11,6 +11,8 @@ import { MetricsRefreshProcessor } from './metrics-refresh.processor';
 import { TaskStatusChangedListener } from './task-status-changed.listener';
 import { PlanningMetricsCollector } from './planning.metrics';
 import { SearchAuditMetricsCollector } from './search-audit.metrics';
+import { RealtimeMetricsCollector } from './realtime.metrics';
+import { NotificationsMetricsCollector } from './notifications.metrics';
 
 @Global()
 @Module({
@@ -27,7 +29,15 @@ import { SearchAuditMetricsCollector } from './search-audit.metrics';
     TaskStatusChangedListener,
     PlanningMetricsCollector,
     SearchAuditMetricsCollector,
+    RealtimeMetricsCollector,
+    NotificationsMetricsCollector,
   ],
-  exports: [MetricsService, PlanningMetricsCollector, SearchAuditMetricsCollector],
+  exports: [
+    MetricsService,
+    PlanningMetricsCollector,
+    SearchAuditMetricsCollector,
+    RealtimeMetricsCollector,
+    NotificationsMetricsCollector,
+  ],
 })
 export class MetricsModule {}

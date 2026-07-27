@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { realtimeEventSchema, RealtimeEvent } from '@tasker/config';
+import { RealtimeMetricsCollector } from '../metrics/realtime.metrics';
 
 // Room name conventions. Kept as pure functions so tests can assert them
 // without spinning up the gateway.
@@ -19,6 +20,11 @@ export class RealtimeEmitter {
   private readonly logger = new Logger(RealtimeEmitter.name);
   private server?: Server;
   private scrubber: PayloadScrubber = (e) => e;
+
+  // Optional so unit tests that instantiate the emitter without the
+  // MetricsModule DI graph still work; `@Optional()` prevents Nest from
+  // failing to construct the emitter when the collector is unavailable.
+  constructor(@Optional() private readonly metrics?: RealtimeMetricsCollector) {}
 
   // Called once by the gateway after @WebSocketServer() resolves.
   bind(server: Server): void {
@@ -40,18 +46,26 @@ export class RealtimeEmitter {
     const parsed = realtimeEventSchema.safeParse(event);
     if (!parsed.success) {
       this.logger.warn({ issues: parsed.error.errors }, 'Dropping malformed realtime event');
+      this.metrics?.incrementEvent(String((event as { type?: string }).type), 'dropped');
       return;
     }
     if (!this.server) {
       // In tests without a bound server this is a no-op. In production the
       // gateway binds the server at boot; missing binding is a real bug.
       this.logger.warn({ type: event.type }, 'RealtimeEmitter has no server bound');
+      this.metrics?.incrementEvent(event.type, 'dropped');
       return;
     }
     const rooms = this.roomsFor(event);
     const payload = this.scrubber(event);
-    for (const room of rooms) {
-      this.server.to(room).emit(event.type, payload);
+    try {
+      for (const room of rooms) {
+        this.server.to(room).emit(event.type, payload);
+      }
+      this.metrics?.incrementEvent(event.type, 'success');
+    } catch (err) {
+      this.metrics?.incrementEvent(event.type, 'error');
+      throw err;
     }
   }
 

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
@@ -8,6 +8,7 @@ import { RedisConnectionFactory } from '../../common/redis/redis-connection.fact
 import { MAIL_PROVIDER, MailProvider, MailTemplate } from '../../common/mail/mail.provider';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NOTIFICATIONS_QUEUE, NOTIFICATION_EMAIL_BATCH_JOB } from '../../queues/constants';
+import { NotificationsMetricsCollector } from '../../metrics/notifications.metrics';
 import { BufferedEmailItem, emailBucketIndexKey, emailBucketKey } from './email.channel';
 
 const PROCESSING_SUFFIX = ':processing';
@@ -44,6 +45,7 @@ export class EmailBatcher implements OnModuleInit {
     @Inject(MAIL_PROVIDER) private readonly mail: MailProvider,
     private readonly prisma: PrismaService,
     @InjectQueue(NOTIFICATIONS_QUEUE) private readonly queue: Queue,
+    @Optional() private readonly metrics?: NotificationsMetricsCollector,
   ) {
     this.redis = factory.create();
     this.batchWindowSeconds = config.get<number>('NOTIF_EMAIL_BATCH_WINDOW_S', 300);
@@ -150,6 +152,9 @@ export class EmailBatcher implements OnModuleInit {
       } else {
         await this.dispatchBatch(email.email, items);
       }
+      for (const item of items) {
+        this.metrics?.incrementDelivered('EMAIL', item.eventType, 'success');
+      }
       // Success — drop the processing list and clean the index.
       await Promise.all([
         this.redis.del(processing),
@@ -165,6 +170,9 @@ export class EmailBatcher implements OnModuleInit {
         { err, recipientUserId, size: items.length },
         'email.batch.enqueue_failed — restoring items',
       );
+      for (const item of items) {
+        this.metrics?.incrementDelivered('EMAIL', item.eventType, 'failure');
+      }
       // Push items back to the head of the source list, oldest first, so
       // the next drain sees them in original arrival order.
       const raws = items.map((item) => JSON.stringify(item));

@@ -1,4 +1,4 @@
-import { Logger, UseGuards, UsePipes } from '@nestjs/common';
+import { Logger, Optional, UseGuards, UsePipes } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -18,6 +18,7 @@ import { SOCKET_USER_KEY } from './ws-auth.guard';
 import { WsAuthGuard } from './ws-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { WsException } from '@nestjs/websockets';
+import { RealtimeMetricsCollector } from '../metrics/realtime.metrics';
 
 // The workspace is provided by the client via handshake.auth.workspaceId so
 // the ticket stays user-scoped (a user with two open workspaces gets two
@@ -33,6 +34,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     private readonly tickets: RealtimeTicketService,
     private readonly emitter: RealtimeEmitter,
     private readonly prisma: PrismaService,
+    @Optional() private readonly metrics?: RealtimeMetricsCollector,
   ) {}
 
   afterInit(): void {
@@ -47,6 +49,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         { socketId: socket.id },
         'WS connect rejected — missing ticket or workspace',
       );
+      this.metrics?.incrementConnect('reject');
       socket.disconnect(true);
       return;
     }
@@ -56,6 +59,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       userId = redeemed.userId;
     } catch (err) {
       this.logger.warn({ socketId: socket.id, err }, 'WS connect rejected — ticket invalid');
+      this.metrics?.incrementConnect('reject');
       socket.disconnect(true);
       return;
     }
@@ -71,17 +75,20 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         { socketId: socket.id, userId, workspaceId },
         'WS connect rejected — non-member',
       );
+      this.metrics?.incrementConnect('reject');
       socket.disconnect(true);
       return;
     }
     socket.data[SOCKET_USER_KEY] = { userId };
     (socket.data as { workspaceId?: string }).workspaceId = workspaceId;
     await socket.join([workspaceRoom(workspaceId), userRoom(userId)]);
+    this.metrics?.incrementConnect('success');
     this.logger.log({ socketId: socket.id, userId, workspaceId }, 'realtime.connect');
   }
 
   handleDisconnect(socket: Socket): void {
     const user = (socket.data as { user?: { userId: string } }).user;
+    this.metrics?.decrementConnection();
     this.logger.log({ socketId: socket.id, userId: user?.userId }, 'realtime.disconnect');
   }
 

@@ -1,0 +1,219 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "row",
+      "title": "Realtime",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Active connections (per node)",
+      "description": "Live socket.io connections. Killing a node drops its series to zero within one scrape cycle.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
+      "id": 1,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tasker_realtime_connections",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Handshake rate (accept vs reject)",
+      "description": "Handshakes per second. Sustained rejects usually mean ticket TTL misconfig or a hostile client.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "id": 2,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(tasker_realtime_connects_total[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Rooms by kind",
+      "description": "Room cardinality: workspace/task/user. Task rooms dominate under heavy per-task follower load.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "id": 3,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tasker_realtime_rooms",
+          "legendFormat": "{{kind}} · {{node}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Event throughput by type",
+      "description": "Rate of successful realtime emits per event type. Backbone view of app-tier activity.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "id": 4,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (type) (rate(tasker_realtime_events_total{result=\"success\"}[5m]))",
+          "legendFormat": "{{type}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "Dropped or errored events (last 15m)",
+      "description": "Malformed or failed emits — should stay at zero.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 9 },
+      "id": 5,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(tasker_realtime_events_total{result=~\"error|dropped\"}[15m]))",
+          "legendFormat": "bad emits"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "title": "Notifications",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "id": 200,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Delivery success by channel",
+      "description": "Delivered notifications per second, split by channel. IN_APP is fanned out via websocket, EMAIL after batch window, PUSH per subscription.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "id": 6,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (channel) (rate(tasker_notification_delivered_total{result=\"success\"}[5m]))",
+          "legendFormat": "{{channel}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Delivery failure by channel",
+      "description": "Failed deliveries per channel. Sustained EMAIL failure means SMTP outage; PUSH failure with cleaned=gone spike is normal on chunky reaps.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "id": 7,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (channel) (rate(tasker_notification_delivered_total{result=\"failure\"}[5m]))",
+          "legendFormat": "{{channel}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Push subscription cleanup rate",
+      "description": "Rows reaped from push_subscription. `gone` = 404/410 from the push service; `dormant` = periodic sweep.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "id": 8,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (reason) (rate(tasker_push_subscriptions_cleaned_total[5m]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "Notification failures (last hour)",
+      "description": "Total failed deliveries across all channels in the last hour.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 26 },
+      "id": 9,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(tasker_notification_delivered_total{result=\"failure\"}[1h]))",
+          "legendFormat": "failures"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["tasker", "realtime", "notifications"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus" },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data source",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Tasker · Realtime & Notifications",
+  "uid": "tasker-realtime-notifications",
+  "version": 1
+}

@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import webPush, { WebPushError } from 'web-push';
 import { PushSubscriptionsService } from '../../push/push-subscriptions.service';
+import { NotificationsMetricsCollector } from '../../metrics/notifications.metrics';
 import type { BufferedEmailItem } from './email.channel';
 
 const EVENT_TITLE: Record<string, string> = {
@@ -51,6 +52,7 @@ export class PushChannel {
   constructor(
     config: ConfigService,
     private readonly subs: PushSubscriptionsService,
+    @Optional() private readonly metrics?: NotificationsMetricsCollector,
   ) {
     this.appBaseUrl = config.get<string>('APP_BASE_URL', 'http://localhost:3000');
     const publicKey = config.get<string | undefined>('VAPID_PUBLIC_KEY');
@@ -89,7 +91,9 @@ export class PushChannel {
           );
           delivered++;
           await this.subs.touchLastSeen(row.id);
+          this.metrics?.incrementDelivered('PUSH', item.eventType, 'success');
         } catch (err) {
+          this.metrics?.incrementDelivered('PUSH', item.eventType, 'failure');
           await this.classifyError(err, row.endpoint);
         }
       }),
@@ -103,6 +107,7 @@ export class PushChannel {
         // Endpoint gone — remove the row so the next fan-out does not
         // waste an outbound request.
         await this.subs.deleteByEndpoint(endpoint);
+        this.metrics?.incrementPushCleaned('gone');
         this.logger.log({ endpoint, statusCode: err.statusCode }, 'push.subscription.reaped');
         return;
       }
