@@ -39,9 +39,11 @@ test.describe('Global search — ⌘K + /search', () => {
     // Type a fragment that matches the widget task and the project.
     await searchInput.fill('widget');
 
-    // Grouped headings appear.
-    await expect(page.getByRole('heading', { name: /tasks/i })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole('heading', { name: /projects/i })).toBeVisible();
+    // Grouped headings appear. cmdk renders `CommandGroup` headings as
+    // <div cmdk-group-heading aria-hidden="true">, which don't carry the
+    // ARIA `heading` role — match on visible text instead.
+    await expect(page.getByText(/^tasks$/i).first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/^projects$/i).first()).toBeVisible();
 
     // A result matching "widget" is present.
     await expect(page.getByText(/widget/i).first()).toBeVisible();

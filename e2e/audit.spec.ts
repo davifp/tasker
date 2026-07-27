@@ -38,8 +38,14 @@ test.describe('Audit viewer', () => {
         .first(),
     ).toBeVisible({ timeout: 15_000 });
 
-    // Open a row's drawer via the Open button.
-    await page.getByRole('button', { name: /open/i }).first().click();
+    // Open a row's drawer via the Open button — scope to the audit table so
+    // the topbar's "Open command palette" trigger (aria-label also matches
+    // /open/i) is not clicked instead.
+    await page
+      .getByRole('table')
+      .getByRole('button', { name: /^open$/i })
+      .first()
+      .click();
     await expect(page.getByRole('heading', { name: /audit entry/i })).toBeVisible();
     await expect(page.getByText(/read-only/i)).toBeVisible();
 
