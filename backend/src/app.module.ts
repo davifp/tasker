@@ -7,6 +7,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { envSchema } from '@tasker/config';
 import { LoggerModule } from './common/logger/logger.module';
+import { RedisConnectionFactory } from './common/redis/redis-connection.factory';
 import { TraceIdMiddleware } from './common/middleware/trace-id.middleware';
 import { ProblemDetailsFilter } from './common/filters/problem-details.filter';
 import { PrismaModule } from './prisma/prisma.module';
@@ -37,6 +38,7 @@ import { AuditReadModule } from './audit/audit-read.module';
 import { ContextModule } from './common/context/context.module';
 import { AuditModule } from './common/audit/audit.module';
 import { ActivityModule } from './common/activity/activity.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { WorkspaceGuard } from './common/context/workspace.guard';
 import { RolesGuard } from './common/context/roles.guard';
 import { WorkspaceContextInterceptor } from './common/context/workspace-context.interceptor';
@@ -65,22 +67,13 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
       validate: (config) => envSchema.parse(config),
     }),
     // BullMQ global setup — must come before any feature module that calls registerQueue.
-    // Uses connection options (not an instance) so BullMQ can spawn its own ioredis connections
-    // with maxRetriesPerRequest: null as required by BullMQ.
+    // Delegates to RedisConnectionFactory.bullOptions() so BullMQ, the realtime
+    // ticket store, and the Socket.IO Redis adapter parse REDIS_URL the same way.
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const url = new URL(config.getOrThrow<string>('REDIS_URL'));
-        return {
-          connection: {
-            host: url.hostname,
-            port: parseInt(url.port || '6379', 10),
-            ...(url.password ? { password: decodeURIComponent(url.password) } : {}),
-            maxRetriesPerRequest: null,
-            enableReadyCheck: false,
-          },
-        };
-      },
+      useFactory: (config: ConfigService) => ({
+        connection: new RedisConnectionFactory(config).bullOptions(),
+      }),
     }),
     EventEmitterModule.forRoot({ wildcard: false, delimiter: '.', global: true }),
     RedisModule,
@@ -161,6 +154,7 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     MetricsModule,
     SearchModule,
     AuditReadModule,
+    RealtimeModule,
   ],
   providers: [
     {
