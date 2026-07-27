@@ -25,6 +25,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   return (
     <AppShell
       workspaceSlug={slug}
+      workspaceId={active.id}
       workspaces={workspaces.map((membership) => ({
         id: membership.id,
         slug: membership.slug,
