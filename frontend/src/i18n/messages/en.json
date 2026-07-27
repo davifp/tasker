@@ -968,6 +968,16 @@
       "saved": "Preferences saved.",
       "error": "Could not save preferences.",
       "loading": "Loading preferences…"
+    },
+    "push": {
+      "title": "Browser push notifications",
+      "subtitle": "Get instant alerts on this device, even when the tab is closed.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "working": "Working…",
+      "permissionDenied": "Notifications are blocked in this browser. Update site settings to enable them.",
+      "unsupported": "This browser does not support Web Push. Try Chrome, Edge, Firefox, or Safari 16.4+.",
+      "error": "Could not enable push notifications. Please try again."
     }
   }
 }

@@ -968,6 +968,16 @@
       "saved": "Preferências salvas.",
       "error": "Não foi possível salvar as preferências.",
       "loading": "Carregando preferências…"
+    },
+    "push": {
+      "title": "Notificações push do navegador",
+      "subtitle": "Receba alertas instantâneos neste dispositivo, mesmo com a aba fechada.",
+      "enable": "Ativar",
+      "disable": "Desativar",
+      "working": "Processando…",
+      "permissionDenied": "Notificações estão bloqueadas neste navegador. Ajuste as configurações do site.",
+      "unsupported": "Este navegador não suporta Web Push. Use Chrome, Edge, Firefox ou Safari 16.4+.",
+      "error": "Não foi possível ativar as notificações push. Tente novamente."
     }
   }
 }

@@ -9,6 +9,8 @@ import { PreferencesService } from './preferences.service';
 import { InAppChannel } from './channels/in-app.channel';
 import { EmailChannel } from './channels/email.channel';
 import { EmailBatcher } from './channels/email-batcher.service';
+import { PushChannel } from './channels/push.channel';
+import { PushModule } from '../push/push.module';
 import { NotificationsProcessor } from './notifications.processor';
 import { NotificationsController } from './notifications.controller';
 import { PreferencesController } from './preferences.controller';
@@ -24,6 +26,7 @@ import { PreferencesController } from './preferences.controller';
     PrismaModule,
     RealtimeModule,
     MailModule,
+    PushModule,
     BullModule.registerQueue({ name: NOTIFICATIONS_QUEUE }),
   ],
   controllers: [NotificationsController, PreferencesController],
@@ -33,6 +36,7 @@ import { PreferencesController } from './preferences.controller';
     InAppChannel,
     EmailChannel,
     EmailBatcher,
+    PushChannel,
     NotificationsProcessor,
   ],
   exports: [NotificationsService, PreferencesService],

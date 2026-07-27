@@ -19,6 +19,7 @@ describe('CleanupProcessor.runCleanup', () => {
     findUnique: ReturnType<typeof vi.fn>;
   };
   let notification: { deleteMany: ReturnType<typeof vi.fn> };
+  let pushSubscription: { deleteMany: ReturnType<typeof vi.fn> };
   let prisma: { forSystem: ReturnType<typeof vi.fn> };
   let queue: { add: ReturnType<typeof vi.fn> };
   let mail: { send: ReturnType<typeof vi.fn> };
@@ -37,6 +38,7 @@ describe('CleanupProcessor.runCleanup', () => {
       findUnique: vi.fn(),
     };
     notification = { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) };
+    pushSubscription = { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) };
     prisma = {
       forSystem: vi.fn().mockReturnValue({
         emailVerificationToken,
@@ -44,6 +46,7 @@ describe('CleanupProcessor.runCleanup', () => {
         session,
         workspace,
         notification,
+        pushSubscription,
       }),
     };
     queue = { add: vi.fn().mockResolvedValue({ id: 'purge-warning-x' }) };
@@ -154,6 +157,24 @@ describe('CleanupProcessor.runCleanup', () => {
       where: { createdAt: { lt: expectedCutoff } },
     });
     expect(result.purgedNotifications).toBe(42);
+  });
+
+  it('reaps push subscriptions dormant beyond PUSH_DORMANT_DAYS (default 60)', async () => {
+    pushSubscription.deleteMany.mockResolvedValueOnce({ count: 5 });
+    const processor = new CleanupProcessor(
+      prisma as never,
+      config as never,
+      mail as never,
+      queue as never,
+    );
+
+    const result = await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
+
+    const expectedCutoff = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    expect(pushSubscription.deleteMany).toHaveBeenCalledWith({
+      where: { lastSeenAt: { lt: expectedCutoff } },
+    });
+    expect(result.reapedPushSubscriptions).toBe(5);
   });
 
   it('honours NOTIFICATION_RETENTION_DAYS override', async () => {

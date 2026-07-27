@@ -21,6 +21,7 @@ interface CleanupResult {
   purgedWorkspaces: number;
   scheduledWarnings: number;
   purgedNotifications: number;
+  reapedPushSubscriptions: number;
 }
 
 @Injectable()
@@ -94,6 +95,8 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
     const notificationCutoff = new Date(
       now.getTime() - notificationRetentionDays * 24 * 60 * 60 * 1000,
     );
+    const pushDormantDays = this.config.get<number>('PUSH_DORMANT_DAYS', 60);
+    const pushDormantCutoff = new Date(now.getTime() - pushDormantDays * 24 * 60 * 60 * 1000);
 
     const result: CleanupResult = {
       expiredTokens: { verification: 0, passwordReset: 0 },
@@ -101,6 +104,7 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
       purgedWorkspaces: 0,
       scheduledWarnings: 0,
       purgedNotifications: 0,
+      reapedPushSubscriptions: 0,
     };
 
     try {
@@ -160,6 +164,20 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
       result.purgedNotifications = notifications.count;
     } catch (err) {
       this.logger.warn({ err, jobId: job.id }, 'Failed to purge stale notifications');
+    }
+
+    try {
+      // Dormant push subscription sweep. `lastSeenAt` is bumped every time
+      // `PushChannel.send` successfully delivers to an endpoint, so a stale
+      // `lastSeenAt` is a strong signal that the browser abandoned the
+      // registration (uninstall / cleared storage). 60 days is aligned with
+      // the FCM/Windows push endpoint TTL guidance.
+      const dormant = await this.prisma
+        .forSystem()
+        .pushSubscription.deleteMany({ where: { lastSeenAt: { lt: pushDormantCutoff } } });
+      result.reapedPushSubscriptions = dormant.count;
+    } catch (err) {
+      this.logger.warn({ err, jobId: job.id }, 'Failed to reap dormant push subscriptions');
     }
 
     this.logger.log({ jobId: job.id, ...result }, 'Cleanup pass complete');

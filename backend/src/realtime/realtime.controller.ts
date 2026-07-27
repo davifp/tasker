@@ -1,4 +1,5 @@
 import { Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RealtimeTicketService } from './realtime.ticket.service';
@@ -18,6 +19,7 @@ export class RealtimeController {
   constructor(
     private readonly tickets: RealtimeTicketService,
     private readonly emitter: RealtimeEmitter,
+    private readonly config: ConfigService,
   ) {}
 
   @Post('ticket')
@@ -39,5 +41,15 @@ export class RealtimeController {
     this.emitter.emitRaw(userRoom(req.user.userId), 'test.ping', {
       at: new Date().toISOString(),
     });
+  }
+
+  // Web Push VAPID public key. Safe to serve to any authenticated caller —
+  // the key is a public identifier; only the private counterpart must stay
+  // server-side. Returned as JSON so the browser can pass it straight to
+  // `pushManager.subscribe`.
+  @Get('vapid-key')
+  vapidKey(): { publicKey: string | null } {
+    const publicKey = this.config.get<string>('VAPID_PUBLIC_KEY') ?? null;
+    return { publicKey };
   }
 }

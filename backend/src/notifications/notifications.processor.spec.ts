@@ -4,6 +4,7 @@ import type { NotificationJob } from '@tasker/config';
 import type { PreferencesService } from './preferences.service';
 import type { EmailChannel } from './channels/email.channel';
 import type { EmailBatcher } from './channels/email-batcher.service';
+import type { PushChannel } from './channels/push.channel';
 import { NotificationsProcessor } from './notifications.processor';
 
 function makeJob(data: unknown): Job<NotificationJob> {
@@ -14,18 +15,25 @@ function makeJob(data: unknown): Job<NotificationJob> {
   } as Job<NotificationJob>;
 }
 
-function makeProcessor(prefs?: { emailEnabled?: boolean }) {
-  const isEnabled = vi.fn().mockResolvedValue(prefs?.emailEnabled ?? true);
+function makeProcessor(prefs?: { emailEnabled?: boolean; pushEnabled?: boolean }) {
+  const isEnabled = vi.fn(async (_u: string, _e: string, channel: string) => {
+    if (channel === 'EMAIL') return prefs?.emailEnabled ?? true;
+    if (channel === 'PUSH') return prefs?.pushEnabled ?? false;
+    return false;
+  });
   const buffer = vi.fn().mockResolvedValue(undefined);
   const drain = vi.fn().mockResolvedValue({ flushed: 3 });
+  const send = vi.fn().mockResolvedValue({ delivered: 0 });
   const preferences = { isEnabled } as unknown as PreferencesService;
   const email = { buffer } as unknown as EmailChannel;
   const batcher = { drain } as unknown as EmailBatcher;
+  const push = { send } as unknown as PushChannel;
   return {
-    processor: new NotificationsProcessor(preferences, email, batcher),
+    processor: new NotificationsProcessor(preferences, email, batcher, push),
     isEnabled,
     buffer,
     drain,
+    send,
   };
 }
 
@@ -94,6 +102,23 @@ describe('NotificationsProcessor', () => {
     const { processor, drain } = makeProcessor();
     await processor.process(makeJob({ type: 'notification.email-batch' }));
     expect(drain).toHaveBeenCalledWith(undefined);
+  });
+
+  it('calls PushChannel.send when PUSH is enabled on the fan-out', async () => {
+    const { processor, send } = makeProcessor({ emailEnabled: false, pushEnabled: true });
+    await processor.process(
+      makeJob({
+        type: 'notification.fanout',
+        workspaceId: 'ws-1',
+        eventType: 'COMMENT_MENTION',
+        recipientUserId: 'user-a',
+        notificationId: 'n-1',
+        sourceKind: 'COMMENT',
+        sourceId: 'c-1',
+        payload: {},
+      }),
+    );
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it('drops malformed jobs without throwing', async () => {

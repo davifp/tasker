@@ -6,6 +6,7 @@ import { NOTIFICATIONS_QUEUE } from '../queues/constants';
 import { PreferencesService } from './preferences.service';
 import { EmailChannel } from './channels/email.channel';
 import { EmailBatcher } from './channels/email-batcher.service';
+import { PushChannel } from './channels/push.channel';
 
 // Consumer for the notifications queue. The producer contract is frozen in
 // `@tasker/config` as a discriminated union:
@@ -31,6 +32,7 @@ export class NotificationsProcessor extends WorkerHost {
     private readonly preferences: PreferencesService,
     private readonly emailChannel: EmailChannel,
     private readonly emailBatcher: EmailBatcher,
+    private readonly pushChannel: PushChannel,
   ) {
     super();
   }
@@ -64,31 +66,41 @@ export class NotificationsProcessor extends WorkerHost {
         // Re-check the preference matrix at fan-out time so a flip that
         // happens between `notify()` and the drain (rare, but possible under
         // a 5-min buffer) is honoured.
-        const emailEnabled = await this.preferences.isEnabled(
-          data.recipientUserId,
-          data.eventType,
-          'EMAIL',
-        );
+        const [emailEnabled, pushEnabled] = await Promise.all([
+          this.preferences.isEnabled(data.recipientUserId, data.eventType, 'EMAIL'),
+          this.preferences.isEnabled(data.recipientUserId, data.eventType, 'PUSH'),
+        ]);
+        const bufferedItem = {
+          notificationId: data.notificationId,
+          workspaceId: data.workspaceId,
+          eventType: data.eventType,
+          sourceKind: data.sourceKind,
+          sourceId: data.sourceId,
+          ...(data.actorUserId ? { actorUserId: data.actorUserId } : {}),
+          idempotencyKey: `${data.eventType}:${data.recipientUserId}:${data.sourceId}`,
+          payload: data.payload,
+          bufferedAt: new Date().toISOString(),
+        };
         if (emailEnabled) {
-          await this.emailChannel.buffer(data.recipientUserId, {
-            notificationId: data.notificationId,
-            workspaceId: data.workspaceId,
-            eventType: data.eventType,
-            sourceKind: data.sourceKind,
-            sourceId: data.sourceId,
-            ...(data.actorUserId ? { actorUserId: data.actorUserId } : {}),
-            idempotencyKey: `${data.eventType}:${data.recipientUserId}:${data.sourceId}`,
-            payload: data.payload,
-            bufferedAt: new Date().toISOString(),
-          });
+          await this.emailChannel.buffer(data.recipientUserId, bufferedItem);
         }
-        // Task 7.0 will enqueue the push sub-job here on `pushEnabled`.
+        let pushDelivered = 0;
+        if (pushEnabled) {
+          // Push delivery is synchronous per fan-out job — no buffer — because
+          // the user just triggered an event and the browser can absorb the
+          // notification immediately. The channel handles 404/410 cleanup
+          // and swallows transient failures.
+          const result = await this.pushChannel.send(data.recipientUserId, bufferedItem);
+          pushDelivered = result.delivered;
+        }
         this.logger.log(
           {
             jobId: job.id,
             recipientUserId: data.recipientUserId,
             eventType: data.eventType,
             emailEnabled,
+            pushEnabled,
+            pushDelivered,
           },
           'notifications.fanout.dispatched',
         );

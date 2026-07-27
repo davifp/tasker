@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { PreferencesMatrixForm } from '@/features/notifications/preferences/PreferencesMatrixForm';
+import { PushOptInToggle } from '@/features/notifications/preferences/PushOptInToggle';
 
 export default async function NotificationPreferencesPage() {
   const t = await getTranslations('notifications.preferences');
@@ -10,6 +11,7 @@ export default async function NotificationPreferencesPage() {
         <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </header>
       <PreferencesMatrixForm />
+      <PushOptInToggle />
     </section>
   );
 }
