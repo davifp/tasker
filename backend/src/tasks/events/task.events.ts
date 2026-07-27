@@ -6,6 +6,10 @@ export interface TaskCreatedEvent {
   taskId: string;
   number: number;
   actorUserId: string;
+  // The initial assignee (if any) travels with the event so the
+  // notifications translator can raise a `TASK_ASSIGNED` bell entry
+  // without a second DB round trip.
+  assigneeUserId?: string | null;
 }
 
 export interface TaskUpdatedEvent {
@@ -13,6 +17,13 @@ export interface TaskUpdatedEvent {
   projectId: string;
   taskId: string;
   actorUserId: string;
+  // Populated only when the update patch touched the assignee. Consumed by
+  // the notifications translator to raise a `TASK_ASSIGNED` bell event for
+  // the new assignee (and to clear the old one from the recipient set).
+  assigneeDelta?: {
+    previousUserId: string | null;
+    currentUserId: string | null;
+  };
 }
 
 export interface TaskMovedEvent {

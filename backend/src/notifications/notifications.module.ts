@@ -12,6 +12,7 @@ import { EmailBatcher } from './channels/email-batcher.service';
 import { PushChannel } from './channels/push.channel';
 import { PushModule } from '../push/push.module';
 import { NotificationsProcessor } from './notifications.processor';
+import { DomainEventsListener } from './domain-events.listener';
 import { NotificationsController } from './notifications.controller';
 import { PreferencesController } from './preferences.controller';
 
@@ -38,6 +39,7 @@ import { PreferencesController } from './preferences.controller';
     EmailBatcher,
     PushChannel,
     NotificationsProcessor,
+    DomainEventsListener,
   ],
   exports: [NotificationsService, PreferencesService],
 })

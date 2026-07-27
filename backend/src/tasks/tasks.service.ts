@@ -173,6 +173,7 @@ export class TasksService {
           taskId: task.id,
           number: task.number,
           actorUserId: input.actorUserId,
+          ...(task.assigneeUserId ? { assigneeUserId: task.assigneeUserId } : {}),
         } satisfies TaskCreatedEvent);
 
         return task;
@@ -210,11 +211,13 @@ export class TasksService {
   ): Promise<Task> {
     // labelIds → full replace of TaskLabel rows
     const { labelIds, ...scalarPatch } = patch;
+    let previousAssigneeUserId: string | null = null;
     const task = await this.prisma.forSystem().$transaction(async (tx) => {
       const existing = await tx.task.findUnique({ where: { id: taskId } });
       if (!existing || existing.workspaceId !== workspaceId) {
         throw new NotFoundException('Task not found');
       }
+      previousAssigneeUserId = existing.assigneeUserId;
 
       // Cross-field invariant: when the patch would leave the task with both
       // endpoints set, enforce `startDate <= dueDate`. Resolve the effective
@@ -277,11 +280,19 @@ export class TasksService {
       return updated;
     });
 
+    const assigneeDelta =
+      scalarPatch.assigneeUserId !== undefined
+        ? {
+            previousUserId: previousAssigneeUserId,
+            currentUserId: task.assigneeUserId,
+          }
+        : undefined;
     this.events.emit(TaskEvents.UPDATED, {
       workspaceId,
       projectId: task.projectId,
       taskId: task.id,
       actorUserId,
+      ...(assigneeDelta ? { assigneeDelta } : {}),
     } satisfies TaskUpdatedEvent);
 
     return task;
