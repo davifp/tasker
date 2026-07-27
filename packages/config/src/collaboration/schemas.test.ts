@@ -196,7 +196,7 @@ describe('listActivityQuerySchema', () => {
 });
 
 describe('notificationJobSchema', () => {
-  const valid = {
+  const validMention = {
     type: 'comment.mention' as const,
     workspaceId: 'ws-1',
     commentId: 'c-1',
@@ -205,15 +205,88 @@ describe('notificationJobSchema', () => {
     actorUserId: 'u-2',
   };
 
-  it('accepts a well-formed mention job', () => {
-    expect(notificationJobSchema.parse(valid)).toEqual(valid);
+  it('accepts a well-formed legacy mention job', () => {
+    expect(notificationJobSchema.parse(validMention)).toEqual(validMention);
   });
 
-  it('rejects a job with the wrong type literal', () => {
-    expect(() => notificationJobSchema.parse({ ...valid, type: 'comment.reply' })).toThrow();
+  it('rejects a job with an unknown discriminator', () => {
+    expect(() => notificationJobSchema.parse({ ...validMention, type: 'comment.reply' })).toThrow();
   });
 
-  it('rejects a job with an empty required id', () => {
-    expect(() => notificationJobSchema.parse({ ...valid, mentionedUserId: '' })).toThrow();
+  it('rejects a mention job with an empty required id', () => {
+    expect(() => notificationJobSchema.parse({ ...validMention, mentionedUserId: '' })).toThrow();
+  });
+
+  it('accepts a fan-out job with all required fields', () => {
+    const job = {
+      type: 'notification.fanout' as const,
+      workspaceId: 'ws-1',
+      eventType: 'COMMENT_MENTION' as const,
+      recipientUserId: 'u-1',
+      notificationId: 'n-1',
+      sourceKind: 'COMMENT' as const,
+      sourceId: 'c-1',
+      actorUserId: 'u-2',
+    };
+    expect(notificationJobSchema.parse(job)).toEqual(job);
+  });
+
+  it('accepts a fan-out job without an actor (system-emitted)', () => {
+    const job = {
+      type: 'notification.fanout' as const,
+      workspaceId: 'ws-1',
+      eventType: 'SPRINT_LIFECYCLE' as const,
+      recipientUserId: 'u-1',
+      notificationId: 'n-1',
+      sourceKind: 'SPRINT' as const,
+      sourceId: 's-1',
+    };
+    expect(notificationJobSchema.parse(job)).toEqual(job);
+  });
+
+  it('rejects a fan-out job with an unknown eventType', () => {
+    expect(() =>
+      notificationJobSchema.parse({
+        type: 'notification.fanout',
+        workspaceId: 'ws-1',
+        eventType: 'comment.mention',
+        recipientUserId: 'u-1',
+        notificationId: 'n-1',
+        sourceKind: 'COMMENT',
+        sourceId: 'c-1',
+      }),
+    ).toThrow();
+  });
+
+  it('accepts an email-batch scan job (no recipient)', () => {
+    expect(notificationJobSchema.parse({ type: 'notification.email-batch' })).toEqual({
+      type: 'notification.email-batch',
+    });
+  });
+
+  it('accepts an email-batch job targeted at a recipient', () => {
+    expect(
+      notificationJobSchema.parse({ type: 'notification.email-batch', recipientUserId: 'u-1' }),
+    ).toEqual({ type: 'notification.email-batch', recipientUserId: 'u-1' });
+  });
+
+  it('accepts a push job with all required fields', () => {
+    const job = {
+      type: 'notification.push' as const,
+      workspaceId: 'ws-1',
+      recipientUserId: 'u-1',
+      notificationId: 'n-1',
+    };
+    expect(notificationJobSchema.parse(job)).toEqual(job);
+  });
+
+  it('rejects a push job with a missing notificationId', () => {
+    expect(() =>
+      notificationJobSchema.parse({
+        type: 'notification.push',
+        workspaceId: 'ws-1',
+        recipientUserId: 'u-1',
+      }),
+    ).toThrow();
   });
 });

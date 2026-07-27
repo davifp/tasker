@@ -94,6 +94,30 @@ export const envSchema = z.object({
   // Max time to wait for the cleanup repeatable-job registration at boot
   // (protects app.listen from blocking when Redis is unreachable).
   CLEANUP_REGISTER_TIMEOUT_MS: z.coerce.number().default(2000),
+
+  // Realtime (Phase 8) — Socket.IO ticket lifetime and signing key.
+  // Ticket is one-shot: jti is stored in Redis with the same TTL, so a
+  // replayed ticket is rejected. Rotating RT_TICKET_SECRET invalidates
+  // in-flight tickets without affecting the underlying JWT session.
+  RT_TICKET_TTL_S: z.coerce.number().int().positive().default(60),
+  RT_TICKET_SECRET: z.string().min(32),
+  // Comma-separated list of origins allowed to open the Socket.IO handshake.
+  // The API is on a different origin from the web app, so CORS on the WS
+  // upgrade must be explicit.
+  RT_ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
+
+  // Web Push (Phase 8). VAPID keys can be generated with
+  // `pnpm exec web-push generate-vapid-keys`. VAPID_SUBJECT identifies the
+  // sender to push services; must be a mailto: URL or https URL.
+  VAPID_PUBLIC_KEY: z.string().default(''),
+  VAPID_PRIVATE_KEY: z.string().default(''),
+  VAPID_SUBJECT: z.string().default('mailto:noreply@tasker.dev'),
+
+  // Notification delivery timing (Phase 8). Email batching flushes every
+  // NOTIF_EMAIL_BATCH_WINDOW_S seconds per recipient; deduplication collapses
+  // (recipient × eventType × sourceId) bursts inside NOTIF_DEDUPE_WINDOW_S.
+  NOTIF_EMAIL_BATCH_WINDOW_S: z.coerce.number().int().positive().default(300),
+  NOTIF_DEDUPE_WINDOW_S: z.coerce.number().int().positive().default(60),
 });
 
 export type Env = z.infer<typeof envSchema>;

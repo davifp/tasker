@@ -6,6 +6,7 @@ const validEnv = {
   DATABASE_URL: 'postgres://tasker:tasker@localhost:5432/tasker',
   REDIS_URL: 'redis://localhost:6379',
   JWT_SECRET: 'a'.repeat(64),
+  RT_TICKET_SECRET: 'b'.repeat(64),
 };
 
 describe('envSchema', () => {
@@ -68,5 +69,40 @@ describe('envSchema', () => {
     });
     expect(result.THROTTLE_DEFAULT_LIMIT).toBe(10_000);
     expect(result.THROTTLE_DEFAULT_TTL_S).toBe(60);
+  });
+
+  // Phase 8: realtime & notifications env vars.
+  it('applies realtime defaults (60s ticket TTL, localhost origin)', () => {
+    const result = envSchema.parse(validEnv);
+    expect(result.RT_TICKET_TTL_S).toBe(60);
+    expect(result.RT_ALLOWED_ORIGINS).toBe('http://localhost:3000');
+  });
+
+  it('rejects a RT_TICKET_SECRET shorter than 32 chars', () => {
+    expect(() => envSchema.parse({ ...validEnv, RT_TICKET_SECRET: 'too-short' })).toThrow();
+  });
+
+  it('coerces RT_TICKET_TTL_S from string and rejects a non-positive value', () => {
+    const result = envSchema.parse({ ...validEnv, RT_TICKET_TTL_S: '120' });
+    expect(result.RT_TICKET_TTL_S).toBe(120);
+    expect(() => envSchema.parse({ ...validEnv, RT_TICKET_TTL_S: '0' })).toThrow();
+  });
+
+  it('applies notification timing defaults (300s batch, 60s dedupe)', () => {
+    const result = envSchema.parse(validEnv);
+    expect(result.NOTIF_EMAIL_BATCH_WINDOW_S).toBe(300);
+    expect(result.NOTIF_DEDUPE_WINDOW_S).toBe(60);
+  });
+
+  it('coerces NOTIF_EMAIL_BATCH_WINDOW_S from string', () => {
+    const result = envSchema.parse({ ...validEnv, NOTIF_EMAIL_BATCH_WINDOW_S: '120' });
+    expect(result.NOTIF_EMAIL_BATCH_WINDOW_S).toBe(120);
+  });
+
+  it('applies VAPID defaults (empty keys, sender subject)', () => {
+    const result = envSchema.parse(validEnv);
+    expect(result.VAPID_PUBLIC_KEY).toBe('');
+    expect(result.VAPID_PRIVATE_KEY).toBe('');
+    expect(result.VAPID_SUBJECT).toBe('mailto:noreply@tasker.dev');
   });
 });

@@ -22,6 +22,7 @@ export default defineConfig({
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
       JWT_SECRET: 'test-secret-that-is-at-least-32-chars-long',
+      RT_TICKET_SECRET: 'rt-test-secret-that-is-at-least-32-chars-long',
     },
     coverage: {
       provider: 'v8',

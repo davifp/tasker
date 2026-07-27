@@ -70,6 +70,28 @@ enum MetricJobStatus {
   FAILED
 }
 
+// Notification catalog (Phase 8). Enum members are UPPER_SNAKE so they can be
+// mirrored 1:1 by the Zod schema in `@tasker/config` — a value read from the
+// DB is immediately valid on the wire without translation.
+enum NotificationEventType {
+  COMMENT_MENTION
+  TASK_ASSIGNED
+  COMMENT_FOLLOWED
+  SPRINT_LIFECYCLE
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum NotificationSourceKind {
+  TASK
+  COMMENT
+  SPRINT
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique @db.Citext
@@ -101,6 +123,10 @@ model User {
   createdSprints          Sprint[]                    @relation("SprintCreator")
   sprintCapacities        SprintCapacity[]            @relation("SprintCapacityMember")
   createdEpics            Epic[]                      @relation("EpicCreator")
+  notificationsReceived   Notification[]              @relation("NotificationRecipient")
+  notificationsActed      Notification[]              @relation("NotificationActor")
+  notificationPreferences NotificationPreference[]
+  pushSubscriptions       PushSubscription[]
 }
 
 model OAuthAccount {
@@ -147,7 +173,7 @@ model Workspace {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  owner            User              @relation("WorkspaceOwner", fields: [ownerUserId], references: [id])
+  owner            User                 @relation("WorkspaceOwner", fields: [ownerUserId], references: [id])
   members          WorkspaceMember[]
   invitations      Invitation[]
   auditLogs        AuditLog[]
@@ -164,6 +190,7 @@ model Workspace {
   sprintSnapshots  SprintTaskSnapshot[]
   epics            Epic[]
   metricJobLogs    MetricJobLog[]
+  notifications    Notification[]
 }
 
 model WorkspaceMember {
@@ -298,27 +325,27 @@ model Task {
   // Planning (Phase 6) — nullable so pre-existing tasks are unaffected.
   // `estimate` in story points contributes to burndown/velocity; null counts
   // as 0 for point sums but still counts for scope.
-  estimate  Int?
-  sprintId  String?
-  epicId    String?
-  deletedAt DateTime?
-  purgeAt   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  estimate        Int?
+  sprintId        String?
+  epicId          String?
+  deletedAt       DateTime?
+  purgeAt         DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  workspace      Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  project        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee       User?                 @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
-  createdBy      User                  @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  sprint         Sprint?               @relation(fields: [sprintId], references: [id], onDelete: SetNull)
-  epic           Epic?                 @relation(fields: [epicId], references: [id], onDelete: SetNull)
-  labels         TaskLabel[]
-  dependencies   TaskDependency[]      @relation("TaskDependencies_task")
-  dependents     TaskDependency[]      @relation("TaskDependencies_blocker")
-  checklistItems ChecklistItem[]
-  comments       Comment[]
-  attachments    Attachment[]
-  activities     Activity[]
+  workspace       Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project         Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee        User?                @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  createdBy       User                 @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  sprint          Sprint?              @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  epic            Epic?                @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  labels          TaskLabel[]
+  dependencies    TaskDependency[]     @relation("TaskDependencies_task")
+  dependents      TaskDependency[]     @relation("TaskDependencies_blocker")
+  checklistItems  ChecklistItem[]
+  comments        Comment[]
+  attachments     Attachment[]
+  activities      Activity[]
   sprintSnapshots SprintTaskSnapshot[]
 
   @@unique([projectId, number])
@@ -521,13 +548,13 @@ model Sprint {
 // Scoped strictly to the sprint (does not persist across sprints unless the
 // planner explicitly copies it forward — see FR-15).
 model SprintCapacity {
-  id              String   @id @default(cuid())
-  workspaceId     String
-  sprintId        String
-  memberUserId    String
-  capacityPoints  Int
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  workspaceId    String
+  sprintId       String
+  memberUserId   String
+  capacityPoints Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   sprint    Sprint    @relation(fields: [sprintId], references: [id], onDelete: Cascade)
@@ -541,15 +568,15 @@ model SprintCapacity {
 // (START on activate, COMPLETE on close). Powers burndown and the close
 // summary so editing the underlying Task does not drift historical metrics.
 model SprintTaskSnapshot {
-  id              String              @id @default(cuid())
-  workspaceId     String
-  sprintId        String
-  taskId          String
-  phase           SprintSnapshotPhase
-  snapshotAt      DateTime            @default(now())
-  status          TaskStatus
-  estimate        Int?
-  assigneeUserId  String?
+  id             String              @id @default(cuid())
+  workspaceId    String
+  sprintId       String
+  taskId         String
+  phase          SprintSnapshotPhase
+  snapshotAt     DateTime            @default(now())
+  status         TaskStatus
+  estimate       Int?
+  assigneeUserId String?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   sprint    Sprint    @relation(fields: [sprintId], references: [id], onDelete: Cascade)
@@ -590,14 +617,14 @@ model Epic {
 // (last successful matview refresh) and the /health probe for the metrics
 // worker. `workspaceId` nullable because the repeatable job runs globally.
 model MetricJobLog {
-  id           String          @id @default(cuid())
-  workspaceId  String?
-  matview      String
-  status       MetricJobStatus
-  startedAt    DateTime        @default(now())
-  finishedAt   DateTime?
-  refreshMs    Int?
-  error        String?
+  id          String          @id @default(cuid())
+  workspaceId String?
+  matview     String
+  status      MetricJobStatus
+  startedAt   DateTime        @default(now())
+  finishedAt  DateTime?
+  refreshMs   Int?
+  error       String?
 
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -624,4 +651,67 @@ model UserProjectViewPreference {
 
   @@id([userId, projectId])
   @@index([projectId])
+}
+
+// Notification (Phase 8). One row per recipient — the actor is never a
+// recipient of their own action. `payload` is a compact JSON snapshot so the
+// bell dropdown can render each item without a second fetch. Retention is
+// 90 days, enforced by the nightly cleanup job.
+model Notification {
+  id              String                 @id @default(cuid())
+  workspaceId     String
+  recipientUserId String
+  actorUserId     String?
+  eventType       NotificationEventType
+  sourceKind      NotificationSourceKind
+  sourceId        String
+  payload         Json                   @default("{}")
+  readAt          DateTime?
+  createdAt       DateTime               @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  recipient User      @relation("NotificationRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  actor     User?     @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  // Bell dropdown reads (recent items per recipient) and unread-count query.
+  @@index([recipientUserId, createdAt(sort: Desc)])
+  @@index([recipientUserId, readAt])
+  // Workspace-scoped audit reads and the 90-day cleanup sweep.
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
+
+// User preference matrix, global per user (v1 does not scope preferences by
+// workspace). The composite primary key `(userId, eventType, channel)` is
+// small and lookups are always by user, so no secondary index is needed
+// beyond the implicit PK.
+model NotificationPreference {
+  userId    String
+  eventType NotificationEventType
+  channel   NotificationChannel
+  enabled   Boolean
+  updatedAt DateTime              @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, eventType, channel])
+}
+
+// Browser push subscription registered per user + endpoint. `endpoint` is
+// globally unique because push services issue distinct endpoints per browser
+// install. `lastSeenAt` powers the dormant-subscription sweep (delete after
+// 60 days without confirmed delivery).
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String
+  authKey    String
+  userAgent  String?
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([lastSeenAt])
 }

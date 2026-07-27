@@ -25,16 +25,23 @@ export class NotificationsProcessor extends WorkerHost {
       );
       return;
     }
-    this.logger.log(
-      {
-        jobId: job.id,
-        type: parsed.data.type,
-        workspaceId: parsed.data.workspaceId,
-        commentId: parsed.data.commentId,
-        mentionedUserId: parsed.data.mentionedUserId,
-        actorUserId: parsed.data.actorUserId,
-      },
-      'notifications.enqueued',
-    );
+    // Task 4.0 will replace this stub with per-type dispatch. Until then, log
+    // only fields available on the specific variant so the union stays type-safe.
+    const data = parsed.data;
+    if (data.type === 'comment.mention') {
+      this.logger.log(
+        {
+          jobId: job.id,
+          type: data.type,
+          workspaceId: data.workspaceId,
+          commentId: data.commentId,
+          mentionedUserId: data.mentionedUserId,
+          actorUserId: data.actorUserId,
+        },
+        'notifications.enqueued',
+      );
+      return;
+    }
+    this.logger.log({ jobId: job.id, type: data.type }, 'notifications.enqueued');
   }
 }

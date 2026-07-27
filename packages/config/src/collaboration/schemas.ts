@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { REACTIONS_CATALOG } from './reactions-catalog';
 import { ATTACHMENT_MAX_BYTES, isAllowedAttachmentMime } from './attachment-policy';
+import { notificationEventTypeSchema, notificationSourceKindSchema } from '../realtime/schemas';
 
 // ---------------------------------------------------------------------------
 // Comments
@@ -136,15 +137,13 @@ export type ActivityVerb = z.infer<typeof activityVerbSchema>;
 export type ListActivityQuery = z.infer<typeof listActivityQuerySchema>;
 
 // ---------------------------------------------------------------------------
-// Notifications queue payloads (Phase 8 substrate)
+// Notifications queue payloads (Phase 8)
 // ---------------------------------------------------------------------------
 
-/**
- * Producer contract frozen here so Phase 8 can swap the consumer without
- * having to migrate every mention-emitting producer. Keep this schema
- * additive-only — new fields must be optional.
- */
-export const notificationJobSchema = z.object({
+// Legacy Phase-5 producer contract for `@mention` events. Kept as a variant of
+// the union so pre-existing enqueuers (CommentsService mention emit) don't
+// need a coordinated migration to switch to `notification.fanout`.
+export const notificationCommentMentionJobSchema = z.object({
   type: z.literal('comment.mention'),
   workspaceId: z.string().min(1),
   commentId: z.string().min(1),
@@ -153,4 +152,45 @@ export const notificationJobSchema = z.object({
   actorUserId: z.string().min(1),
 });
 
+// Fan-out orchestrator: produced by `NotificationsService.notify` once per
+// (event × recipient) after the in-app row is written. Spawns per-channel
+// sub-jobs subject to the recipient's preferences.
+export const notificationFanoutJobSchema = z.object({
+  type: z.literal('notification.fanout'),
+  workspaceId: z.string().min(1),
+  eventType: notificationEventTypeSchema,
+  recipientUserId: z.string().min(1),
+  notificationId: z.string().min(1),
+  sourceKind: notificationSourceKindSchema,
+  sourceId: z.string().min(1),
+  actorUserId: z.string().min(1).optional(),
+});
+
+// Periodic drain of the per-recipient email buffer. When `recipientUserId`
+// is omitted the batcher runs in scan mode and flushes every bucket found.
+export const notificationEmailBatchJobSchema = z.object({
+  type: z.literal('notification.email-batch'),
+  recipientUserId: z.string().min(1).optional(),
+});
+
+// Per-notification push delivery job. Enqueued by the fan-out orchestrator
+// when the recipient has PUSH enabled for the event type.
+export const notificationPushJobSchema = z.object({
+  type: z.literal('notification.push'),
+  workspaceId: z.string().min(1),
+  recipientUserId: z.string().min(1),
+  notificationId: z.string().min(1),
+});
+
+export const notificationJobSchema = z.discriminatedUnion('type', [
+  notificationCommentMentionJobSchema,
+  notificationFanoutJobSchema,
+  notificationEmailBatchJobSchema,
+  notificationPushJobSchema,
+]);
+
+export type NotificationCommentMentionJob = z.infer<typeof notificationCommentMentionJobSchema>;
+export type NotificationFanoutJob = z.infer<typeof notificationFanoutJobSchema>;
+export type NotificationEmailBatchJob = z.infer<typeof notificationEmailBatchJobSchema>;
+export type NotificationPushJob = z.infer<typeof notificationPushJobSchema>;
 export type NotificationJob = z.infer<typeof notificationJobSchema>;
