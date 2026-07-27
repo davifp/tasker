@@ -12,6 +12,9 @@ export const PURGE_WARNING_JOB = 'purge-warning' as const;
 // `@tasker/config` (notificationJobSchema) so Phase 8 can swap the consumer
 // without migrating producers.
 export const COMMENT_MENTION_JOB = 'comment.mention' as const;
+export const NOTIFICATION_FANOUT_JOB = 'notification.fanout' as const;
+export const NOTIFICATION_EMAIL_BATCH_JOB = 'notification.email-batch' as const;
+export const NOTIFICATION_PUSH_JOB = 'notification.push' as const;
 
 // Job names inside the attachments queue.
 export const ATTACHMENTS_JANITOR_JOB = 'janitor' as const;

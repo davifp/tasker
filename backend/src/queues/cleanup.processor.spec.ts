@@ -18,6 +18,7 @@ describe('CleanupProcessor.runCleanup', () => {
     findMany: ReturnType<typeof vi.fn>;
     findUnique: ReturnType<typeof vi.fn>;
   };
+  let notification: { deleteMany: ReturnType<typeof vi.fn> };
   let prisma: { forSystem: ReturnType<typeof vi.fn> };
   let queue: { add: ReturnType<typeof vi.fn> };
   let mail: { send: ReturnType<typeof vi.fn> };
@@ -35,12 +36,14 @@ describe('CleanupProcessor.runCleanup', () => {
       findMany: vi.fn().mockResolvedValue([]),
       findUnique: vi.fn(),
     };
+    notification = { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) };
     prisma = {
       forSystem: vi.fn().mockReturnValue({
         emailVerificationToken,
         passwordResetToken,
         session,
         workspace,
+        notification,
       }),
     };
     queue = { add: vi.fn().mockResolvedValue({ id: 'purge-warning-x' }) };
@@ -132,6 +135,48 @@ describe('CleanupProcessor.runCleanup', () => {
       expect.objectContaining({ jobId: `purge-warning:ws-1:${purgeAt.toISOString()}` }),
     );
     expect(result.scheduledWarnings).toBe(1);
+  });
+
+  it('purges Notification rows older than the retention window (default 90 days)', async () => {
+    notification.deleteMany.mockResolvedValueOnce({ count: 42 });
+    const processor = new CleanupProcessor(
+      prisma as never,
+      config as never,
+      mail as never,
+      queue as never,
+    );
+
+    const result = await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
+
+    // Default retention is 90 days back from now.
+    const expectedCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    expect(notification.deleteMany).toHaveBeenCalledWith({
+      where: { createdAt: { lt: expectedCutoff } },
+    });
+    expect(result.purgedNotifications).toBe(42);
+  });
+
+  it('honours NOTIFICATION_RETENTION_DAYS override', async () => {
+    config.get.mockImplementation((key: string, def: unknown) => {
+      if (key === 'NOTIFICATION_RETENTION_DAYS') return 30;
+      if (key === 'SESSION_RETENTION_DAYS') return 7;
+      if (key === 'PURGE_WARNING_LEAD_DAYS') return 3;
+      return def;
+    });
+    notification.deleteMany.mockResolvedValueOnce({ count: 1 });
+    const processor = new CleanupProcessor(
+      prisma as never,
+      config as never,
+      mail as never,
+      queue as never,
+    );
+
+    await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
+
+    const expectedCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    expect(notification.deleteMany).toHaveBeenCalledWith({
+      where: { createdAt: { lt: expectedCutoff } },
+    });
   });
 });
 

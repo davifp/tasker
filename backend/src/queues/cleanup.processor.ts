@@ -20,6 +20,7 @@ interface CleanupResult {
   expiredSessions: number;
   purgedWorkspaces: number;
   scheduledWarnings: number;
+  purgedNotifications: number;
 }
 
 @Injectable()
@@ -89,12 +90,17 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
     const sessionCutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
     const warningLeadDays = this.config.get<number>('PURGE_WARNING_LEAD_DAYS', 3);
     const warningWindow = new Date(now.getTime() + warningLeadDays * 24 * 60 * 60 * 1000);
+    const notificationRetentionDays = this.config.get<number>('NOTIFICATION_RETENTION_DAYS', 90);
+    const notificationCutoff = new Date(
+      now.getTime() - notificationRetentionDays * 24 * 60 * 60 * 1000,
+    );
 
     const result: CleanupResult = {
       expiredTokens: { verification: 0, passwordReset: 0 },
       expiredSessions: 0,
       purgedWorkspaces: 0,
       scheduledWarnings: 0,
+      purgedNotifications: 0,
     };
 
     try {
@@ -141,6 +147,19 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
       result.scheduledWarnings = await this.scheduleWarnings(now, warningWindow);
     } catch (err) {
       this.logger.warn({ err, jobId: job.id }, 'Failed to schedule purge warnings');
+    }
+
+    try {
+      // Notification retention: bell rows older than the retention window are
+      // no longer surfaced in the UI (bell dropdown truncates to the last 90
+      // days by design), so purging them keeps the table lean without user
+      // impact. Read-state is preserved implicitly — the row is gone.
+      const notifications = await this.prisma
+        .forSystem()
+        .notification.deleteMany({ where: { createdAt: { lt: notificationCutoff } } });
+      result.purgedNotifications = notifications.count;
+    } catch (err) {
+      this.logger.warn({ err, jobId: job.id }, 'Failed to purge stale notifications');
     }
 
     this.logger.log({ jobId: job.id, ...result }, 'Cleanup pass complete');
