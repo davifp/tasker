@@ -39,3 +39,28 @@ Mailhog UI: http://localhost:8025
 | `pnpm lint` | Lint all workspaces |
 | `pnpm typecheck` | Type-check all workspaces |
 | `pnpm test` | Run all test suites |
+
+### Realtime load smoke
+
+`scripts/rt-load.mjs` opens N concurrent Socket.IO clients against a running
+API, triggers a broadcast, and reports the client-observed P95 latency.
+Fails with a non-zero exit code when P95 exceeds `RT_LOAD_P95_SLO_MS`
+(default 500 ms). Not wired into CI — run locally before a release or when
+touching the realtime path.
+
+```bash
+node scripts/rt-load.mjs \
+  --api http://localhost:3001 \
+  --token <bearer-jwt> \
+  --workspace <workspaceId> \
+  --clients 100
+```
+
+The multi-node adapter profile can be exercised with:
+
+```bash
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.multi.yml up
+# Then point the load smoke at either --api http://localhost:3011 (node A)
+# or --api http://localhost:3012 (node B); events emitted on one are seen
+# by clients on the other via the Redis adapter.
+```

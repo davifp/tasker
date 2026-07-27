@@ -70,6 +70,22 @@ export default defineConfig({
         // under a throttler failure.
         THROTTLE_DEFAULT_LIMIT: '10000',
         THROTTLE_DEFAULT_TTL_S: '60',
+        // Notification email batcher: default 5-minute window is far too
+        // wide for the mention-notification spec, which asserts on a
+        // MailHog message inside a single test's lifetime. Collapse it to
+        // 5 s so the drain job fires before the spec's timeout.
+        NOTIF_EMAIL_BATCH_WINDOW_S: '5',
+        // Web Push VAPID key pair — placeholder, not a real cryptographic
+        // key. The push-optin spec stubs navigator.serviceWorker so no
+        // outbound push ever happens; the frontend hook just needs
+        // `getVapidKey()` to return a non-null base64-url string so
+        // pushManager.subscribe is reached.
+        VAPID_PUBLIC_KEY:
+          process.env['VAPID_PUBLIC_KEY'] ??
+          'BJT0R8s3d1JbA4hZ_dY3Iis9EBcNRPqM8Nhy0kQ1_g8s3d1JbA4hZ_dY3Iis9EBcNRPqM8Nhy0kQ1_g8s',
+        VAPID_PRIVATE_KEY:
+          process.env['VAPID_PRIVATE_KEY'] ?? 'e2e-placeholder-private-key-not-used',
+        VAPID_SUBJECT: process.env['VAPID_SUBJECT'] ?? 'mailto:e2e@tasker.local',
       },
     },
     {
