@@ -924,5 +924,50 @@
         "member": "Member"
       }
     }
+  },
+  "notifications": {
+    "bell": {
+      "label": "Notifications",
+      "unreadBadge": "{count} unread",
+      "empty": "You are all caught up.",
+      "viewAll": "View all",
+      "markAllRead": "Mark all as read",
+      "loading": "Loading notifications…",
+      "error": "Could not load notifications.",
+      "retry": "Retry"
+    },
+    "page": {
+      "title": "Notifications",
+      "subtitle": "Everything that mentioned or involved you in this workspace.",
+      "unreadOnly": "Show unread only",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "empty": "No notifications match the current filters.",
+      "typeFilter": "Filter by event",
+      "allTypes": "All events",
+      "markAllRead": "Mark all as read"
+    },
+    "event": {
+      "COMMENT_MENTION": "mentioned you in a comment",
+      "TASK_ASSIGNED": "assigned a task to you",
+      "COMMENT_FOLLOWED": "commented on a task you follow",
+      "SPRINT_LIFECYCLE": "changed the sprint state"
+    },
+    "channel": {
+      "IN_APP": "In app",
+      "EMAIL": "Email",
+      "PUSH": "Push"
+    },
+    "preferences": {
+      "title": "Notification preferences",
+      "subtitle": "Choose which channels deliver each event type. Applies to every workspace you belong to.",
+      "columns": {
+        "event": "Event"
+      },
+      "save": "Save preferences",
+      "saved": "Preferences saved.",
+      "error": "Could not save preferences.",
+      "loading": "Loading preferences…"
+    }
   }
 }

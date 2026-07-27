@@ -8,6 +8,7 @@ import { UserMenu } from './UserMenu';
 import { WorkspaceSwitcher, type WorkspaceOption } from '@/features/workspace/WorkspaceSwitcher';
 import { ThemeMenu } from '@/features/theme/ThemeMenu';
 import { LocaleSwitcher } from '@/features/i18n/LocaleSwitcher';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 interface TopbarProps {
   workspaceSlug: string;
@@ -45,6 +46,7 @@ export function Topbar({ workspaceSlug, workspaces, user, onOpenPalette }: Topba
       >
         <Search className="h-4 w-4" aria-hidden="true" />
       </Button>
+      <NotificationBell workspaceSlug={workspaceSlug} />
       <ThemeMenu />
       <LocaleSwitcher />
       <UserMenu name={user.name} email={user.email} />

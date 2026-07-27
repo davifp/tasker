@@ -214,6 +214,27 @@ export const epicKeys = {
     ['epics', workspaceSlug, 'roadmap', canonicalizePlanning(filters ?? {})] as const,
 };
 
+// ---------------------------------------------------------------------------
+// Notifications (Fase 8) — bell + full page + preferences.
+// The list is workspace-scoped by design (bell shows only current-workspace
+// notifications); preferences are user-global so their key is not
+// workspace-partitioned.
+// ---------------------------------------------------------------------------
+
+interface NotificationListFilters {
+  unreadOnly?: boolean;
+  type?: string;
+  limit?: number;
+}
+
+export const notificationKeys = {
+  all: (workspaceSlug: string) => ['notifications', workspaceSlug] as const,
+  list: (workspaceSlug: string, filters?: NotificationListFilters) =>
+    ['notifications', workspaceSlug, 'list', canonicalizePlanning(filters ?? {})] as const,
+  unreadCount: (workspaceSlug: string) => ['notifications', workspaceSlug, 'unread-count'] as const,
+  preferences: () => ['notifications', 'preferences'] as const,
+};
+
 export const dashboardKeys = {
   all: (workspaceSlug: string) => ['dashboard', workspaceSlug] as const,
   burndown: (workspaceSlug: string, projectSlug: string, sprintNumber: number) =>

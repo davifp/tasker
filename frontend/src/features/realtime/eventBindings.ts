@@ -80,8 +80,12 @@ export function invalidateFor(
       invalidate(['tasks', ctx.workspaceSlug]);
       break;
     case 'notification.new':
-      // Task 5.0 owns the notifications query keys. Prefix-only invalidation
-      // handles both the list and the unread-count query.
+      // Prefix invalidation catches both `notificationKeys.list(...)` and
+      // `notificationKeys.unreadCount(...)` because both start with
+      // `['notifications', workspaceSlug]`. Preferences live under
+      // `['notifications', 'preferences']` (no workspace segment) and are
+      // intentionally out of scope for realtime — they never change from
+      // an incoming notification.
       invalidate(['notifications', ctx.workspaceSlug]);
       break;
   }

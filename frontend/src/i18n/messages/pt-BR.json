@@ -924,5 +924,50 @@
         "member": "Membro"
       }
     }
+  },
+  "notifications": {
+    "bell": {
+      "label": "Notificações",
+      "unreadBadge": "{count} não lidas",
+      "empty": "Nada de novo por aqui.",
+      "viewAll": "Ver todas",
+      "markAllRead": "Marcar tudo como lido",
+      "loading": "Carregando notificações…",
+      "error": "Não foi possível carregar as notificações.",
+      "retry": "Tentar novamente"
+    },
+    "page": {
+      "title": "Notificações",
+      "subtitle": "Tudo o que menciona ou envolve você neste workspace.",
+      "unreadOnly": "Mostrar somente não lidas",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando…",
+      "empty": "Nenhuma notificação corresponde aos filtros atuais.",
+      "typeFilter": "Filtrar por evento",
+      "allTypes": "Todos os eventos",
+      "markAllRead": "Marcar tudo como lido"
+    },
+    "event": {
+      "COMMENT_MENTION": "mencionou você em um comentário",
+      "TASK_ASSIGNED": "atribuiu uma tarefa a você",
+      "COMMENT_FOLLOWED": "comentou em uma tarefa que você acompanha",
+      "SPRINT_LIFECYCLE": "alterou o estado do sprint"
+    },
+    "channel": {
+      "IN_APP": "No app",
+      "EMAIL": "E-mail",
+      "PUSH": "Push"
+    },
+    "preferences": {
+      "title": "Preferências de notificação",
+      "subtitle": "Escolha por quais canais cada evento chega. Vale para todos os seus workspaces.",
+      "columns": {
+        "event": "Evento"
+      },
+      "save": "Salvar preferências",
+      "saved": "Preferências salvas.",
+      "error": "Não foi possível salvar as preferências.",
+      "loading": "Carregando preferências…"
+    }
   }
 }
