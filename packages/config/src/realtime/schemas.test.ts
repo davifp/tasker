@@ -15,6 +15,7 @@ describe('notification catalog enums', () => {
       'TASK_ASSIGNED',
       'COMMENT_FOLLOWED',
       'SPRINT_LIFECYCLE',
+      'AI_BUDGET_THRESHOLD',
     ]) {
       expect(notificationEventTypeSchema.parse(value)).toBe(value);
     }
@@ -35,7 +36,7 @@ describe('notification catalog enums', () => {
   });
 
   it('accepts every notification source kind', () => {
-    for (const value of ['TASK', 'COMMENT', 'SPRINT']) {
+    for (const value of ['TASK', 'COMMENT', 'SPRINT', 'WORKSPACE']) {
       expect(notificationSourceKindSchema.parse(value)).toBe(value);
     }
   });

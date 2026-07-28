@@ -7,6 +7,9 @@ import type { PreferenceEntry } from './dto/notifications.dto';
 //   * COMMENT_MENTION + TASK_ASSIGNED  → on for every channel
 //   * COMMENT_FOLLOWED                 → on for IN_APP only
 //   * SPRINT_LIFECYCLE                 → on for IN_APP + EMAIL
+//   * AI_BUDGET_THRESHOLD              → on for IN_APP only (admin ops signal;
+//                                        no email spam by default. Admins can
+//                                        opt in via /settings/notifications)
 // Kept as a pure lookup so callers can consult defaults without hitting the DB
 // (used by the fan-out gate for rows the user has never touched).
 const DEFAULTS: Record<NotificationEventType, Record<NotificationChannel, boolean>> = {
@@ -14,6 +17,7 @@ const DEFAULTS: Record<NotificationEventType, Record<NotificationChannel, boolea
   TASK_ASSIGNED: { IN_APP: true, EMAIL: true, PUSH: true },
   COMMENT_FOLLOWED: { IN_APP: true, EMAIL: false, PUSH: false },
   SPRINT_LIFECYCLE: { IN_APP: true, EMAIL: true, PUSH: false },
+  AI_BUDGET_THRESHOLD: { IN_APP: true, EMAIL: false, PUSH: false },
 };
 
 export function defaultPreference(

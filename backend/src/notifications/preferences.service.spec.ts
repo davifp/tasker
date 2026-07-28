@@ -89,10 +89,11 @@ describe('PreferencesService.listAll', () => {
     const { prisma } = makePrisma();
     const service = new PreferencesService(prisma);
     const all = service.listAll();
-    expect(all).toHaveLength(4 * 3);
+    expect(all).toHaveLength(5 * 3);
     const key = (r: { eventType: string; channel: string }) => `${r.eventType}:${r.channel}`;
     const keys = new Set(all.map(key));
     expect(keys.has('COMMENT_MENTION:IN_APP')).toBe(true);
     expect(keys.has('SPRINT_LIFECYCLE:PUSH')).toBe(true);
+    expect(keys.has('AI_BUDGET_THRESHOLD:IN_APP')).toBe(true);
   });
 });

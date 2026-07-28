@@ -17,6 +17,7 @@ import {
   SprintEvents,
   SprintStartedEvent,
 } from '../sprints/events/sprint.events';
+import { AI_USAGE_THRESHOLD_EVENT, AiUsageThresholdEvent } from '../ai/budget/ai-budget.events';
 
 // Central bridge between the existing `EventEmitter2` domain event bus and
 // the new realtime + notifications transports introduced in Phase 8.
@@ -211,8 +212,54 @@ export class DomainEventsListener {
   }
 
   // ---------------------------------------------------------------------
+  // AI budget thresholds (Phase 9)
+  // ---------------------------------------------------------------------
+
+  /**
+   * Fires when `AiBudgetService.reconcile` crosses the 80% or 100% boundary
+   * for a workspace's current billing month. The idempotency guarantee
+   * ("once per boundary per month") lives in the budget service via the
+   * CAS on `notifiedAt80` / `notifiedAt100`; this handler just fans out to
+   * admins (owner + ADMIN role members) as in-app notifications. Non-admin
+   * members are excluded on purpose — budget is an ops concern.
+   */
+  @OnEvent(AI_USAGE_THRESHOLD_EVENT)
+  async onAiUsageThreshold(event: AiUsageThresholdEvent): Promise<void> {
+    const recipients = await this.resolveAdmins(event.workspaceId);
+    if (recipients.length === 0) return;
+
+    await this.notifications.notify({
+      workspaceId: event.workspaceId,
+      eventType: 'AI_BUDGET_THRESHOLD',
+      recipients,
+      // No actor — the emission is system-driven from the budget reconcile.
+      sourceEntity: {
+        kind: 'WORKSPACE',
+        // (workspaceId, billingMonth, percentage) makes each notification
+        // unique per boundary crossing so the NotificationsService dedupe
+        // window does not collapse the 80% and 100% events.
+        id: `${event.workspaceId}:${event.billingMonth}:${event.percentage}`,
+      },
+      payload: {
+        percentage: event.percentage,
+        tokensConsumed: event.tokensConsumed,
+        tokensBudget: event.tokensBudget,
+        billingMonth: event.billingMonth,
+      },
+    });
+  }
+
+  // ---------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------
+
+  private async resolveAdmins(workspaceId: string): Promise<string[]> {
+    const rows = await this.prisma.forSystem().workspaceMember.findMany({
+      where: { workspaceId, role: { in: ['OWNER', 'ADMIN'] } },
+      select: { userId: true },
+    });
+    return rows.map((r) => r.userId);
+  }
 
   private async notifyAssigned(
     workspaceId: string,

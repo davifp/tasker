@@ -12,13 +12,14 @@ export const notificationEventTypeSchema = z.enum([
   'TASK_ASSIGNED',
   'COMMENT_FOLLOWED',
   'SPRINT_LIFECYCLE',
+  'AI_BUDGET_THRESHOLD',
 ]);
 export type NotificationEventType = z.infer<typeof notificationEventTypeSchema>;
 
 export const notificationChannelSchema = z.enum(['IN_APP', 'EMAIL', 'PUSH']);
 export type NotificationChannel = z.infer<typeof notificationChannelSchema>;
 
-export const notificationSourceKindSchema = z.enum(['TASK', 'COMMENT', 'SPRINT']);
+export const notificationSourceKindSchema = z.enum(['TASK', 'COMMENT', 'SPRINT', 'WORKSPACE']);
 export type NotificationSourceKind = z.infer<typeof notificationSourceKindSchema>;
 
 // ---------------------------------------------------------------------------

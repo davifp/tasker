@@ -14,6 +14,7 @@ function makeListener(prismaOverrides?: {
   capacities?: Array<{ memberUserId: string }>;
   displayName?: string;
   project?: { name: string } | null;
+  admins?: Array<{ userId: string }>;
 }) {
   const emit = vi.fn().mockResolvedValue(undefined);
   const notify = vi.fn().mockResolvedValue(undefined);
@@ -59,6 +60,9 @@ function makeListener(prismaOverrides?: {
         findUnique: vi
           .fn()
           .mockResolvedValue({ displayName: prismaOverrides?.displayName ?? 'Ana' }),
+      },
+      workspaceMember: {
+        findMany: vi.fn().mockResolvedValue(prismaOverrides?.admins ?? []),
       },
     }),
   } as unknown as PrismaService;
@@ -213,5 +217,76 @@ describe('DomainEventsListener sprint lifecycle', () => {
     });
     expect(emit).toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('DomainEventsListener.onAiUsageThreshold', () => {
+  it('notifies only workspace admins with the threshold payload', async () => {
+    const { listener, notify } = makeListener({
+      admins: [{ userId: 'admin-1' }, { userId: 'owner-1' }],
+    });
+    await listener.onAiUsageThreshold({
+      workspaceId: 'ws-1',
+      billingMonth: '2026-07',
+      percentage: 80,
+      tokensConsumed: 810,
+      tokensBudget: 1000,
+    });
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: 'ws-1',
+        eventType: 'AI_BUDGET_THRESHOLD',
+        recipients: ['admin-1', 'owner-1'],
+        sourceEntity: { kind: 'WORKSPACE', id: 'ws-1:2026-07:80' },
+        payload: {
+          percentage: 80,
+          tokensConsumed: 810,
+          tokensBudget: 1000,
+          billingMonth: '2026-07',
+        },
+      }),
+    );
+  });
+
+  it('is a no-op when the workspace has no admins', async () => {
+    const { listener, notify } = makeListener({ admins: [] });
+    await listener.onAiUsageThreshold({
+      workspaceId: 'ws-1',
+      billingMonth: '2026-07',
+      percentage: 100,
+      tokensConsumed: 1050,
+      tokensBudget: 1000,
+    });
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('gives distinct sourceEntity.id per (workspace, month, threshold) so dedupe does not collapse 80 & 100', async () => {
+    const { listener, notify } = makeListener({
+      admins: [{ userId: 'admin-1' }],
+    });
+    await listener.onAiUsageThreshold({
+      workspaceId: 'ws-1',
+      billingMonth: '2026-07',
+      percentage: 80,
+      tokensConsumed: 810,
+      tokensBudget: 1000,
+    });
+    await listener.onAiUsageThreshold({
+      workspaceId: 'ws-1',
+      billingMonth: '2026-07',
+      percentage: 100,
+      tokensConsumed: 1010,
+      tokensBudget: 1000,
+    });
+    expect(notify).toHaveBeenCalledTimes(2);
+    const first = (notify as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
+      sourceEntity: { id: string };
+    };
+    const second = (notify as unknown as { mock: { calls: unknown[][] } }).mock.calls[1][0] as {
+      sourceEntity: { id: string };
+    };
+    expect(first.sourceEntity.id).toBe('ws-1:2026-07:80');
+    expect(second.sourceEntity.id).toBe('ws-1:2026-07:100');
   });
 });

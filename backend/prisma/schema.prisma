@@ -78,6 +78,7 @@ enum NotificationEventType {
   TASK_ASSIGNED
   COMMENT_FOLLOWED
   SPRINT_LIFECYCLE
+  AI_BUDGET_THRESHOLD
 }
 
 enum NotificationChannel {
@@ -90,6 +91,7 @@ enum NotificationSourceKind {
   TASK
   COMMENT
   SPRINT
+  WORKSPACE
 }
 
 // AI Actions (Phase 9). Enum members are UPPER_SNAKE so they can be mirrored

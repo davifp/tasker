@@ -18,6 +18,11 @@ const TEMPLATE_FOR_EVENT: Record<NotificationEventType, MailTemplate> = {
   TASK_ASSIGNED: 'notification-assignment',
   COMMENT_FOLLOWED: 'notification-comment-followed',
   SPRINT_LIFECYCLE: 'notification-sprint-lifecycle',
+  // AI_BUDGET_THRESHOLD does not enable EMAIL by default (see
+  // preferences.service.ts DEFAULTS). If an admin explicitly opts in, we
+  // route through the shared `notification-batch` template until a
+  // dedicated one lands.
+  AI_BUDGET_THRESHOLD: 'notification-batch',
 };
 
 const EVENT_SUMMARY: Record<NotificationEventType, string> = {
@@ -25,6 +30,7 @@ const EVENT_SUMMARY: Record<NotificationEventType, string> = {
   TASK_ASSIGNED: 'assigned a task to you',
   COMMENT_FOLLOWED: 'commented on a task you follow',
   SPRINT_LIFECYCLE: 'changed the sprint state',
+  AI_BUDGET_THRESHOLD: 'AI monthly token budget threshold reached',
 };
 
 // Drains per-recipient email buckets into `MailProvider.send`. The drain is
