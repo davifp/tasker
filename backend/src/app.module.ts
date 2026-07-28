@@ -126,6 +126,20 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
               !matchesPath(ctx, '/auth/password/reset/request') &&
               !matchesPath(ctx, '/auth/password/reset/confirm'),
           },
+          // AI actions (Phase 9). Applied to `/workspaces/:slug/ai/*` routes
+          // only — @Throttle({ aiAction: {} }) on the AI controller opts in;
+          // every other route uses the default throttler.
+          {
+            name: 'aiAction',
+            limit: config.get<number>('THROTTLE_AI_ACTION_LIMIT')!,
+            ttl: config.get<number>('THROTTLE_AI_ACTION_TTL_S')! * 1000,
+            skipIf: (ctx) => {
+              const req = ctx.switchToHttp().getRequest<{ originalUrl?: string; url: string }>();
+              const raw = req.originalUrl ?? req.url ?? '';
+              const path = raw.split('?', 1)[0]!.replace(/^\/api\/v1/, '');
+              return !/^\/workspaces\/[^/]+\/ai(\/|$)/.test(path);
+            },
+          },
         ],
         storage: new RedisThrottlerStorage(redis),
       }),
