@@ -13,6 +13,7 @@ import { PlanningMetricsCollector } from './planning.metrics';
 import { SearchAuditMetricsCollector } from './search-audit.metrics';
 import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
+import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
 
 @Global()
 @Module({
@@ -31,6 +32,7 @@ import { NotificationsMetricsCollector } from './notifications.metrics';
     SearchAuditMetricsCollector,
     RealtimeMetricsCollector,
     NotificationsMetricsCollector,
+    AiMetricsCollector,
   ],
   exports: [
     MetricsService,
@@ -38,6 +40,7 @@ import { NotificationsMetricsCollector } from './notifications.metrics';
     SearchAuditMetricsCollector,
     RealtimeMetricsCollector,
     NotificationsMetricsCollector,
+    AiMetricsCollector,
   ],
 })
 export class MetricsModule {}

@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ZodTypeAny } from 'zod';
 import { zodToJsonSchema as zodToJsonSchemaImpl } from 'zod-to-json-schema';
@@ -46,7 +46,7 @@ export class AnthropicLlmProvider implements LlmProvider {
   private readonly logger = new Logger(AnthropicLlmProvider.name);
   private readonly client: Anthropic;
 
-  constructor(config: ConfigService<Env, true>, client?: Anthropic) {
+  constructor(config: ConfigService<Env, true>, @Optional() client?: Anthropic) {
     const apiKey = config.get('ANTHROPIC_API_KEY', { infer: true });
     this.client =
       client ??

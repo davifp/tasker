@@ -4,12 +4,14 @@ import { PlanningMetricsCollector } from './planning.metrics';
 import { SearchAuditMetricsCollector } from './search-audit.metrics';
 import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
+import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
 
 describe('MetricsController', () => {
   let planning: PlanningMetricsCollector;
   let searchAudit: SearchAuditMetricsCollector;
   let realtime: RealtimeMetricsCollector;
   let notifications: NotificationsMetricsCollector;
+  let ai: AiMetricsCollector;
   let controller: MetricsController;
 
   beforeEach(() => {
@@ -17,7 +19,8 @@ describe('MetricsController', () => {
     searchAudit = new SearchAuditMetricsCollector();
     realtime = new RealtimeMetricsCollector();
     notifications = new NotificationsMetricsCollector();
-    controller = new MetricsController(planning, searchAudit, realtime, notifications);
+    ai = new AiMetricsCollector();
+    controller = new MetricsController(planning, searchAudit, realtime, notifications, ai);
   });
 
   it('concatenates output from every collector', () => {
@@ -29,6 +32,7 @@ describe('MetricsController', () => {
     realtime.incrementEvent('task.updated', 'success');
     notifications.incrementDelivered('IN_APP', 'TASK_ASSIGNED', 'success');
     notifications.incrementPushCleaned('gone');
+    ai.incrementInvocation('GENERATE_DESCRIPTION', 'anthropic', 'claude-sonnet-4-6', 'OK');
 
     const body = controller.scrape();
     expect(body).toContain('tasker_sprint_transition_total{from="PLANNED",to="ACTIVE"} 1');
@@ -43,6 +47,9 @@ describe('MetricsController', () => {
       'tasker_notification_delivered_total{channel="IN_APP",event_type="TASK_ASSIGNED",result="success"} 1',
     );
     expect(body).toContain('tasker_push_subscriptions_cleaned_total{reason="gone"} 1');
+    expect(body).toContain(
+      'tasker_ai_invocations_total{action="GENERATE_DESCRIPTION",provider="anthropic",model="claude-sonnet-4-6",status="OK"} 1',
+    );
     expect(body.endsWith('\n')).toBe(true);
   });
 });

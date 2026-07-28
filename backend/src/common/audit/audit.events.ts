@@ -30,6 +30,11 @@ export const AuditEvent = {
   API_KEY_REVOKED: 'apiKey.revoked',
   // Phase 7 — audit self-audit for CSV exports.
   AUDIT_EXPORT: 'audit.export',
+  // Phase 9 — one row per AI invocation (success or failure). Metadata
+  // carries the AuditAiMetadata payload (see AuditMetadataShape).
+  AI_INVOCATION: 'ai.invocation',
+  AI_CONSENT_ACCEPTED: 'ai.consent_accepted',
+  AI_FEEDBACK_SUBMITTED: 'ai.feedback_submitted',
 } as const;
 
 export type AuditEventName = (typeof AuditEvent)[keyof typeof AuditEvent];

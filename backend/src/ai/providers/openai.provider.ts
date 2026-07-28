@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI, { APIError, APIConnectionError, APIUserAbortError, RateLimitError } from 'openai';
 import type { ZodTypeAny } from 'zod';
@@ -39,7 +39,7 @@ export class OpenAiLlmProvider implements LlmProvider {
   private readonly logger = new Logger(OpenAiLlmProvider.name);
   private readonly client: OpenAI;
 
-  constructor(config: ConfigService<Env, true>, client?: OpenAI) {
+  constructor(config: ConfigService<Env, true>, @Optional() client?: OpenAI) {
     const apiKey = config.get('OPENAI_API_KEY', { infer: true });
     this.client = client ?? new OpenAI({ apiKey: apiKey || 'missing-openai-api-key' });
   }
