@@ -118,6 +118,28 @@ export const envSchema = z.object({
   // (recipient × eventType × sourceId) bursts inside NOTIF_DEDUPE_WINDOW_S.
   NOTIF_EMAIL_BATCH_WINDOW_S: z.coerce.number().int().positive().default(300),
   NOTIF_DEDUPE_WINDOW_S: z.coerce.number().int().positive().default(60),
+
+  // AI Actions (Phase 9). Provider selection is config-driven so we can flip
+  // the default per environment without a code change. Keys are optional in
+  // development/test — adapters fall through to a placeholder that only fails
+  // when actually invoked. `AI_FALLBACK_PROVIDER` opts into the router's
+  // single-shot fallback on transient errors; when unset, transient failures
+  // surface directly as `about:blank#ai-provider-unavailable` (503).
+  ANTHROPIC_API_KEY: z.string().default(''),
+  OPENAI_API_KEY: z.string().default(''),
+  AI_DEFAULT_PROVIDER: z.enum(['anthropic', 'openai']).default('anthropic'),
+  AI_FALLBACK_PROVIDER: z.enum(['anthropic', 'openai']).optional(),
+  // Default per-workspace monthly token budget (in output-equivalent tokens).
+  // Overridable per workspace via WorkspaceAiUsage.tokensBudget seeded at
+  // consent time; this value is the seed default.
+  AI_MONTHLY_TOKEN_BUDGET: z.coerce.number().int().positive().default(1_000_000),
+  // Bumped when the AI data-sharing consent document changes. Existing
+  // WorkspaceAiConsent rows with a stale documentVersion are treated as
+  // "not accepted" until the admin re-accepts.
+  AI_CONSENT_DOCUMENT_VERSION: z.string().default('v1'),
+  // Per-user rate limit on AI action endpoints (see AppModule throttler set).
+  THROTTLE_AI_ACTION_LIMIT: z.coerce.number().default(30),
+  THROTTLE_AI_ACTION_TTL_S: z.coerce.number().default(60),
 });
 
 export type Env = z.infer<typeof envSchema>;
