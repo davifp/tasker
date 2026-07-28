@@ -92,6 +92,27 @@ enum NotificationSourceKind {
   SPRINT
 }
 
+// AI Actions (Phase 9). Enum members are UPPER_SNAKE so they can be mirrored
+// 1:1 by the Zod schema in `@tasker/config` (see AI_ACTION values) — a value
+// read from the DB is immediately valid on the wire without translation.
+enum AiAction {
+  GENERATE_DESCRIPTION
+  SUMMARIZE_COMMENTS
+  GENERATE_CHECKLIST
+  ESTIMATE_AND_SUGGEST
+}
+
+enum AiInvocationStatus {
+  OK
+  ERROR
+  ABORTED
+}
+
+enum AiFeedbackRating {
+  POSITIVE
+  NEGATIVE
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique @db.Citext
@@ -127,6 +148,9 @@ model User {
   notificationsActed      Notification[]              @relation("NotificationActor")
   notificationPreferences NotificationPreference[]
   pushSubscriptions       PushSubscription[]
+  aiConsentsAccepted      WorkspaceAiConsent[]        @relation("AiConsentAcceptor")
+  aiInvocations           AiInvocation[]              @relation("AiInvocationActor")
+  aiFeedbackGiven         AiFeedback[]                @relation("AiFeedbackAuthor")
 }
 
 model OAuthAccount {
@@ -191,6 +215,10 @@ model Workspace {
   epics            Epic[]
   metricJobLogs    MetricJobLog[]
   notifications    Notification[]
+  aiConsent        WorkspaceAiConsent?
+  aiUsage          WorkspaceAiUsage[]
+  aiInvocations    AiInvocation[]
+  aiFeedback       AiFeedback[]
 }
 
 model WorkspaceMember {
@@ -714,4 +742,98 @@ model PushSubscription {
 
   @@index([userId])
   @@index([lastSeenAt])
+}
+
+// AI Actions (Phase 9). Workspace-level opt-in accepted by an admin before any
+// AI action becomes available. `documentVersion` lets us reset consent on
+// policy updates: bumping the version invalidates the acceptance until the
+// admin re-accepts. One row per workspace (unique on `workspaceId`).
+model WorkspaceAiConsent {
+  id                String   @id @default(cuid())
+  workspaceId       String   @unique
+  acceptedByUserId  String
+  acceptedAt        DateTime @default(now())
+  documentVersion   String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  acceptedBy User      @relation("AiConsentAcceptor", fields: [acceptedByUserId], references: [id], onDelete: Restrict)
+}
+
+// AI Actions (Phase 9). Monthly rolling budget per workspace. `billingMonth`
+// is `YYYY-MM` in UTC — reservations for a given calendar month land on the
+// same row, which is atomically incremented via Prisma's `increment` operator
+// to prevent races. `notifiedAt80` / `notifiedAt100` are set once per month
+// to guarantee threshold notifications are emitted at most once per boundary.
+model WorkspaceAiUsage {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  billingMonth    String
+  tokensBudget    Int
+  tokensReserved  Int       @default(0)
+  tokensConsumed  Int       @default(0)
+  notifiedAt80    DateTime?
+  notifiedAt100   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, billingMonth])
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
+
+// AI Actions (Phase 9). One row per LLM invocation, regardless of outcome.
+// `cachedInputTokens` tracks Anthropic prompt-cache hits separately from
+// billable input; `latencyMs` covers the full server-side round trip
+// (start → last chunk). `traceId` mirrors the propagated request trace so
+// invocations correlate with logs and AuditLog rows.
+model AiInvocation {
+  id                String             @id @default(cuid())
+  workspaceId       String
+  actorUserId       String
+  action            AiAction
+  targetType        String?
+  targetId          String?
+  provider          String
+  model             String
+  inputTokens       Int                @default(0)
+  outputTokens      Int                @default(0)
+  cachedInputTokens Int                @default(0)
+  latencyMs         Int                @default(0)
+  status            AiInvocationStatus
+  errorCode         String?
+  traceId           String?
+  createdAt         DateTime           @default(now())
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor     User       @relation("AiInvocationActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  feedback  AiFeedback[]
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, action, createdAt(sort: Desc)])
+  @@index([workspaceId, actorUserId, createdAt(sort: Desc)])
+}
+
+// AI Actions (Phase 9). Structured 👍/👎 feedback attached to a specific
+// invocation. Negative feedback may include an optional free-text reason.
+// One `AiInvocation` may receive at most one feedback per user (enforced by
+// unique on `(invocationId, createdByUserId)`).
+model AiFeedback {
+  id              String           @id @default(cuid())
+  workspaceId     String
+  invocationId    String
+  createdByUserId String
+  rating          AiFeedbackRating
+  reason          String?
+  createdAt       DateTime         @default(now())
+
+  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invocation AiInvocation @relation(fields: [invocationId], references: [id], onDelete: Cascade)
+  createdBy  User         @relation("AiFeedbackAuthor", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([invocationId, createdByUserId])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([invocationId])
 }

@@ -74,6 +74,11 @@ export class AuditMutationInterceptor implements NestInterceptor {
    * method, and route params; the request body is included with sensitive
    * keys stripped. The full response body is deliberately not persisted —
    * that's what the entity table itself is for.
+   *
+   * The returned shape maps to `AuditMetadataShape` (see
+   * `./audit-metadata.types.ts`). Phase 9 (AI actions) extends the same JSON
+   * column with an optional `ai: AuditAiMetadata` key written by
+   * `AiInvocationRecorder`; the interceptor never populates `ai` itself.
    */
   private summarizeRequest(req: Request, _body: unknown): Record<string, unknown> {
     return {

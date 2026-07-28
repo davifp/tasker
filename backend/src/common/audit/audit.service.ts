@@ -11,6 +11,13 @@ export interface AuditEntry {
   workspaceId?: string;
   targetType?: string;
   targetId?: string;
+  /**
+   * Compact JSON payload persisted to `AuditLog.metadata`. See
+   * `AuditMetadataShape` in `./audit-metadata.types.ts` for the documented
+   * shape — the interceptor writes `{ method, path, params, body }`, and
+   * Phase 9 (`AiInvocationRecorder`) extends the same envelope with
+   * `{ ai: AuditAiMetadata }` for AI invocations.
+   */
   metadata?: Prisma.InputJsonValue;
 }
 
