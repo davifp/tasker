@@ -5,8 +5,14 @@ import { z } from 'zod';
 import { LlmProviderError, LlmStreamRequest, LlmStructuredRequest } from './llm-provider.port';
 import { OpenAiLlmProvider } from './openai.provider';
 
-function makeConfig(): ConfigService {
-  return { get: () => 'test-key' } as unknown as ConfigService;
+function makeConfig(overrides: Record<string, unknown> = {}): ConfigService {
+  const values: Record<string, unknown> = {
+    OPENAI_API_KEY: 'test-key',
+    AI_OPENAI_BASE_URL: undefined,
+    AI_OPENAI_MODEL: undefined,
+    ...overrides,
+  };
+  return { get: (key: string) => values[key] } as unknown as ConfigService;
 }
 
 function fakeClient(chatCreate: ReturnType<typeof vi.fn>): OpenAI {
@@ -38,6 +44,51 @@ const streamReq: LlmStreamRequest = {
 };
 
 describe('OpenAiLlmProvider', () => {
+  describe('env-driven baseURL + model', () => {
+    it('passes AI_OPENAI_BASE_URL through to the OpenAI client so any compat provider works', () => {
+      const provider = new OpenAiLlmProvider(
+        makeConfig({ AI_OPENAI_BASE_URL: 'https://api.groq.com/openai/v1' }),
+      );
+      // OpenAI SDK exposes the resolved baseURL as an instance property; a
+      // trailing slash may or may not be attached depending on the SDK
+      // version, so match on prefix.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((provider as any).client.baseURL).toContain('api.groq.com/openai/v1');
+    });
+
+    it('uses AI_OPENAI_MODEL as the request default when no per-call model is set', async () => {
+      const create = vi.fn().mockResolvedValue({
+        choices: [{ message: { content: '{"answer":"ok"}' } }],
+        model: 'llama-3.3-70b-versatile',
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      });
+      const provider = new OpenAiLlmProvider(
+        makeConfig({ AI_OPENAI_MODEL: 'llama-3.3-70b-versatile' }),
+        fakeClient(create),
+      );
+
+      await provider.complete(structuredReq);
+
+      expect(create.mock.calls[0][0].model).toBe('llama-3.3-70b-versatile');
+    });
+
+    it('per-call model still overrides the env default', async () => {
+      const create = vi.fn().mockResolvedValue({
+        choices: [{ message: { content: '{"answer":"ok"}' } }],
+        model: 'gpt-4o',
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      });
+      const provider = new OpenAiLlmProvider(
+        makeConfig({ AI_OPENAI_MODEL: 'llama-3.3-70b-versatile' }),
+        fakeClient(create),
+      );
+
+      await provider.complete({ ...structuredReq, model: 'gpt-4o' });
+
+      expect(create.mock.calls[0][0].model).toBe('gpt-4o');
+    });
+  });
+
   describe('complete', () => {
     it('uses response_format.json_schema with strict:true and flattens system blocks', async () => {
       const create = vi.fn().mockResolvedValue({
@@ -66,6 +117,44 @@ describe('OpenAiLlmProvider', () => {
       expect(req.messages[0].content).toContain('preface');
       expect(req.messages[0].content).toContain('instruction');
       expect(req.messages[0].content).not.toContain('ttl');
+    });
+
+    it('tolerates JSON wrapped in ```json fences (common on free-tier models)', async () => {
+      const create = vi.fn().mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: '```json\n{"answer":"ok"}\n```',
+            },
+          },
+        ],
+        model: 'gemma',
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      });
+      const provider = new OpenAiLlmProvider(makeConfig(), fakeClient(create));
+
+      const result = await provider.complete(structuredReq);
+
+      expect(result.value).toEqual({ answer: 'ok' });
+    });
+
+    it('extracts the outermost JSON object when the model adds prose around it', async () => {
+      const create = vi.fn().mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: 'Sure! Here is the JSON:\n{"answer":"ok"}\nHope that helps.',
+            },
+          },
+        ],
+        model: 'gemma',
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      });
+      const provider = new OpenAiLlmProvider(makeConfig(), fakeClient(create));
+
+      const result = await provider.complete(structuredReq);
+
+      expect(result.value).toEqual({ answer: 'ok' });
     });
 
     it('rejects non-JSON content with reason=validation', async () => {

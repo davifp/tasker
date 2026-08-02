@@ -283,6 +283,10 @@ function friendlyErrorMessage(err: HttpError): string {
       return 'Too many AI requests in a short window. Please wait a moment.';
     case 'about:blank#ai-provider-unavailable':
       return 'The AI provider is temporarily unavailable. Please try again in a moment.';
+    case 'about:blank#ai-invalid-response':
+      return 'The AI returned an unexpected response. Try again — the model can be inconsistent on free tiers.';
+    case 'about:blank#ai-aborted':
+      return 'The AI action was cancelled.';
     case 'about:blank#ai-insufficient-context':
       return err.detail ?? 'There is not enough context to run this AI action.';
     default:

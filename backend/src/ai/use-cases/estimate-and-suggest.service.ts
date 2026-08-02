@@ -199,4 +199,7 @@ const ACTION_INSTRUCTION =
   `your certainty. priority in {LOW, MEDIUM, HIGH}. assignees: up to 3 candidates from ` +
   `the roster — never a userId not listed. If context is too sparse (empty description + ` +
   `no meaningful title), set insufficientContext = true and leave the other fields at ` +
-  `their neutral defaults.`;
+  `their neutral defaults.\n\n` +
+  `Respond with ONLY valid JSON in this exact shape — no Markdown, no prose, no code ` +
+  `fences, no leading or trailing text:\n` +
+  `{"estimate": {"low": 3, "high": 5, "confidence": "medium"}, "priority": "MEDIUM", "assignees": [{"userId": "user_xxx", "reason": "why"}], "insufficientContext": false}`;

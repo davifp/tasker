@@ -31,6 +31,11 @@ export const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
  * not expose per-block prompt-cache markers, so `PromptBlock.cache` is
  * flattened into a single system message; the provider's own cache is
  * content-hash driven and continues to work transparently.
+ *
+ * `AI_OPENAI_BASE_URL` + `AI_OPENAI_MODEL` let the adapter target any
+ * OpenAI-compatible endpoint (Groq, OpenRouter, Mistral, Cerebras, Together,
+ * DeepSeek, …) without a code change. Callers that pass an explicit
+ * `req.model` still win; the env value is the default when none is set.
  */
 @Injectable()
 export class OpenAiLlmProvider implements LlmProvider {
@@ -38,10 +43,18 @@ export class OpenAiLlmProvider implements LlmProvider {
 
   private readonly logger = new Logger(OpenAiLlmProvider.name);
   private readonly client: OpenAI;
+  private readonly defaultModel: string;
 
   constructor(config: ConfigService<Env, true>, @Optional() client?: OpenAI) {
     const apiKey = config.get('OPENAI_API_KEY', { infer: true });
-    this.client = client ?? new OpenAI({ apiKey: apiKey || 'missing-openai-api-key' });
+    const baseURL = config.get('AI_OPENAI_BASE_URL', { infer: true });
+    this.defaultModel = config.get('AI_OPENAI_MODEL', { infer: true }) ?? OPENAI_DEFAULT_MODEL;
+    this.client =
+      client ??
+      new OpenAI({
+        apiKey: apiKey || 'missing-openai-api-key',
+        ...(baseURL ? { baseURL } : {}),
+      });
   }
 
   async complete<T>(req: LlmStructuredRequest<T>): Promise<LlmStructuredResult<T>> {
@@ -53,7 +66,7 @@ export class OpenAiLlmProvider implements LlmProvider {
     try {
       const response = await this.client.chat.completions.create(
         {
-          model: req.model ?? OPENAI_DEFAULT_MODEL,
+          model: req.model ?? this.defaultModel,
           max_tokens: req.maxTokens,
           messages: [
             { role: 'system', content: this.flattenSystemBlocks(req.systemBlocks) },
@@ -82,7 +95,7 @@ export class OpenAiLlmProvider implements LlmProvider {
       }
       let parsed: unknown;
       try {
-        parsed = JSON.parse(raw);
+        parsed = JSON.parse(extractJson(raw));
       } catch (err) {
         throw new LlmProviderError(
           'validation',
@@ -113,7 +126,7 @@ export class OpenAiLlmProvider implements LlmProvider {
     try {
       const stream = await this.client.chat.completions.create(
         {
-          model: req.model ?? OPENAI_DEFAULT_MODEL,
+          model: req.model ?? this.defaultModel,
           max_tokens: req.maxTokens,
           stream: true,
           stream_options: { include_usage: true },
@@ -179,4 +192,23 @@ export class OpenAiLlmProvider implements LlmProvider {
     this.logger.warn({ err }, 'Unclassified OpenAI error');
     return new LlmProviderError('unknown', this.name, message, err);
   }
+}
+
+// Small tolerance layer for free-tier / open-weights backends that don't
+// strictly honor `response_format.json_schema` and wrap JSON in Markdown
+// fences (```json … ```) or bracket it with prose. We prefer the largest
+// balanced `{ … }` block after fence removal; on any structural surprise we
+// return the trimmed input and let JSON.parse throw the real error.
+function extractJson(raw: string): string {
+  const withoutFences = raw
+    .trim()
+    .replace(/^```(?:json|jsonc)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  const start = withoutFences.indexOf('{');
+  const end = withoutFences.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    return withoutFences.slice(start, end + 1);
+  }
+  return withoutFences;
 }

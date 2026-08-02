@@ -127,6 +127,12 @@ export const envSchema = z.object({
   // surface directly as `about:blank#ai-provider-unavailable` (503).
   ANTHROPIC_API_KEY: z.string().default(''),
   OPENAI_API_KEY: z.string().default(''),
+  // Optional overrides that let the OpenAI adapter target any OpenAI-compatible
+  // provider (Groq, OpenRouter, Mistral, Cerebras, Together, DeepSeek, …)
+  // without a code change. `AI_OPENAI_BASE_URL` unset → hits api.openai.com;
+  // `AI_OPENAI_MODEL` unset → adapter's built-in default (gpt-4o-mini).
+  AI_OPENAI_BASE_URL: z.string().url().optional(),
+  AI_OPENAI_MODEL: z.string().optional(),
   AI_DEFAULT_PROVIDER: z.enum(['anthropic', 'openai']).default('anthropic'),
   AI_FALLBACK_PROVIDER: z.enum(['anthropic', 'openai']).optional(),
   // Default per-workspace monthly token budget (in output-equivalent tokens).

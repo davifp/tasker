@@ -30,6 +30,7 @@ import {
   type SubmitFeedbackInput,
 } from './dto';
 import { AiFeedbackService } from './feedback/ai-feedback.service';
+import { LlmProviderError } from './providers/llm-provider.port';
 import { EstimateAndSuggestService } from './use-cases/estimate-and-suggest.service';
 import { GenerateChecklistService } from './use-cases/generate-checklist.service';
 import { GenerateDescriptionService } from './use-cases/generate-description.service';
@@ -74,16 +75,80 @@ function writeSseEvent(res: ExpressResponse, event: string, data: unknown): void
 }
 
 function writeSseError(res: ExpressResponse, err: unknown): void {
-  const problem =
-    err instanceof HttpException
-      ? { ...(err.getResponse() as object), status: err.getStatus() }
-      : {
-          type: 'about:blank#ai-provider-unavailable',
-          title: 'AI provider unavailable',
-          detail: err instanceof Error ? err.message : 'Unknown error',
-          status: 503,
-        };
-  writeSseEvent(res, 'error', problem);
+  if (err instanceof HttpException) {
+    writeSseEvent(res, 'error', {
+      ...(err.getResponse() as object),
+      status: err.getStatus(),
+    });
+    return;
+  }
+  // Preserve the LlmProviderError.reason classification so the frontend can
+  // show specific copy per failure mode. Without this, an upstream 429 or a
+  // provider overload both collapsed to the generic "AI provider unavailable"
+  // banner, hiding actionable details from the user.
+  if (err instanceof LlmProviderError) {
+    writeSseEvent(res, 'error', llmProviderErrorToProblem(err));
+    return;
+  }
+  writeSseEvent(res, 'error', {
+    type: 'about:blank#ai-provider-unavailable',
+    title: 'AI provider unavailable',
+    detail: err instanceof Error ? err.message : 'Unknown error',
+    status: 503,
+  });
+}
+
+function llmProviderErrorToProblem(err: LlmProviderError): {
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
+} {
+  switch (err.reason) {
+    case 'rate_limited':
+      return {
+        type: 'about:blank#ai-rate-limited',
+        title: 'AI provider is rate-limited',
+        status: 429,
+        detail: err.message,
+      };
+    case 'overloaded':
+      return {
+        type: 'about:blank#ai-provider-unavailable',
+        title: 'AI provider is overloaded',
+        status: 503,
+        detail: err.message,
+      };
+    case 'network':
+      return {
+        type: 'about:blank#ai-provider-unavailable',
+        title: 'AI provider is unreachable',
+        status: 503,
+        detail: err.message,
+      };
+    case 'validation':
+    case 'refusal':
+      return {
+        type: 'about:blank#ai-invalid-response',
+        title: 'AI response failed validation',
+        status: 502,
+        detail: err.message,
+      };
+    case 'aborted':
+      return {
+        type: 'about:blank#ai-aborted',
+        title: 'AI action was cancelled',
+        status: 499,
+        detail: err.message,
+      };
+    default:
+      return {
+        type: 'about:blank#ai-provider-unavailable',
+        title: 'AI provider unavailable',
+        status: 503,
+        detail: err.message,
+      };
+  }
 }
 
 /**
@@ -268,10 +333,20 @@ export class AiController {
   @Roles('MEMBER')
   async postEstimateAndSuggest(@Req() req: ExpressRequest, @Param('taskId') taskId: string) {
     const ctx = requireCtx(req);
-    return this.estimate.execute({
-      workspaceId: ctx.workspaceId,
-      actorUserId: ctx.userId,
-      taskId,
-    });
+    try {
+      return await this.estimate.execute({
+        workspaceId: ctx.workspaceId,
+        actorUserId: ctx.userId,
+        taskId,
+      });
+    } catch (err) {
+      // Same classification the SSE routes get via writeSseError — the JSON
+      // route needs it too so the frontend's Problem Details switch matches.
+      if (err instanceof LlmProviderError) {
+        const problem = llmProviderErrorToProblem(err);
+        throw new HttpException(problem, problem.status);
+      }
+      throw err;
+    }
   }
 }

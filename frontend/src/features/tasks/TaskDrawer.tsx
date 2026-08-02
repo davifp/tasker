@@ -21,6 +21,7 @@ import { MarkdownEditor } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
 import { TaskMetadataPanel } from './TaskMetadataPanel';
 import { ChecklistPanel } from '@/features/checklists/ChecklistPanel';
+import { useAddChecklistItem } from '@/features/checklists/hooks/useChecklistMutations';
 import { CommentsPanel } from '@/features/comments/CommentsPanel';
 import { DependenciesPanel } from '@/features/dependencies/DependenciesPanel';
 import { AttachmentsPanel } from '@/features/attachments/AttachmentsPanel';
@@ -136,6 +137,7 @@ function DrawerBody({
   // to the disabled "Admin must enable AI" state.
   const usageQuery = useAiUsage(workspaceSlug, { enabled: isAdmin });
   const acceptConsent = useAcceptAiConsent(workspaceSlug, usageQuery.data?.consent.requiredDocumentVersion ?? 'v1');
+  const addChecklistItem = useAddChecklistItem({ workspaceSlug, projectSlug, taskNumber });
 
   useEffect(() => {
     // Focus the title textarea exactly once — but only when the deep-link
@@ -227,13 +229,41 @@ function DrawerBody({
         usage={usageQuery.data}
         isAdmin={isAdmin}
         onAcceptConsent={isAdmin ? () => acceptConsent.mutate() : undefined}
-        onAcceptDescription={(draft) => {
+        onAcceptDescription={async (draft) => {
+          // Persist immediately so follow-up AI actions (checklist,
+          // estimate) that read the description from the DB see the new
+          // value. The editor stays open so the user can still tweak-
+          // and-resave.
           setDescDraft(draft);
           setEditingDescription(true);
+          try {
+            await update.mutateAsync({ number: task.number, patch: { description: draft } });
+          } catch (err) {
+            if (err instanceof HttpError) toast.error(err.title, { description: err.detail });
+            else toast.error(t('errors.saveDescriptionFailed'));
+          }
         }}
-        onAcceptChecklist={() => {
-          // Delegated to ChecklistPanel via a bus later; for now log.
-          toast.info('Checklist items accepted — add them via the checklist panel.');
+        onAcceptChecklist={async (items) => {
+          // Persist items sequentially so their positions match the order the
+          // model produced (the API assigns position at insert time). Parallel
+          // fires would race on position and shuffle the list.
+          let failed = 0;
+          for (const title of items) {
+            try {
+              await addChecklistItem.mutateAsync({ title });
+            } catch {
+              failed += 1;
+            }
+          }
+          if (failed === 0) {
+            toast.success(`Added ${items.length} checklist item${items.length === 1 ? '' : 's'}.`);
+          } else if (failed < items.length) {
+            toast.warning(
+              `Added ${items.length - failed} of ${items.length} items — ${failed} failed.`,
+            );
+          } else {
+            toast.error('Could not add any checklist items.');
+          }
         }}
       />
 

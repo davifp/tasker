@@ -167,4 +167,7 @@ const WORKSPACE_PREFACE =
 const ACTION_INSTRUCTION =
   `From the task title and description, produce a checklist. Each item MUST start with ` +
   `an imperative verb, MUST fit on one line (~120 chars), and MUST be independently ` +
-  `actionable. Prefer 5–10 items; hard-cap at 30.`;
+  `actionable. Prefer 5–10 items; hard-cap at 30.\n\n` +
+  `Respond with ONLY valid JSON in this exact shape — no Markdown, no prose, no code ` +
+  `fences, no leading or trailing text:\n` +
+  `{"items": ["Do X", "Do Y", "..."]}`;
