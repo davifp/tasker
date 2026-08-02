@@ -12,8 +12,13 @@ export async function DELETE(
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   const { endpoint } = await params;
+  // Next.js decodes the [endpoint] segment before handing it to us, so the
+  // raw URL (with slashes and colons) needs to be re-encoded before being
+  // rebuilt into the backend URL — otherwise the path segment splits and
+  // hits an unrelated backend route.
+  const encoded = encodeURIComponent(endpoint);
   async function call(accessToken: string): Promise<Response> {
-    return fetch(apiUrl(`/push/subscriptions/${endpoint}`), {
+    return fetch(apiUrl(`/push/subscriptions/${encoded}`), {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
       cache: 'no-store',

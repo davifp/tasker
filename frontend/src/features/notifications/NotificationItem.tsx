@@ -27,6 +27,8 @@ export function NotificationItem({ notification, onMarkRead, href }: Props) {
       ? notification.payload.actorDisplayName
       : (notification.actorUserId ?? '—');
   const eventLine = t(`event.${notification.eventType}`);
+  const taskTitle =
+    typeof notification.payload?.taskTitle === 'string' ? notification.payload.taskTitle : null;
   const absoluteDate = dateFormatter.format(new Date(notification.createdAt));
 
   const body = (
@@ -42,6 +44,7 @@ export function NotificationItem({ notification, onMarkRead, href }: Props) {
         <span className="text-foreground">
           <span className="font-medium">{actorName}</span> {eventLine}
         </span>
+        {taskTitle ? <span className="mt-0.5 text-foreground/80">{taskTitle}</span> : null}
         <span className="text-[10px] text-muted-foreground" title={absoluteDate}>
           {absoluteDate}
         </span>

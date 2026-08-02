@@ -72,7 +72,9 @@ test.describe('Mention notification', () => {
     await expect(peerPage.getByRole('heading', { name: /notifications/i })).toBeVisible();
     await expect(peerPage.getByText('Mention target')).toBeVisible({ timeout: 5_000 });
     // The event summary comes from the `event.COMMENT_MENTION` translation.
-    await expect(peerPage.getByText(/mentioned you/i).first()).toBeVisible();
+    // Scope to <article> so we don't match the hidden <option value=…> the
+    // event-type filter dropdown carries with the same text.
+    await expect(peerPage.getByRole('article').filter({ hasText: /mentioned you/i })).toBeVisible();
 
     // ---- MailHog: the drain sent a mention email -------------------------
     const mail = await waitForEmail(
