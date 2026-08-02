@@ -25,6 +25,8 @@ import { CommentsPanel } from '@/features/comments/CommentsPanel';
 import { DependenciesPanel } from '@/features/dependencies/DependenciesPanel';
 import { AttachmentsPanel } from '@/features/attachments/AttachmentsPanel';
 import { ActivityFeed } from '@/features/activity/ActivityFeed';
+import { AiActionsMenu } from '@/features/ai/components/AiActionsMenu';
+import { useAiUsage, useAcceptAiConsent } from '@/features/ai/hooks/useAiUsage';
 
 interface TaskDrawerProps {
   workspaceSlug: string;
@@ -127,6 +129,13 @@ function DrawerBody({
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState(false);
   const [descDraft, setDescDraft] = useState('');
+  const isAdmin = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  // Only admins can hit /ai/usage — the endpoint returns 403 otherwise.
+  // The menu still renders for members; the banner + disabled state read
+  // from the admin-populated usage cache when available, else fall back
+  // to the disabled "Admin must enable AI" state.
+  const usageQuery = useAiUsage(workspaceSlug, { enabled: isAdmin });
+  const acceptConsent = useAcceptAiConsent(workspaceSlug, usageQuery.data?.consent.requiredDocumentVersion ?? 'v1');
 
   useEffect(() => {
     // Focus the title textarea exactly once — but only when the deep-link
@@ -209,6 +218,23 @@ function DrawerBody({
         workspaceSlug={workspaceSlug}
         projectSlug={projectSlug}
         task={task}
+      />
+
+      <AiActionsMenu
+        workspaceSlug={workspaceSlug}
+        taskId={task.id}
+        taskTitle={task.title}
+        usage={usageQuery.data}
+        isAdmin={isAdmin}
+        onAcceptConsent={isAdmin ? () => acceptConsent.mutate() : undefined}
+        onAcceptDescription={(draft) => {
+          setDescDraft(draft);
+          setEditingDescription(true);
+        }}
+        onAcceptChecklist={() => {
+          // Delegated to ChecklistPanel via a bus later; for now log.
+          toast.info('Checklist items accepted — add them via the checklist panel.');
+        }}
       />
 
       <section className="flex flex-col gap-2" aria-label={t('descriptionLabel')}>

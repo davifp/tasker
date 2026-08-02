@@ -14,6 +14,8 @@ import { SafeMarkdown } from '@/components/markdown/SafeMarkdown';
 import { HttpError } from '@/lib/http/errors';
 import { AssigneeBubble } from '@/features/tasks/AssigneeBubble';
 import type { WorkspaceRole } from '@/lib/http/types';
+import { SummarizeThreadButton } from '@/features/ai/components/SummarizeThreadButton';
+import { useAiUsage } from '@/features/ai/hooks/useAiUsage';
 
 interface CommentsPanelProps {
   workspaceSlug: string;
@@ -107,11 +109,23 @@ export function CommentsPanel({
     else toast.error(fallback);
   }
 
+  const isAdmin = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const aiUsage = useAiUsage(workspaceSlug, { enabled: isAdmin });
+
   return (
     <section className="flex flex-col gap-3" aria-label={t('label')}>
       <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {t('heading')} <span className="ml-1 text-muted-foreground">({items.length})</span>
       </h4>
+      <SummarizeThreadButton
+        workspaceSlug={workspaceSlug}
+        taskId={taskId}
+        commentCount={items.length}
+        usage={aiUsage.data}
+        onPostAsComment={(summary) => {
+          setDraft(`_(AI summary)_\n\n${summary}`);
+        }}
+      />
       {isLoading ? (
         <p className="text-xs text-muted-foreground">{t('loading')}</p>
       ) : items.length === 0 ? (
