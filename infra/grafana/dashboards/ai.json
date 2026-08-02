@@ -1,0 +1,181 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "row",
+      "title": "AI Actions",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 200,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Invocations (per action/status)",
+      "description": "AI invocations per second, split by action and terminal status. Sustained non-success series usually points at provider outage, budget exhaustion, or a mispromptedaction.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 201,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (action, status) (rate(tasker_ai_invocations_total[5m]))",
+          "legendFormat": "{{action}} · {{status}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "P95 latency (per action/provider)",
+      "description": "95th-percentile time-to-final-token per action + provider. Compare Anthropic vs. OpenAI series to catch fallback-induced tail latency.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 202,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, action, provider) (rate(tasker_ai_latency_ms_bucket[5m])))",
+          "legendFormat": "p95 {{action}} · {{provider}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Tokens consumed (per kind)",
+      "description": "Input / output / cached-input tokens per second. `cached_input` should sit high once the workspace preface warms up — a sudden collapse means the 1h cache TTL expired or the preface changed.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 9 },
+      "id": 203,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (kind) (rate(tasker_ai_tokens_total[5m]))",
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "type": "table",
+      "title": "Monthly budget — top workspaces",
+      "description": "Current-month consumed/budget ratio. Sorted descending; workspaces at or above 1.0 have exhausted their monthly budget and should be flagged.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 9 },
+      "id": 204,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(20, tasker_ai_budget_ratio)",
+          "instant": true,
+          "legendFormat": "{{workspaceId}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 0.8, "color": "yellow" },
+              { "value": 1.0, "color": "red" }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Provider fallbacks",
+      "description": "Router fallbacks per second, broken down by from → to and reason. A sustained non-zero series usually points at a specific provider health issue.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 9 },
+      "id": 205,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (from, to, reason) (rate(tasker_ai_provider_fallbacks_total[5m]))",
+          "legendFormat": "{{from}}→{{to}} · {{reason}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "👍 / 👎 ratio",
+      "description": "Ratio of POSITIVE to total feedback over the last 24h. A drop below ~0.7 usually means the prompt or model choice for a specific action is regressing.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 17 },
+      "id": 206,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(tasker_ai_feedback_total{rating=\"POSITIVE\"}[24h])) / clamp_min(sum(rate(tasker_ai_feedback_total[24h])), 1e-9)",
+          "legendFormat": "positive share"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "red" },
+              { "value": 0.6, "color": "yellow" },
+              { "value": 0.75, "color": "green" }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Feedback (per action)",
+      "description": "Absolute 👍/👎 counts per action. Low volume on a specific action means the affordance is undiscoverable; a sudden 👎 spike usually points at a prompt regression.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 17 },
+      "id": 207,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (action, rating) (rate(tasker_ai_feedback_total[1h]))",
+          "legendFormat": "{{action}} · {{rating}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["ai", "tasker"],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus",
+        "hide": 0,
+        "current": {},
+        "options": []
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "AI Actions",
+  "uid": "tasker-ai",
+  "version": 1,
+  "weekStart": ""
+}
