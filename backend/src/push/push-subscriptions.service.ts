@@ -11,7 +11,10 @@ export class PushSubscriptionsService {
   // Upsert by endpoint so a browser re-registering the same subscription
   // does not fail on the unique constraint. `lastSeenAt` bumps on every
   // upsert so the dormant sweep only reaps truly abandoned rows.
-  async upsert(userId: string, input: PushSubscriptionInput): Promise<{ id: string }> {
+  async upsert(
+    userId: string,
+    input: PushSubscriptionInput,
+  ): Promise<{ id: string; endpoint: string }> {
     const now = new Date();
     const row = await this.prisma.forSystem().pushSubscription.upsert({
       where: { endpoint: input.endpoint },
@@ -30,7 +33,7 @@ export class PushSubscriptionsService {
         ...(input.userAgent ? { userAgent: input.userAgent } : {}),
         lastSeenAt: now,
       },
-      select: { id: true },
+      select: { id: true, endpoint: true },
     });
     return row;
   }

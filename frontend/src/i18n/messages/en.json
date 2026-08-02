@@ -972,8 +972,8 @@
     "push": {
       "title": "Browser push notifications",
       "subtitle": "Get instant alerts on this device, even when the tab is closed.",
-      "enable": "Enable",
-      "disable": "Disable",
+      "enable": "Enable push",
+      "disable": "Disable push",
       "working": "Working…",
       "permissionDenied": "Notifications are blocked in this browser. Update site settings to enable them.",
       "unsupported": "This browser does not support Web Push. Try Chrome, Edge, Firefox, or Safari 16.4+.",

@@ -972,8 +972,8 @@
     "push": {
       "title": "Notificações push do navegador",
       "subtitle": "Receba alertas instantâneos neste dispositivo, mesmo com a aba fechada.",
-      "enable": "Ativar",
-      "disable": "Desativar",
+      "enable": "Ativar push",
+      "disable": "Desativar push",
       "working": "Processando…",
       "permissionDenied": "Notificações estão bloqueadas neste navegador. Ajuste as configurações do site.",
       "unsupported": "Este navegador não suporta Web Push. Use Chrome, Edge, Firefox ou Safari 16.4+.",
