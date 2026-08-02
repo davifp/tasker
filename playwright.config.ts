@@ -75,17 +75,20 @@ export default defineConfig({
         // MailHog message inside a single test's lifetime. Collapse it to
         // 5 s so the drain job fires before the spec's timeout.
         NOTIF_EMAIL_BATCH_WINDOW_S: '5',
-        // Web Push VAPID key pair — placeholder, not a real cryptographic
-        // key. The push-optin spec stubs navigator.serviceWorker so no
-        // outbound push ever happens; the frontend hook just needs
-        // `getVapidKey()` to return a non-null base64-url string so
-        // pushManager.subscribe is reached.
+        // Web Push VAPID key pair — real e2e-only pair (65 bytes decoded)
+        // so `webPush.setVapidDetails()` accepts it at boot. The push-optin
+        // spec stubs navigator.serviceWorker so no outbound push ever
+        // happens; the pair only needs to be structurally valid, not tied
+        // to any real push service subscription.
+        // NOTE: use `||` not `??` — if the developer's `.env` has
+        // VAPID_PUBLIC_KEY set to an empty string (very common), nullish-
+        // coalesce keeps the empty string and the API crashes at boot.
         VAPID_PUBLIC_KEY:
-          process.env['VAPID_PUBLIC_KEY'] ??
-          'BJT0R8s3d1JbA4hZ_dY3Iis9EBcNRPqM8Nhy0kQ1_g8s3d1JbA4hZ_dY3Iis9EBcNRPqM8Nhy0kQ1_g8s',
+          process.env['VAPID_PUBLIC_KEY'] ||
+          'BPOa_Aum0Lw-g1gKczQaoRwZE2fKfoZhx0ifTErwd7XuL7nNOvjf7o_RUjsPk1MaWf_oHi3c8rWfXuSWv8G4R_g',
         VAPID_PRIVATE_KEY:
-          process.env['VAPID_PRIVATE_KEY'] ?? 'e2e-placeholder-private-key-not-used',
-        VAPID_SUBJECT: process.env['VAPID_SUBJECT'] ?? 'mailto:e2e@tasker.local',
+          process.env['VAPID_PRIVATE_KEY'] || 'UpH4oCl3ke7btMCgryRoYOzNzkJz2bK8-ibHnggSmi4',
+        VAPID_SUBJECT: process.env['VAPID_SUBJECT'] || 'mailto:e2e@tasker.local',
       },
     },
     {
