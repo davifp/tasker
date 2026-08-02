@@ -228,7 +228,8 @@ describe('notificationJobSchema', () => {
       sourceId: 'c-1',
       actorUserId: 'u-2',
     };
-    expect(notificationJobSchema.parse(job)).toEqual(job);
+    // `payload` has a Zod default of {} so parse() fills it in when omitted.
+    expect(notificationJobSchema.parse(job)).toEqual({ ...job, payload: {} });
   });
 
   it('accepts a fan-out job without an actor (system-emitted)', () => {
@@ -241,7 +242,7 @@ describe('notificationJobSchema', () => {
       sourceKind: 'SPRINT' as const,
       sourceId: 's-1',
     };
-    expect(notificationJobSchema.parse(job)).toEqual(job);
+    expect(notificationJobSchema.parse(job)).toEqual({ ...job, payload: {} });
   });
 
   it('rejects a fan-out job with an unknown eventType', () => {
