@@ -28,6 +28,7 @@ pnpm dev
 ```
 
 API: http://localhost:3001/api/v1/health  
+API docs: http://localhost:3001/api/v1/docs (raw spec at http://localhost:3001/api/v1/openapi.json)  
 Mailhog UI: http://localhost:8025
 
 ## Scripts
@@ -39,6 +40,22 @@ Mailhog UI: http://localhost:8025
 | `pnpm lint` | Lint all workspaces |
 | `pnpm typecheck` | Type-check all workspaces |
 | `pnpm test` | Run all test suites |
+
+### Public API — OpenAPI baseline
+
+`openapi/baseline.json` is a committed snapshot of the OpenAPI 3.x document
+served at `/api/v1/openapi.json`. CI regenerates the spec and fails if it
+drifts from the committed baseline. When a PR intentionally changes the
+public surface (adds/removes routes, changes DTOs, updates tags), regenerate
+locally and commit the result:
+
+```bash
+pnpm --filter api openapi:dump
+git add openapi/baseline.json
+```
+
+The dump script boots the Nest app in a doc-only mode (no HTTP listener, no
+Redis/queue connections) and writes the spec to `openapi/baseline.json`.
 
 ### Realtime load smoke
 

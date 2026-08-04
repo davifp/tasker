@@ -101,6 +101,19 @@ jobs:
       - name: Check coverage thresholds
         run: node scripts/check-coverage.mjs
 
+      - name: Verify OpenAPI baseline is up to date
+        run: |
+          pnpm --filter api openapi:dump
+          if ! git diff --quiet -- openapi/baseline.json; then
+            echo '::error::openapi/baseline.json is out of date. Regenerate locally with `pnpm --filter api openapi:dump` and commit the result.'
+            git --no-pager diff --stat -- openapi/baseline.json
+            exit 1
+          fi
+        env:
+          DATABASE_URL: postgres://tasker:tasker@localhost:5432/tasker
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+
       - name: Audit dependencies (advisory)
         run: pnpm audit --audit-level=high || true
 
