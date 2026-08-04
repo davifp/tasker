@@ -6,4 +6,10 @@ set -e
 # playwright.config.ts webServer entries) and boots them otherwise. Docker
 # services (postgres/redis/mailhog) must be up — start with:
 #   docker compose -f infra/docker-compose.yml up -d
-pnpm test:all
+#
+# CI=1 aligns the local gate with the GitHub Actions gate — same retry
+# count (2 on Playwright), same single-worker execution, same forbidOnly.
+# Without it, transient e2e flakes fail the push where CI would have
+# succeeded on retry, and the local check is strictly stricter than the
+# check that actually gatekeeps main.
+CI=1 pnpm test:all
