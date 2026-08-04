@@ -75,7 +75,7 @@ describe('AI Actions schema (integration)', () => {
     await raw.$connect();
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: url },
       stdio: 'inherit',
     });

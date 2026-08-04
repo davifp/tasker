@@ -114,7 +114,7 @@ describe('Labels module (integration)', () => {
     process.env['THROTTLE_LOGIN_LIMIT'] = '100';
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: dbUrl },
       stdio: 'inherit',
     });

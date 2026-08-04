@@ -126,7 +126,7 @@ describe('Attachments (integration)', () => {
     process.env['STORAGE_GET_URL_TTL_S'] = '300';
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: dbUrl },
       stdio: 'inherit',
     });

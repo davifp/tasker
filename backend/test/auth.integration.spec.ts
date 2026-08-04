@@ -81,7 +81,7 @@ describe('Auth lifecycle (integration)', () => {
     process.env['LOG_LEVEL'] = 'silent';
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: dbUrl },
       stdio: 'inherit',
     });

@@ -53,7 +53,7 @@ describe('Search & Audit migration (integration)', () => {
     await prisma.$connect();
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: url },
       stdio: 'inherit',
     });

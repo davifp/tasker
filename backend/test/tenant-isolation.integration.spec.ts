@@ -12,7 +12,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { PrismaClient } from '@prisma/client';
 import { execSync } from 'node:child_process';
-import { WorkspaceContextStore, WorkspaceContext } from '../src/common/context/workspace-context.store';
+import { WorkspaceContextStore } from '../src/common/context/workspace-context.store';
 import { buildTenantExtension } from '../src/prisma/tenant.extension';
 
 // ---------------------------------------------------------------------------
@@ -34,17 +34,41 @@ async function seedBaseline(raw: PrismaClient) {
   });
 
   const ws1 = await raw.workspace.create({
-    data: { id: 'ws-1', slug: 'workspace-one', name: 'Workspace One', ownerUserId: userA.id, updatedAt: new Date() },
+    data: {
+      id: 'ws-1',
+      slug: 'workspace-one',
+      name: 'Workspace One',
+      ownerUserId: userA.id,
+      updatedAt: new Date(),
+    },
   });
   const ws2 = await raw.workspace.create({
-    data: { id: 'ws-2', slug: 'workspace-two', name: 'Workspace Two', ownerUserId: userB.id, updatedAt: new Date() },
+    data: {
+      id: 'ws-2',
+      slug: 'workspace-two',
+      name: 'Workspace Two',
+      ownerUserId: userB.id,
+      updatedAt: new Date(),
+    },
   });
 
   const memA = await raw.workspaceMember.create({
-    data: { id: 'mem-a', workspaceId: ws1.id, userId: userA.id, role: 'OWNER', updatedAt: new Date() },
+    data: {
+      id: 'mem-a',
+      workspaceId: ws1.id,
+      userId: userA.id,
+      role: 'OWNER',
+      updatedAt: new Date(),
+    },
   });
   const memB = await raw.workspaceMember.create({
-    data: { id: 'mem-b', workspaceId: ws2.id, userId: userB.id, role: 'OWNER', updatedAt: new Date() },
+    data: {
+      id: 'mem-b',
+      workspaceId: ws2.id,
+      userId: userB.id,
+      role: 'OWNER',
+      updatedAt: new Date(),
+    },
   });
 
   await raw.invitation.create({
@@ -73,7 +97,12 @@ async function seedBaseline(raw: PrismaClient) {
   });
 
   return {
-    userA, userB, ws1, ws2, memA, memB,
+    userA,
+    userB,
+    ws1,
+    ws2,
+    memA,
+    memB,
     ctxA: { userId: userA.id, workspaceId: ws1.id, role: 'OWNER' as const, membershipId: memA.id },
     ctxB: { userId: userB.id, workspaceId: ws2.id, role: 'OWNER' as const, membershipId: memB.id },
   };
@@ -112,7 +141,7 @@ describe('Tenant isolation (integration)', () => {
 
     // Apply migrations
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: url },
       stdio: 'inherit',
     });
@@ -192,7 +221,12 @@ describe('Tenant isolation (integration)', () => {
           data: { email: 'spoof@test.com', displayName: 'Spoof', updatedAt: new Date() },
         });
         const member = await tenant.workspaceMember.create({
-          data: { workspaceId: seed.ws2.id, userId: extraUser.id, role: 'MEMBER', updatedAt: new Date() } as never,
+          data: {
+            workspaceId: seed.ws2.id,
+            userId: extraUser.id,
+            role: 'MEMBER',
+            updatedAt: new Date(),
+          } as never,
         });
         expect(member.workspaceId).toBe(seed.ws1.id);
 
@@ -205,8 +239,12 @@ describe('Tenant isolation (integration)', () => {
     it('createMany injects workspaceId into every row', async () => {
       const tenant = makeTenantClient(raw, store);
       const [u1, u2] = await Promise.all([
-        raw.user.create({ data: { email: 'bulk1@w1.test', displayName: 'Bulk1', updatedAt: new Date() } }),
-        raw.user.create({ data: { email: 'bulk2@w1.test', displayName: 'Bulk2', updatedAt: new Date() } }),
+        raw.user.create({
+          data: { email: 'bulk1@w1.test', displayName: 'Bulk1', updatedAt: new Date() },
+        }),
+        raw.user.create({
+          data: { email: 'bulk2@w1.test', displayName: 'Bulk2', updatedAt: new Date() },
+        }),
       ]);
 
       await store.run(seed.ctxA, async () => {
@@ -222,7 +260,7 @@ describe('Tenant isolation (integration)', () => {
         where: { userId: { in: [u1.id, u2.id] } },
       });
       expect(created).toHaveLength(2);
-      expect(created.every(m => m.workspaceId === seed.ws1.id)).toBe(true);
+      expect(created.every((m) => m.workspaceId === seed.ws1.id)).toBe(true);
 
       // Cleanup
       await raw.workspaceMember.deleteMany({ where: { userId: { in: [u1.id, u2.id] } } });
@@ -235,7 +273,12 @@ describe('Tenant isolation (integration)', () => {
         data: { email: 'del@w1.test', displayName: 'Del', updatedAt: new Date() },
       });
       await raw.workspaceMember.create({
-        data: { workspaceId: seed.ws1.id, userId: extraUser.id, role: 'MEMBER', updatedAt: new Date() },
+        data: {
+          workspaceId: seed.ws1.id,
+          userId: extraUser.id,
+          role: 'MEMBER',
+          updatedAt: new Date(),
+        },
       });
 
       await store.run(seed.ctxA, async () => {

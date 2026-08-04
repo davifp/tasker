@@ -90,7 +90,7 @@ describe('OAuth callback lifecycle (integration)', () => {
     process.env['OAUTH_SUCCESS_REDIRECT_URL'] = 'http://localhost:3000/auth/oauth/callback';
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: dbUrl },
       stdio: 'inherit',
     });

@@ -75,6 +75,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Migrate the shared postgres service so integration specs that reuse
+      # it (ai-controller, ai-budget-notification) find the User/Workspace
+      # tables at import time. Specs that stand up their own Testcontainers
+      # postgres call migrate themselves inside beforeAll.
+      - name: Run Prisma migrations (shared postgres)
+        run: pnpm --filter api exec prisma migrate deploy
+        env:
+          DATABASE_URL: postgres://tasker:tasker@localhost:5432/tasker
+
       - name: Lint, typecheck, test, build
         run: pnpm turbo run lint typecheck test build
         env:

@@ -90,7 +90,7 @@ describe('Reactions (integration)', () => {
     process.env['THROTTLE_DEFAULT_LIMIT'] = '10000';
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: dbUrl },
       stdio: 'inherit',
     });

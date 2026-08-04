@@ -75,7 +75,7 @@ describe('Email verification lifecycle (integration)', () => {
     process.env['APP_BASE_URL'] = 'http://localhost:3000';
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: dbUrl },
       stdio: 'inherit',
     });

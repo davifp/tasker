@@ -120,7 +120,7 @@ describe('Tasks module (integration)', () => {
     process.env['THROTTLE_DEFAULT_TTL_S'] = '60';
 
     execSync('pnpm prisma migrate deploy', {
-      cwd: '/home/davi/tasker/backend',
+      cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: dbUrl },
       stdio: 'inherit',
     });
