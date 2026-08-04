@@ -108,6 +108,13 @@ describe('RealtimeProvider', () => {
       },
     });
     await waitFor(() => expect(created).not.toBeNull());
+    // First connect (handshake) must NOT invalidate — otherwise every
+    // freshly-mounted view refetches immediately after boot even when the
+    // cache is still fresh (breaks the "one hop per filter change" invariant).
+    act(() => created!.connect());
+    expect(invalidateSpy).not.toHaveBeenCalledWith();
+    // A second connect models the socket dropping and re-establishing:
+    // this is the case where we actually need to catch up.
     act(() => created!.connect());
     expect(invalidateSpy).toHaveBeenCalledWith();
   });

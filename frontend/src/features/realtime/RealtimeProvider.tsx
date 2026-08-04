@@ -74,6 +74,9 @@ export function RealtimeProvider({
   const [connected, setConnected] = useState(false);
   // Ref so re-renders don't re-run the connection effect below.
   const attemptedRefreshRef = useRef(false);
+  // Track whether we have already seen a successful connect, so we only
+  // invalidate on true *re*connects (not on the initial handshake).
+  const hasConnectedBeforeRef = useRef(false);
 
   const resolvedFetchTicket = useCallback(async () => {
     return (ticketFetcher ?? fetchTicket)();
@@ -113,7 +116,10 @@ export function RealtimeProvider({
           setConnected(true);
           // On reconnect (not the first connect) revalidate active queries
           // so the UI catches up with anything that happened while offline.
-          void queryClient.invalidateQueries();
+          if (hasConnectedBeforeRef.current) {
+            void queryClient.invalidateQueries();
+          }
+          hasConnectedBeforeRef.current = true;
         });
         current.on('disconnect', () => setConnected(false));
         current.on('connect_error', async (err: Error) => {
