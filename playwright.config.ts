@@ -42,6 +42,15 @@ export default defineConfig({
         NODE_ENV: 'test',
         PORT: String(API_PORT),
         OAUTH_SUCCESS_REDIRECT_URL: `${WEB_BASE_URL}/oauth/{provider}/complete`,
+        // App secrets — CI has no .env file, so ConfigModule.validate crashes
+        // without an explicit value. `||` matches the VAPID pattern so an
+        // empty-string in a dev .env doesn't win over the test default.
+        JWT_SECRET:
+          process.env['JWT_SECRET'] ||
+          'e2e-only-jwt-secret-do-not-use-outside-tests-0000000000000000',
+        RT_TICKET_SECRET:
+          process.env['RT_TICKET_SECRET'] ||
+          'e2e-only-rt-ticket-secret-do-not-use-outside-tests-000000000',
         // Pin the SMTP transport at MailHog so every environment (local dev,
         // CI runner) delivers verification mails to the same inbox the
         // `waitForEmail` helper polls. Defaults already point at localhost:1025
