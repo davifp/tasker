@@ -113,7 +113,7 @@ export class NotificationsService {
             payload: input.payload,
           },
           {
-            jobId: `fanout:${input.eventType}:${recipientUserId}:${input.sourceEntity.id}`,
+            jobId: `fanout-${input.eventType}-${recipientUserId}-${input.sourceEntity.id}`,
             removeOnComplete: 500,
             removeOnFail: 100,
           },

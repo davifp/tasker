@@ -76,7 +76,7 @@ describe('NotificationsProcessor', () => {
     const [recipient, item] = buffer.mock.calls[0]!;
     expect(recipient).toBe('user-a');
     expect(item).toMatchObject({
-      idempotencyKey: 'COMMENT_MENTION:user-a:c-1',
+      idempotencyKey: 'COMMENT_MENTION-user-a-c-1',
       payload: { actorDisplayName: 'Bruno' },
     });
   });

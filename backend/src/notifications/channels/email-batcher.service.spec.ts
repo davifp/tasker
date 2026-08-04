@@ -107,7 +107,7 @@ function makeItem(overrides?: Partial<BufferedEmailItem>): BufferedEmailItem {
     eventType: 'COMMENT_MENTION',
     sourceKind: 'COMMENT',
     sourceId: 'c-1',
-    idempotencyKey: 'COMMENT_MENTION:user-a:c-1',
+    idempotencyKey: 'COMMENT_MENTION-user-a-c-1',
     payload: { actorDisplayName: 'Bruno', taskTitle: 'Ship it', projectName: 'Web' },
     bufferedAt: '2026-07-27T12:00:00Z',
     ...overrides,
@@ -128,7 +128,7 @@ describe('EmailBatcher.drain', () => {
       expect.objectContaining({
         template: 'notification-mention',
         to: 'user@example.com',
-        idempotencyKey: 'email:COMMENT_MENTION:user-a:c-1',
+        idempotencyKey: 'email-COMMENT_MENTION-user-a-c-1',
       }),
     );
   });

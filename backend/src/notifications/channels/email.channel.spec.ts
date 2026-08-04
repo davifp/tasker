@@ -68,7 +68,7 @@ function makeItem(overrides?: Partial<BufferedEmailItem>): BufferedEmailItem {
     eventType: 'COMMENT_MENTION',
     sourceKind: 'COMMENT',
     sourceId: 'c-1',
-    idempotencyKey: 'COMMENT_MENTION:user-a:c-1',
+    idempotencyKey: 'COMMENT_MENTION-user-a-c-1',
     payload: {},
     bufferedAt: '2026-07-27T12:00:00Z',
     ...overrides,

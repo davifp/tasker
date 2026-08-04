@@ -204,7 +204,7 @@ export class EmailBatcher implements OnModuleInit {
       template,
       to,
       variables,
-      idempotencyKey: `email:${item.idempotencyKey}`,
+      idempotencyKey: `email-${item.idempotencyKey}`,
     });
   }
 
@@ -224,7 +224,7 @@ export class EmailBatcher implements OnModuleInit {
       },
       // Idempotency key derived from the sorted per-item keys — a second
       // drain with the same set of items collapses onto the same mail job.
-      idempotencyKey: `email-batch:${items
+      idempotencyKey: `email-batch-${items
         .map((i) => i.idempotencyKey)
         .sort()
         .join('|')

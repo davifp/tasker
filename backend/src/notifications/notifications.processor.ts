@@ -77,7 +77,7 @@ export class NotificationsProcessor extends WorkerHost {
           sourceKind: data.sourceKind,
           sourceId: data.sourceId,
           ...(data.actorUserId ? { actorUserId: data.actorUserId } : {}),
-          idempotencyKey: `${data.eventType}:${data.recipientUserId}:${data.sourceId}`,
+          idempotencyKey: `${data.eventType}-${data.recipientUserId}-${data.sourceId}`,
           payload: data.payload,
           bufferedAt: new Date().toISOString(),
         };
