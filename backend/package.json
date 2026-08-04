@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "build": "tsc --project tsconfig.build.json && node -e \"require('fs').cpSync('src/common/mail/templates','dist/common/mail/templates',{recursive:true})\"",
     "build:worker": "tsc --project tsconfig.build.json && node -e \"require('fs').cpSync('src/common/mail/templates','dist/common/mail/templates',{recursive:true})\"",
