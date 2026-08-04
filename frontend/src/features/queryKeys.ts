@@ -235,6 +235,16 @@ export const notificationKeys = {
   preferences: () => ['notifications', 'preferences'] as const,
 };
 
+// ---------------------------------------------------------------------------
+// Platform (Fase 10) — API keys, webhooks, integrations.
+// ---------------------------------------------------------------------------
+
+export const platformKeys = {
+  all: (workspaceSlug: string) => ['platform', workspaceSlug] as const,
+  apiKeys: (workspaceSlug: string, filters?: { includeRevoked?: boolean }) =>
+    ['platform', workspaceSlug, 'api-keys', filters ?? {}] as const,
+};
+
 export const dashboardKeys = {
   all: (workspaceSlug: string) => ['dashboard', workspaceSlug] as const,
   burndown: (workspaceSlug: string, projectSlug: string, sprintNumber: number) =>

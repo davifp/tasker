@@ -979,5 +979,66 @@
       "unsupported": "Este navegador não suporta Web Push. Use Chrome, Edge, Firefox ou Safari 16.4+.",
       "error": "Não foi possível ativar as notificações push. Tente novamente."
     }
+  },
+  "platform": {
+    "nav": "Plataforma",
+    "apiKeys": {
+      "title": "Chaves de API",
+      "subtitle": "Tokens de acesso duradouros e escopados para uso programático da API do Tasker.",
+      "forbiddenTitle": "Você não tem acesso às chaves de API",
+      "forbiddenBody": "Apenas administradores e proprietários do workspace podem criar ou revogar chaves de API.",
+      "createButton": "Criar chave de API",
+      "empty": "Nenhuma chave de API ainda. Crie uma para começar.",
+      "table": {
+        "name": "Nome",
+        "prefix": "Chave",
+        "scopes": "Escopos",
+        "created": "Criada em",
+        "lastUsed": "Último uso",
+        "expires": "Expira em",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "status": {
+        "active": "Ativa",
+        "revoked": "Revogada",
+        "expired": "Expirada"
+      },
+      "value": {
+        "never": "Nunca",
+        "noExpiration": "Sem expiração"
+      },
+      "create": {
+        "title": "Criar chave de API",
+        "description": "Dê um nome à chave e escolha os escopos. Você verá o valor completo uma única vez — guarde-o em local seguro.",
+        "nameLabel": "Nome",
+        "namePlaceholder": "ex: Sincronização noturna",
+        "scopesLabel": "Escopos",
+        "expiresAtLabel": "Expira em (opcional)",
+        "expiresAtHelp": "Deixe em branco para uma chave sem expiração.",
+        "submit": "Criar chave",
+        "cancel": "Cancelar"
+      },
+      "reveal": {
+        "title": "Copie esta chave agora — ela não será exibida novamente",
+        "body": "Este é o único momento em que podemos mostrar o valor completo. Se você perder, será necessário revogar e criar uma nova.",
+        "copyButton": "Copiar",
+        "copied": "Copiada",
+        "dismiss": "Já salvei, fechar"
+      },
+      "revoke": {
+        "action": "Revogar",
+        "title": "Revogar esta chave de API?",
+        "body": "Qualquer script ou integração usando esta chave receberá 401 em até um minuto. Esta ação não pode ser desfeita.",
+        "cancel": "Cancelar",
+        "confirm": "Revogar"
+      },
+      "toast": {
+        "created": "Chave de API criada",
+        "revoked": "Chave de API revogada",
+        "createFailed": "Não foi possível criar a chave. Tente novamente.",
+        "revokeFailed": "Não foi possível revogar a chave. Tente novamente."
+      }
+    }
   }
 }

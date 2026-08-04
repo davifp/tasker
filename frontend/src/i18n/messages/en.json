@@ -979,5 +979,66 @@
       "unsupported": "This browser does not support Web Push. Try Chrome, Edge, Firefox, or Safari 16.4+.",
       "error": "Could not enable push notifications. Please try again."
     }
+  },
+  "platform": {
+    "nav": "Platform",
+    "apiKeys": {
+      "title": "API keys",
+      "subtitle": "Long-lived, scoped access tokens for programmatic use of the Tasker API.",
+      "forbiddenTitle": "You don't have access to API keys",
+      "forbiddenBody": "Only workspace admins and owners can create or revoke API keys.",
+      "createButton": "Create API key",
+      "empty": "No API keys yet. Create one to get started.",
+      "table": {
+        "name": "Name",
+        "prefix": "Key",
+        "scopes": "Scopes",
+        "created": "Created",
+        "lastUsed": "Last used",
+        "expires": "Expires",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Active",
+        "revoked": "Revoked",
+        "expired": "Expired"
+      },
+      "value": {
+        "never": "Never",
+        "noExpiration": "No expiration"
+      },
+      "create": {
+        "title": "Create API key",
+        "description": "Name your key and pick the scopes it should carry. You'll see the raw value exactly once — copy it somewhere safe.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Nightly sync",
+        "scopesLabel": "Scopes",
+        "expiresAtLabel": "Expires (optional)",
+        "expiresAtHelp": "Leave blank for a non-expiring key.",
+        "submit": "Create key",
+        "cancel": "Cancel"
+      },
+      "reveal": {
+        "title": "Copy this key now — you won't see it again",
+        "body": "This is the only time we can display the raw key. If you lose it, you'll need to revoke it and create a new one.",
+        "copyButton": "Copy",
+        "copied": "Copied",
+        "dismiss": "I've saved it, close"
+      },
+      "revoke": {
+        "action": "Revoke",
+        "title": "Revoke this API key?",
+        "body": "Any script or integration using this key will start receiving 401 responses within a minute. This cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Revoke"
+      },
+      "toast": {
+        "created": "API key created",
+        "revoked": "API key revoked",
+        "createFailed": "Could not create the API key. Please try again.",
+        "revokeFailed": "Could not revoke the API key. Please try again."
+      }
+    }
   }
 }
