@@ -156,6 +156,9 @@ jobs:
       - name: Install Playwright browser
         run: pnpm test:e2e:install
 
+      - name: Build workspace packages consumed by dev servers
+        run: pnpm --filter @tasker/config build
+
       - name: Run Prisma migrations
         run: pnpm --filter api exec prisma migrate deploy
         env:
