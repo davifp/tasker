@@ -9,6 +9,8 @@ export interface ApiKeyRequestPrincipal {
   apiKeyId: string;
   workspaceId: string;
   scopes: ApiKeyScope[];
+  /** Actor for RBAC/audit — the admin who minted the key. */
+  userId: string;
 }
 
 export interface JwtRequestPrincipal {

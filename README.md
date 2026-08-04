@@ -41,6 +41,38 @@ Mailhog UI: http://localhost:8025
 | `pnpm typecheck` | Type-check all workspaces |
 | `pnpm test` | Run all test suites |
 
+### Public API — quickstart
+
+The public REST surface is mounted under `/api/v1/public/*` and authenticates
+via API keys minted from Settings → Platform → API keys. Every response
+carries `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`,
+and `X-Request-Id`. Errors use RFC 7807 Problem Details.
+
+```bash
+# Introspect the acting key (any scope)
+curl -H "Authorization: Bearer tsk_live_..." \
+  http://localhost:3001/api/v1/public/workspaces/<slug>/me
+
+# List projects (needs projects:read scope)
+curl -H "Authorization: Bearer tsk_live_..." \
+  "http://localhost:3001/api/v1/public/workspaces/<slug>/projects?limit=20"
+
+# List tasks in a project (needs tasks:read)
+curl -H "Authorization: Bearer tsk_live_..." \
+  "http://localhost:3001/api/v1/public/workspaces/<slug>/projects/<project-slug>/tasks?limit=20"
+
+# Create a task (needs tasks:write + Idempotency-Key)
+curl -X POST -H "Authorization: Bearer tsk_live_..." \
+  -H "Content-Type: application/json" -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"title":"Refresh nightly report","priority":"MEDIUM"}' \
+  "http://localhost:3001/api/v1/public/workspaces/<slug>/projects/<project-slug>/tasks"
+```
+
+Missing-scope responses use `about:blank#api-key-missing-scope` (HTTP 403);
+missing-auth responses use `#api-key-unauthorized` (401); rate limit
+exhaustion returns `#rate-limit-exceeded` (429) with a `Retry-After` header
+in seconds.
+
 ### Public API — OpenAPI baseline
 
 `openapi/baseline.json` is a committed snapshot of the OpenAPI 3.x document

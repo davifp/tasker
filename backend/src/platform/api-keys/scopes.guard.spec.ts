@@ -42,6 +42,7 @@ describe('ScopesGuard', () => {
       apiKeyId: 'k1',
       workspaceId: 'w1',
       scopes: ['tasks:read', 'projects:read'],
+      userId: 'u1',
     };
     expect(guard.canActivate(ctxWith(principal))).toBe(true);
   });
@@ -53,6 +54,7 @@ describe('ScopesGuard', () => {
       apiKeyId: 'k1',
       workspaceId: 'w1',
       scopes: ['tasks:read'],
+      userId: 'u1',
     };
     try {
       guard.canActivate(ctxWith(principal));
@@ -75,6 +77,7 @@ describe('ScopesGuard', () => {
       apiKeyId: 'k1',
       workspaceId: 'w1',
       scopes: ['tasks:read'],
+      userId: 'u1',
     };
     expect(() => guard.canActivate(ctxWith(principal))).toThrow(ForbiddenException);
   });

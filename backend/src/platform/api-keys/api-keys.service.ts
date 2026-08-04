@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { ApiKey, Prisma } from '@prisma/client';
+import type { ApiKey, Prisma, WorkspaceRole } from '@prisma/client';
 import { API_KEY_SCOPES, type ApiKeyScope } from '@tasker/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApiKeyHasher } from './api-key-hasher';
@@ -41,6 +41,14 @@ export interface VerifiedApiKey {
   apiKeyId: string;
   workspaceId: string;
   scopes: ApiKeyScope[];
+  /**
+   * The admin (Workspace Member) who minted the key. All actions taken with
+   * this key are attributed to this user in the audit trail; RBAC decisions
+   * use this member's current role, so a demotion tightens the key's reach.
+   */
+  actorUserId: string;
+  actorRole: WorkspaceRole;
+  actorMembershipId: string;
 }
 
 @Injectable()
@@ -137,6 +145,14 @@ export class ApiKeysService {
       if (row.revokedAt) continue;
       if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) continue;
       if (!this.hasher.verify(raw, row.keySalt, row.keyHash)) continue;
+      // Read the creator's current membership so RBAC decisions reflect the
+      // *current* role — a demoted admin's key loses its elevated reach.
+      const membership = await this.prisma.forSystem().workspaceMember.findUnique({
+        where: {
+          workspaceId_userId: { workspaceId: row.workspaceId, userId: row.createdByUserId },
+        },
+      });
+      if (!membership) continue;
       this.bumpLastUsed(row).catch(() => {
         // Non-fatal — the auth decision must not depend on this write.
       });
@@ -144,6 +160,9 @@ export class ApiKeysService {
         apiKeyId: row.id,
         workspaceId: row.workspaceId,
         scopes: this.parseScopes(row.scopes),
+        actorUserId: row.createdByUserId,
+        actorRole: membership.role,
+        actorMembershipId: membership.id,
       };
     }
     return null;
