@@ -115,6 +115,64 @@ enum AiFeedbackRating {
   NEGATIVE
 }
 
+// Platform (public API). Granular scopes issued per API key so a script
+// only receives the least privilege it actually needs. Enum members are
+// UPPER_SNAKE with a `:`-separated logical form (`tasks:read`) mirrored 1:1
+// by the Zod schema in `@tasker/config` — see PLATFORM_API_KEY_SCOPES.
+enum ApiKeyScope {
+  TASKS_READ
+  TASKS_WRITE
+  PROJECTS_READ
+  PROJECTS_WRITE
+  COMMENTS_READ
+  COMMENTS_WRITE
+  SPRINTS_READ
+  SPRINTS_WRITE
+  MEMBERS_READ
+  WEBHOOKS_MANAGE
+}
+
+// Platform (outbound webhooks). Subset of domain events promoted to the
+// public contract; adding a new event requires bumping the wire enum and
+// documenting it — subscribers depend on the value name.
+enum WebhookEventType {
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_DELETED
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  PROJECT_DELETED
+  COMMENT_CREATED
+  COMMENT_UPDATED
+  COMMENT_DELETED
+  SPRINT_CREATED
+  SPRINT_UPDATED
+  SPRINT_STARTED
+  SPRINT_COMPLETED
+}
+
+// Platform (integrations). One row per provider available in v1.
+enum IntegrationProvider {
+  GITHUB
+  GOOGLE_CALENDAR
+}
+
+// Platform (integrations). CONNECTED is the healthy state; upstream token
+// revocation or 401/403 from a provider call flips the row to
+// NEEDS_RECONNECT, which the UI surfaces as a *Reconnect* CTA.
+enum IntegrationState {
+  CONNECTED
+  NEEDS_RECONNECT
+  DISCONNECTED
+}
+
+// Platform (GitHub link). Distinguishes between issues and pull requests
+// so the mirror can pick the right REST endpoint on write-back.
+enum TaskExternalLinkType {
+  ISSUE
+  PR
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique @db.Citext
@@ -153,6 +211,11 @@ model User {
   aiConsentsAccepted      WorkspaceAiConsent[]        @relation("AiConsentAcceptor")
   aiInvocations           AiInvocation[]              @relation("AiInvocationActor")
   aiFeedbackGiven         AiFeedback[]                @relation("AiFeedbackAuthor")
+
+  // Platform (Phase 10)
+  apiKeysCreated       ApiKey[]      @relation("ApiKeyCreator")
+  webhooksCreated      Webhook[]     @relation("WebhookCreator")
+  integrationsCreated  Integration[] @relation("IntegrationCreator")
 }
 
 model OAuthAccount {
@@ -162,7 +225,8 @@ model OAuthAccount {
   providerAccountId String
   createdAt         DateTime      @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integrations Integration[]
 
   @@unique([provider, providerAccountId])
 }
@@ -221,6 +285,12 @@ model Workspace {
   aiUsage          WorkspaceAiUsage[]
   aiInvocations    AiInvocation[]
   aiFeedback       AiFeedback[]
+
+  // Platform (Phase 10)
+  apiKeys              ApiKey[]
+  webhooks             Webhook[]
+  integrations         Integration[]
+  taskExternalLinks    TaskExternalLink[]
 }
 
 model WorkspaceMember {
@@ -377,6 +447,7 @@ model Task {
   attachments     Attachment[]
   activities      Activity[]
   sprintSnapshots SprintTaskSnapshot[]
+  externalLinks   TaskExternalLink[]
 
   @@unique([projectId, number])
   @@index([workspaceId, projectId, status, position])
@@ -838,4 +909,172 @@ model AiFeedback {
   @@unique([invocationId, createdByUserId])
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([invocationId])
+}
+
+// Platform (Phase 10) — Public API access key. Stored as a salted SHA-256
+// digest (`keyHash` = HMAC-SHA256(keySalt, raw)); the raw value is shown to
+// the creator once at creation time and never re-derivable. `keyPrefix` +
+// `last4` are safe for display and secret-scanning without leaking the key.
+// `scopes` is a JSON array of ApiKeyScope values (validated on write by Zod).
+// `lastUsedAt` is bumped by the auth guard at most once per minute of activity.
+model ApiKey {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  name            String
+  keyHash         String
+  keySalt         String
+  keyPrefix       String
+  last4           String
+  scopes          Json      @default("[]")
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  lastUsedAt      DateTime?
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User          @relation("ApiKeyCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  usage     ApiKeyUsage[]
+
+  // Verification path: hash lookup is scoped by prefix + last4 (short-list
+  // candidates cheaply, then constant-time compare on `keyHash`).
+  @@unique([keyPrefix, last4, keyHash])
+  @@index([workspaceId, revokedAt])
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
+
+// Platform — per-minute usage rollup. Written by an async sink (never on the
+// hot request path); powers the API-key usage panel and rate-limit dashboards.
+// `bucketMinute` is the UTC-truncated minute (`YYYY-MM-DDTHH:MM:00Z`) so
+// aggregation is a simple GROUP BY on a string.
+model ApiKeyUsage {
+  id                String @id @default(cuid())
+  apiKeyId          String
+  bucketMinute      String
+  requestCount      Int    @default(0)
+  rateLimitedCount  Int    @default(0)
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@unique([apiKeyId, bucketMinute])
+  @@index([apiKeyId, bucketMinute(sort: Desc)])
+}
+
+// Platform — outbound webhook subscription. `secretHash` + `secretSalt` are
+// stored the same way as ApiKey — the raw secret is shown once at create and
+// again once after rotate-secret, then never returned. `eventTypes` is a
+// String[] of WebhookEventType values (Postgres native array).
+model Webhook {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  url              String
+  eventTypes       String[]
+  secretHash       String
+  secretSalt       String
+  secretRotatedAt  DateTime?
+  isActive         Boolean   @default(true)
+  createdByUserId  String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workspace     Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy     User                   @relation("WebhookCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  deliveries    WebhookDelivery[]
+  dlqDeliveries WebhookDeliveryDLQ[]
+
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
+
+// Platform — one row per delivery attempt (BullMQ retry included). Retention:
+// 30 days, swept by the existing CleanupProcessor with a new job type.
+// `eventId` is the idempotency key echoed to the receiver so they can dedupe
+// retries. `responseSnippet` is truncated to the first ~1KB of the body.
+model WebhookDelivery {
+  id              String    @id @default(cuid())
+  webhookId       String
+  eventType       String
+  eventId         String
+  attempt         Int       @default(1)
+  statusCode      Int?
+  responseSnippet String?
+  error           String?
+  enqueuedAt      DateTime  @default(now())
+  deliveredAt     DateTime?
+  failedAt        DateTime?
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, enqueuedAt(sort: Desc)])
+  @@index([webhookId, eventId])
+  @@index([enqueuedAt])
+}
+
+// Platform — dead-letter queue. Populated when a delivery exhausts its retry
+// budget (24 h ceiling). `payload` is the exact JSON body that was going to be
+// POSTed, so a manual replay can rebuild the request byte-for-byte. Retention:
+// 30 days, swept alongside WebhookDelivery.
+model WebhookDeliveryDLQ {
+  id             String   @id @default(cuid())
+  webhookId      String
+  eventType      String
+  eventId        String
+  payload        Json
+  lastAttemptAt  DateTime
+  retryCount     Int
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+}
+
+// Platform — one row per (workspace, provider). References the existing
+// OAuthAccount row so the OAuth adapter continues to own token refresh and
+// scope grants; `config` carries integration-specific settings (selected
+// repositories, target calendar id, etc.). `state` distinguishes CONNECTED
+// from NEEDS_RECONNECT so the UI can render the *Reconnect* CTA without
+// re-inspecting the underlying token.
+model Integration {
+  id              String              @id @default(cuid())
+  workspaceId     String
+  provider        IntegrationProvider
+  oauthAccountId  String
+  config          Json                @default("{}")
+  state           IntegrationState    @default(CONNECTED)
+  createdByUserId String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  oauthAccount OAuthAccount @relation(fields: [oauthAccountId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("IntegrationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([workspaceId, provider])
+  @@index([workspaceId, state])
+}
+
+// Platform (GitHub) — bidirectional link from a Tasker task to an external
+// issue or pull request. `externalRef` is the canonical `owner/repo#n` form;
+// the unique on (taskId, provider, externalRef) blocks duplicate links from
+// either direction (Tasker → GitHub or GitHub webhook → Tasker).
+model TaskExternalLink {
+  id           String               @id @default(cuid())
+  workspaceId  String
+  taskId       String
+  provider     IntegrationProvider
+  externalType TaskExternalLinkType
+  externalRef  String
+  externalUrl  String
+  createdAt    DateTime             @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, provider, externalRef])
+  @@index([workspaceId, provider])
+  @@index([taskId])
 }

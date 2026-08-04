@@ -146,6 +146,47 @@ export const envSchema = z.object({
   // Per-user rate limit on AI action endpoints (see AppModule throttler set).
   THROTTLE_AI_ACTION_LIMIT: z.coerce.number().default(30),
   THROTTLE_AI_ACTION_TTL_S: z.coerce.number().default(60),
+
+  // Platform (Phase 10) — Public API, Webhooks, Integrations.
+  //
+  // API keys carry a visible prefix so leaked-key scanners (GitHub Secret
+  // Scanning, TruffleHog, git-secrets) can flag them by regex; the default
+  // uses `tsk_live` for prod parity but the env var lets each environment
+  // pick its own prefix (e.g. `tsk_test` for staging) without a code change.
+  API_KEY_PREFIX: z.string().default('tsk_live'),
+
+  // Outbound webhook delivery. `attempts` × exponential backoff (base_ms → cap_ms)
+  // targets a ~24 h ceiling (PRD FR-21). Values are exposed as env so ops can
+  // tighten the SLA per environment without a redeploy.
+  WEBHOOK_MAX_ATTEMPTS: z.coerce.number().int().positive().default(24),
+  WEBHOOK_BACKOFF_BASE_MS: z.coerce.number().int().positive().default(1000),
+  WEBHOOK_BACKOFF_CAP_MS: z.coerce.number().int().positive().default(3_600_000),
+  // Per-request timeout on the HTTP POST to the subscriber (techspec: 10 s).
+  WEBHOOK_HTTP_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  // Retention window (days) applied by CleanupProcessor to WebhookDelivery
+  // and WebhookDeliveryDLQ rows. Techspec: 30 days.
+  WEBHOOK_DELIVERY_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
+
+  // Rate limiting for the public API — sustained requests-per-minute per key,
+  // with a small burst allowance to smooth over short spikes (PRD FR-15..18).
+  RATE_LIMIT_DEFAULT_PER_MIN: z.coerce.number().int().positive().default(1000),
+  RATE_LIMIT_BURST: z.coerce.number().int().nonnegative().default(50),
+
+  // GitHub integration (Phase 10). OAuth client for the *integration* is
+  // distinct from GITHUB_CLIENT_ID/SECRET (the sign-in identity provider) so
+  // the two can be rotated independently. `GITHUB_APP_WEBHOOK_SECRET` protects
+  // the internal inbound receiver at /api/internal/integrations/github/events.
+  GITHUB_OAUTH_CLIENT_ID: z.string().default(''),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().default(''),
+  GITHUB_APP_WEBHOOK_SECRET: z.string().default(''),
+
+  // Google Calendar integration (Phase 10). Same split as GitHub — a dedicated
+  // OAuth client isolates calendar scopes from sign-in scopes.
+  GOOGLE_OAUTH_CLIENT_ID: z.string().default(''),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().default(''),
+
+  // Per-provider HTTP timeout for outbound integration calls (techspec: 15 s).
+  INTEGRATION_HTTP_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
 });
 
 export type Env = z.infer<typeof envSchema>;
