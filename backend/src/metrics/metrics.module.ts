@@ -14,6 +14,7 @@ import { SearchAuditMetricsCollector } from './search-audit.metrics';
 import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
+import { RateLimitingModule } from '../platform/rate-limiting/rate-limiting.module';
 
 @Global()
 @Module({
@@ -22,6 +23,7 @@ import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
     SprintsModule,
     RedisModule,
     BullModule.registerQueue({ name: METRICS_QUEUE }),
+    RateLimitingModule,
   ],
   controllers: [DashboardController, MetricsController],
   providers: [

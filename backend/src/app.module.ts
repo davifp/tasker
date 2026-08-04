@@ -43,6 +43,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PushModule } from './push/push.module';
 import { AiModule } from './ai/ai.module';
 import { PlatformModule } from './platform/platform.module';
+import { RateLimitInterceptor } from './platform/rate-limiting/rate-limit.interceptor';
 import { WorkspaceGuard } from './common/context/workspace.guard';
 import { RolesGuard } from './common/context/roles.guard';
 import { WorkspaceContextInterceptor } from './common/context/workspace-context.interceptor';
@@ -223,6 +224,13 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditMutationInterceptor,
+    },
+    // Runs on every request but no-ops unless the caller authenticated with
+    // an API key. Stamps `X-RateLimit-*` on the response and throws 429 when
+    // the token bucket is empty.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RateLimitInterceptor,
     },
   ],
 })

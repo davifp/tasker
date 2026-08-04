@@ -5,6 +5,7 @@ import { SearchAuditMetricsCollector } from './search-audit.metrics';
 import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
+import { RateLimitMetricsCollector } from '../platform/rate-limiting/rate-limit.metrics';
 
 describe('MetricsController', () => {
   let planning: PlanningMetricsCollector;
@@ -12,6 +13,7 @@ describe('MetricsController', () => {
   let realtime: RealtimeMetricsCollector;
   let notifications: NotificationsMetricsCollector;
   let ai: AiMetricsCollector;
+  let rateLimit: RateLimitMetricsCollector;
   let controller: MetricsController;
 
   beforeEach(() => {
@@ -20,7 +22,15 @@ describe('MetricsController', () => {
     realtime = new RealtimeMetricsCollector();
     notifications = new NotificationsMetricsCollector();
     ai = new AiMetricsCollector();
-    controller = new MetricsController(planning, searchAudit, realtime, notifications, ai);
+    rateLimit = new RateLimitMetricsCollector();
+    controller = new MetricsController(
+      planning,
+      searchAudit,
+      realtime,
+      notifications,
+      ai,
+      rateLimit,
+    );
   });
 
   it('concatenates output from every collector', () => {
@@ -33,6 +43,8 @@ describe('MetricsController', () => {
     notifications.incrementDelivered('IN_APP', 'TASK_ASSIGNED', 'success');
     notifications.incrementPushCleaned('gone');
     ai.incrementInvocation('GENERATE_DESCRIPTION', 'anthropic', 'claude-sonnet-4-6', 'OK');
+    rateLimit.incrementRequest('tsk_live', 200);
+    rateLimit.incrementRateLimitHit('tsk_live');
 
     const body = controller.scrape();
     expect(body).toContain('tasker_sprint_transition_total{from="PLANNED",to="ACTIVE"} 1');
@@ -50,6 +62,8 @@ describe('MetricsController', () => {
     expect(body).toContain(
       'tasker_ai_invocations_total{action="GENERATE_DESCRIPTION",provider="anthropic",model="claude-sonnet-4-6",status="OK"} 1',
     );
+    expect(body).toContain('platform_api_requests_total{key_prefix="tsk_live",status="200"} 1');
+    expect(body).toContain('platform_api_ratelimit_hits_total{key_prefix="tsk_live"} 1');
     expect(body.endsWith('\n')).toBe(true);
   });
 });

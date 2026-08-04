@@ -5,6 +5,7 @@ import { SearchAuditMetricsCollector } from './search-audit.metrics';
 import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
+import { RateLimitMetricsCollector } from '../platform/rate-limiting/rate-limit.metrics';
 
 /**
  * Prometheus scrape endpoint. Public so a scraper doesn't need auth —
@@ -20,6 +21,7 @@ export class MetricsController {
     private readonly realtime: RealtimeMetricsCollector,
     private readonly notifications: NotificationsMetricsCollector,
     private readonly ai: AiMetricsCollector,
+    private readonly rateLimit: RateLimitMetricsCollector,
   ) {}
 
   @Get()
@@ -31,7 +33,8 @@ export class MetricsController {
       this.searchAudit.render() +
       this.realtime.render() +
       this.notifications.render() +
-      this.ai.render()
+      this.ai.render() +
+      this.rateLimit.render()
     );
   }
 }

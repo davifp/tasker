@@ -26,7 +26,9 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": ["status"],
+                        "required": [
+                          "status"
+                        ],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -41,7 +43,9 @@
                       "example": {},
                       "additionalProperties": {
                         "type": "object",
-                        "required": ["status"],
+                        "required": [
+                          "status"
+                        ],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -60,7 +64,9 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": ["status"],
+                        "required": [
+                          "status"
+                        ],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -94,7 +100,9 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": ["status"],
+                        "required": [
+                          "status"
+                        ],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -114,7 +122,9 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": ["status"],
+                        "required": [
+                          "status"
+                        ],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -137,7 +147,9 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": ["status"],
+                        "required": [
+                          "status"
+                        ],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -152,7 +164,9 @@
             }
           }
         },
-        "tags": ["Health"]
+        "tags": [
+          "Health"
+        ]
       }
     },
     "/api/v1/auth/register": {
@@ -174,7 +188,9 @@
             "description": ""
           }
         },
-        "tags": ["Auth"]
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/v1/auth/login": {
@@ -186,7 +202,9 @@
             "description": ""
           }
         },
-        "tags": ["Auth"]
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/v1/auth/refresh": {
@@ -208,7 +226,9 @@
             "description": ""
           }
         },
-        "tags": ["Auth"]
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/v1/auth/logout": {
@@ -220,7 +240,9 @@
             "description": ""
           }
         },
-        "tags": ["Auth"]
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/v1/auth/email/verify": {
@@ -242,7 +264,9 @@
             "description": ""
           }
         },
-        "tags": ["EmailVerification"]
+        "tags": [
+          "EmailVerification"
+        ]
       }
     },
     "/api/v1/auth/email/verify/resend": {
@@ -254,7 +278,9 @@
             "description": ""
           }
         },
-        "tags": ["EmailVerification"]
+        "tags": [
+          "EmailVerification"
+        ]
       }
     },
     "/api/v1/auth/password/reset/request": {
@@ -276,7 +302,9 @@
             "description": ""
           }
         },
-        "tags": ["PasswordReset"]
+        "tags": [
+          "PasswordReset"
+        ]
       }
     },
     "/api/v1/auth/password/reset/confirm": {
@@ -298,7 +326,9 @@
             "description": ""
           }
         },
-        "tags": ["PasswordReset"]
+        "tags": [
+          "PasswordReset"
+        ]
       }
     },
     "/api/v1/me": {
@@ -310,7 +340,9 @@
             "description": ""
           }
         },
-        "tags": ["Me"]
+        "tags": [
+          "Me"
+        ]
       }
     },
     "/api/v1/me/sessions": {
@@ -322,7 +354,9 @@
             "description": ""
           }
         },
-        "tags": ["Me"]
+        "tags": [
+          "Me"
+        ]
       }
     },
     "/api/v1/me/sessions/{id}": {
@@ -343,7 +377,9 @@
             "description": ""
           }
         },
-        "tags": ["Me"]
+        "tags": [
+          "Me"
+        ]
       }
     },
     "/api/v1/me/workspaces": {
@@ -355,7 +391,9 @@
             "description": ""
           }
         },
-        "tags": ["Me"]
+        "tags": [
+          "Me"
+        ]
       }
     },
     "/api/v1/auth/oauth/{provider}": {
@@ -376,7 +414,9 @@
             "description": ""
           }
         },
-        "tags": ["OAuth"]
+        "tags": [
+          "OAuth"
+        ]
       }
     },
     "/api/v1/auth/oauth/{provider}/callback": {
@@ -397,7 +437,9 @@
             "description": ""
           }
         },
-        "tags": ["OAuth"]
+        "tags": [
+          "OAuth"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/activity": {
@@ -418,7 +460,9 @@
             "description": ""
           }
         },
-        "tags": ["Activity"]
+        "tags": [
+          "Activity"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/activity": {
@@ -447,7 +491,9 @@
             "description": ""
           }
         },
-        "tags": ["Activity"]
+        "tags": [
+          "Activity"
+        ]
       }
     },
     "/api/v1/workspaces": {
@@ -469,7 +515,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}": {
@@ -490,7 +538,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       },
       "patch": {
         "operationId": "WorkspacesController_updateWorkspace",
@@ -519,7 +569,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       },
       "delete": {
         "operationId": "WorkspacesController_deleteWorkspace",
@@ -538,7 +590,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/restore": {
@@ -559,7 +613,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/transfer-ownership": {
@@ -590,7 +646,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/members": {
@@ -611,7 +669,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/members/{userId}": {
@@ -650,7 +710,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       },
       "delete": {
         "operationId": "WorkspacesController_removeMember",
@@ -677,7 +739,9 @@
             "description": ""
           }
         },
-        "tags": ["Workspaces"]
+        "tags": [
+          "Workspaces"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/invitations": {
@@ -708,7 +772,9 @@
             "description": ""
           }
         },
-        "tags": ["WorkspaceInvitations"]
+        "tags": [
+          "WorkspaceInvitations"
+        ]
       },
       "get": {
         "operationId": "WorkspaceInvitationsController_listInvitations",
@@ -727,7 +793,9 @@
             "description": ""
           }
         },
-        "tags": ["WorkspaceInvitations"]
+        "tags": [
+          "WorkspaceInvitations"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/invitations/{id}": {
@@ -756,7 +824,9 @@
             "description": ""
           }
         },
-        "tags": ["WorkspaceInvitations"]
+        "tags": [
+          "WorkspaceInvitations"
+        ]
       }
     },
     "/api/v1/invitations/{token}/accept": {
@@ -777,7 +847,9 @@
             "description": ""
           }
         },
-        "tags": ["PublicInvitations"]
+        "tags": [
+          "PublicInvitations"
+        ]
       }
     },
     "/api/v1/invitations/{token}/decline": {
@@ -798,7 +870,9 @@
             "description": ""
           }
         },
-        "tags": ["PublicInvitations"]
+        "tags": [
+          "PublicInvitations"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects": {
@@ -820,7 +894,9 @@
             "description": ""
           }
         },
-        "tags": ["Projects"]
+        "tags": [
+          "Projects"
+        ]
       },
       "get": {
         "operationId": "ProjectsController_list",
@@ -830,7 +906,9 @@
             "description": ""
           }
         },
-        "tags": ["Projects"]
+        "tags": [
+          "Projects"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}": {
@@ -851,7 +929,9 @@
             "description": ""
           }
         },
-        "tags": ["Projects"]
+        "tags": [
+          "Projects"
+        ]
       },
       "patch": {
         "operationId": "ProjectsController_update",
@@ -880,7 +960,9 @@
             "description": ""
           }
         },
-        "tags": ["Projects"]
+        "tags": [
+          "Projects"
+        ]
       },
       "delete": {
         "operationId": "ProjectsController_remove",
@@ -899,7 +981,9 @@
             "description": ""
           }
         },
-        "tags": ["Projects"]
+        "tags": [
+          "Projects"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/restore": {
@@ -920,7 +1004,9 @@
             "description": ""
           }
         },
-        "tags": ["Projects"]
+        "tags": [
+          "Projects"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/labels": {
@@ -942,7 +1028,9 @@
             "description": ""
           }
         },
-        "tags": ["Labels"]
+        "tags": [
+          "Labels"
+        ]
       },
       "get": {
         "operationId": "LabelsController_list",
@@ -952,7 +1040,9 @@
             "description": ""
           }
         },
-        "tags": ["Labels"]
+        "tags": [
+          "Labels"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/labels/{id}": {
@@ -983,7 +1073,9 @@
             "description": ""
           }
         },
-        "tags": ["Labels"]
+        "tags": [
+          "Labels"
+        ]
       },
       "delete": {
         "operationId": "LabelsController_remove",
@@ -1002,7 +1094,9 @@
             "description": ""
           }
         },
-        "tags": ["Labels"]
+        "tags": [
+          "Labels"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks": {
@@ -1033,7 +1127,9 @@
             "description": ""
           }
         },
-        "tags": ["Tasks"]
+        "tags": [
+          "Tasks"
+        ]
       },
       "get": {
         "operationId": "TasksController_list",
@@ -1052,7 +1148,9 @@
             "description": ""
           }
         },
-        "tags": ["Tasks"]
+        "tags": [
+          "Tasks"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}": {
@@ -1081,7 +1179,9 @@
             "description": ""
           }
         },
-        "tags": ["Tasks"]
+        "tags": [
+          "Tasks"
+        ]
       },
       "patch": {
         "operationId": "TasksController_update",
@@ -1118,7 +1218,9 @@
             "description": ""
           }
         },
-        "tags": ["Tasks"]
+        "tags": [
+          "Tasks"
+        ]
       },
       "delete": {
         "operationId": "TasksController_remove",
@@ -1145,7 +1247,9 @@
             "description": ""
           }
         },
-        "tags": ["Tasks"]
+        "tags": [
+          "Tasks"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/move": {
@@ -1184,7 +1288,9 @@
             "description": ""
           }
         },
-        "tags": ["Tasks"]
+        "tags": [
+          "Tasks"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/restore": {
@@ -1213,7 +1319,9 @@
             "description": ""
           }
         },
-        "tags": ["Tasks"]
+        "tags": [
+          "Tasks"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/dependencies": {
@@ -1242,7 +1350,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskDependencies"]
+        "tags": [
+          "TaskDependencies"
+        ]
       },
       "post": {
         "operationId": "TaskDependenciesController_add",
@@ -1279,7 +1389,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskDependencies"]
+        "tags": [
+          "TaskDependencies"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/dependencies/{blockerId}": {
@@ -1316,7 +1428,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskDependencies"]
+        "tags": [
+          "TaskDependencies"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/checklist": {
@@ -1345,7 +1459,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskChecklists"]
+        "tags": [
+          "TaskChecklists"
+        ]
       },
       "post": {
         "operationId": "TaskChecklistsController_create",
@@ -1382,7 +1498,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskChecklists"]
+        "tags": [
+          "TaskChecklists"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/checklist/{itemId}": {
@@ -1429,7 +1547,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskChecklists"]
+        "tags": [
+          "TaskChecklists"
+        ]
       },
       "delete": {
         "operationId": "TaskChecklistsController_remove",
@@ -1464,7 +1584,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskChecklists"]
+        "tags": [
+          "TaskChecklists"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/comments": {
@@ -1493,7 +1615,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskComments"]
+        "tags": [
+          "TaskComments"
+        ]
       },
       "post": {
         "operationId": "TaskCommentsController_create",
@@ -1530,7 +1654,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskComments"]
+        "tags": [
+          "TaskComments"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/comments/{id}": {
@@ -1577,7 +1703,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskComments"]
+        "tags": [
+          "TaskComments"
+        ]
       },
       "delete": {
         "operationId": "TaskCommentsController_remove",
@@ -1612,7 +1740,9 @@
             "description": ""
           }
         },
-        "tags": ["TaskComments"]
+        "tags": [
+          "TaskComments"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/members/mention-search": {
@@ -1624,7 +1754,9 @@
             "description": ""
           }
         },
-        "tags": ["Mentions"]
+        "tags": [
+          "Mentions"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/comments/{commentId}/reactions": {
@@ -1661,7 +1793,9 @@
             "description": ""
           }
         },
-        "tags": ["Reactions"]
+        "tags": [
+          "Reactions"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/comments/{commentId}/reactions/{emoji}": {
@@ -1706,7 +1840,9 @@
             "description": ""
           }
         },
-        "tags": ["Reactions"]
+        "tags": [
+          "Reactions"
+        ]
       },
       "delete": {
         "operationId": "ReactionsController_remove",
@@ -1749,7 +1885,9 @@
             "description": ""
           }
         },
-        "tags": ["Reactions"]
+        "tags": [
+          "Reactions"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/attachments/sign": {
@@ -1788,7 +1926,9 @@
             "description": ""
           }
         },
-        "tags": ["Attachments"]
+        "tags": [
+          "Attachments"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/attachments/{id}/confirm": {
@@ -1825,7 +1965,9 @@
             "description": ""
           }
         },
-        "tags": ["Attachments"]
+        "tags": [
+          "Attachments"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/attachments": {
@@ -1854,7 +1996,9 @@
             "description": ""
           }
         },
-        "tags": ["Attachments"]
+        "tags": [
+          "Attachments"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/attachments/{id}/download": {
@@ -1891,7 +2035,9 @@
             "description": ""
           }
         },
-        "tags": ["Attachments"]
+        "tags": [
+          "Attachments"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/attachments/{id}": {
@@ -1928,7 +2074,9 @@
             "description": ""
           }
         },
-        "tags": ["Attachments"]
+        "tags": [
+          "Attachments"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/me/view-preferences": {
@@ -1949,7 +2097,9 @@
             "description": ""
           }
         },
-        "tags": ["UserProjectViewPreferences"]
+        "tags": [
+          "UserProjectViewPreferences"
+        ]
       },
       "put": {
         "operationId": "UserProjectViewPreferencesController_put",
@@ -1978,7 +2128,9 @@
             "description": ""
           }
         },
-        "tags": ["UserProjectViewPreferences"]
+        "tags": [
+          "UserProjectViewPreferences"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/sprints": {
@@ -2009,7 +2161,9 @@
             "description": ""
           }
         },
-        "tags": ["Sprints"]
+        "tags": [
+          "Sprints"
+        ]
       },
       "get": {
         "operationId": "SprintsController_list",
@@ -2028,7 +2182,9 @@
             "description": ""
           }
         },
-        "tags": ["Sprints"]
+        "tags": [
+          "Sprints"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/sprints/{sprintNumber}": {
@@ -2057,7 +2213,9 @@
             "description": ""
           }
         },
-        "tags": ["Sprints"]
+        "tags": [
+          "Sprints"
+        ]
       },
       "patch": {
         "operationId": "SprintsController_update",
@@ -2094,7 +2252,9 @@
             "description": ""
           }
         },
-        "tags": ["Sprints"]
+        "tags": [
+          "Sprints"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/sprints/{sprintNumber}/tasks": {
@@ -2133,7 +2293,9 @@
             "description": ""
           }
         },
-        "tags": ["Sprints"]
+        "tags": [
+          "Sprints"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/sprints/{sprintNumber}/start": {
@@ -2162,7 +2324,9 @@
             "description": ""
           }
         },
-        "tags": ["Sprints"]
+        "tags": [
+          "Sprints"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/sprints/{sprintNumber}/complete": {
@@ -2191,7 +2355,9 @@
             "description": ""
           }
         },
-        "tags": ["Sprints"]
+        "tags": [
+          "Sprints"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/sprints/{sprintNumber}/capacity": {
@@ -2230,7 +2396,9 @@
             "description": ""
           }
         },
-        "tags": ["Sprints"]
+        "tags": [
+          "Sprints"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/epics": {
@@ -2261,7 +2429,9 @@
             "description": ""
           }
         },
-        "tags": ["Epics"]
+        "tags": [
+          "Epics"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/epics/{id}": {
@@ -2292,7 +2462,9 @@
             "description": ""
           }
         },
-        "tags": ["Epics"]
+        "tags": [
+          "Epics"
+        ]
       },
       "delete": {
         "operationId": "EpicsController_delete",
@@ -2311,7 +2483,9 @@
             "description": ""
           }
         },
-        "tags": ["Epics"]
+        "tags": [
+          "Epics"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/epics/{id}/tasks/{taskId}": {
@@ -2340,7 +2514,9 @@
             "description": ""
           }
         },
-        "tags": ["Epics"]
+        "tags": [
+          "Epics"
+        ]
       },
       "delete": {
         "operationId": "EpicsController_unlinkTask",
@@ -2367,7 +2543,9 @@
             "description": ""
           }
         },
-        "tags": ["Epics"]
+        "tags": [
+          "Epics"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/roadmap": {
@@ -2379,7 +2557,9 @@
             "description": ""
           }
         },
-        "tags": ["Roadmap"]
+        "tags": [
+          "Roadmap"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/projects/{projectSlug}/sprints/{sprintNumber}/burndown": {
@@ -2408,7 +2588,9 @@
             "description": ""
           }
         },
-        "tags": ["Dashboard"]
+        "tags": [
+          "Dashboard"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/dashboard/cycle-lead-time": {
@@ -2420,7 +2602,9 @@
             "description": ""
           }
         },
-        "tags": ["Dashboard"]
+        "tags": [
+          "Dashboard"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/dashboard/sprint-close/{sprintId}": {
@@ -2441,7 +2625,9 @@
             "description": ""
           }
         },
-        "tags": ["Dashboard"]
+        "tags": [
+          "Dashboard"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/dashboard/refresh": {
@@ -2463,7 +2649,9 @@
             "description": ""
           }
         },
-        "tags": ["Dashboard"]
+        "tags": [
+          "Dashboard"
+        ]
       }
     },
     "/api/v1/metrics": {
@@ -2475,7 +2663,9 @@
             "description": ""
           }
         },
-        "tags": ["Metrics"]
+        "tags": [
+          "Metrics"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/search": {
@@ -2496,7 +2686,9 @@
             "description": ""
           }
         },
-        "tags": ["Search"]
+        "tags": [
+          "Search"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/audit": {
@@ -2508,7 +2700,9 @@
             "description": ""
           }
         },
-        "tags": ["Audit"]
+        "tags": [
+          "Audit"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/audit/export.csv": {
@@ -2529,7 +2723,9 @@
             "description": ""
           }
         },
-        "tags": ["Audit"]
+        "tags": [
+          "Audit"
+        ]
       }
     },
     "/api/v1/realtime/ticket": {
@@ -2541,7 +2737,9 @@
             "description": ""
           }
         },
-        "tags": ["Realtime"]
+        "tags": [
+          "Realtime"
+        ]
       }
     },
     "/api/v1/realtime/ping": {
@@ -2553,7 +2751,9 @@
             "description": ""
           }
         },
-        "tags": ["Realtime"]
+        "tags": [
+          "Realtime"
+        ]
       }
     },
     "/api/v1/realtime/vapid-key": {
@@ -2565,7 +2765,9 @@
             "description": ""
           }
         },
-        "tags": ["Realtime"]
+        "tags": [
+          "Realtime"
+        ]
       }
     },
     "/api/v1/notifications": {
@@ -2577,7 +2779,9 @@
             "description": ""
           }
         },
-        "tags": ["Notifications"]
+        "tags": [
+          "Notifications"
+        ]
       }
     },
     "/api/v1/notifications/unread-count": {
@@ -2589,7 +2793,9 @@
             "description": ""
           }
         },
-        "tags": ["Notifications"]
+        "tags": [
+          "Notifications"
+        ]
       }
     },
     "/api/v1/notifications/{id}/read": {
@@ -2610,7 +2816,9 @@
             "description": ""
           }
         },
-        "tags": ["Notifications"]
+        "tags": [
+          "Notifications"
+        ]
       }
     },
     "/api/v1/notifications/read-all": {
@@ -2622,7 +2830,9 @@
             "description": ""
           }
         },
-        "tags": ["Notifications"]
+        "tags": [
+          "Notifications"
+        ]
       }
     },
     "/api/v1/notifications/preferences": {
@@ -2634,7 +2844,9 @@
             "description": ""
           }
         },
-        "tags": ["Preferences"]
+        "tags": [
+          "Preferences"
+        ]
       },
       "put": {
         "operationId": "PreferencesController_update",
@@ -2654,7 +2866,9 @@
             "description": ""
           }
         },
-        "tags": ["Preferences"]
+        "tags": [
+          "Preferences"
+        ]
       }
     },
     "/api/v1/push/subscriptions": {
@@ -2676,7 +2890,9 @@
             "description": ""
           }
         },
-        "tags": ["PushSubscriptions"]
+        "tags": [
+          "PushSubscriptions"
+        ]
       }
     },
     "/api/v1/push/subscriptions/{endpoint}": {
@@ -2697,7 +2913,9 @@
             "description": ""
           }
         },
-        "tags": ["PushSubscriptions"]
+        "tags": [
+          "PushSubscriptions"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/ai/consent": {
@@ -2709,7 +2927,9 @@
             "description": ""
           }
         },
-        "tags": ["Ai"]
+        "tags": [
+          "Ai"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/ai/usage": {
@@ -2721,7 +2941,9 @@
             "description": ""
           }
         },
-        "tags": ["Ai"]
+        "tags": [
+          "Ai"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/ai/feedback": {
@@ -2733,7 +2955,9 @@
             "description": ""
           }
         },
-        "tags": ["Ai"]
+        "tags": [
+          "Ai"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/ai/tasks/{taskId}/generate-description": {
@@ -2754,7 +2978,9 @@
             "description": ""
           }
         },
-        "tags": ["Ai"]
+        "tags": [
+          "Ai"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/ai/tasks/{taskId}/comments/summarize": {
@@ -2775,7 +3001,9 @@
             "description": ""
           }
         },
-        "tags": ["Ai"]
+        "tags": [
+          "Ai"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/ai/tasks/{taskId}/generate-checklist": {
@@ -2796,7 +3024,9 @@
             "description": ""
           }
         },
-        "tags": ["Ai"]
+        "tags": [
+          "Ai"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/ai/tasks/{taskId}/estimate-and-suggest": {
@@ -2817,7 +3047,9 @@
             "description": ""
           }
         },
-        "tags": ["Ai"]
+        "tags": [
+          "Ai"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/api-keys": {
@@ -2829,7 +3061,9 @@
             "description": ""
           }
         },
-        "tags": ["ApiKeys"]
+        "tags": [
+          "ApiKeys"
+        ]
       },
       "post": {
         "operationId": "ApiKeysController_create",
@@ -2849,7 +3083,9 @@
             "description": ""
           }
         },
-        "tags": ["ApiKeys"]
+        "tags": [
+          "ApiKeys"
+        ]
       }
     },
     "/api/v1/workspaces/{slug}/api-keys/{id}/revoke": {
@@ -2870,7 +3106,9 @@
             "description": ""
           }
         },
-        "tags": ["ApiKeys"]
+        "tags": [
+          "ApiKeys"
+        ]
       }
     }
   },
@@ -2957,7 +3195,11 @@
             "maxLength": 100
           }
         },
-        "required": ["email", "password", "displayName"]
+        "required": [
+          "email",
+          "password",
+          "displayName"
+        ]
       },
       "RefreshDto": {
         "type": "object",
@@ -2967,7 +3209,9 @@
             "minLength": 1
           }
         },
-        "required": ["refreshToken"]
+        "required": [
+          "refreshToken"
+        ]
       },
       "VerifyEmailDto": {
         "type": "object",
@@ -2977,7 +3221,9 @@
             "minLength": 1
           }
         },
-        "required": ["token"]
+        "required": [
+          "token"
+        ]
       },
       "PasswordResetRequestDto": {
         "type": "object",
@@ -2987,7 +3233,9 @@
             "format": "email"
           }
         },
-        "required": ["email"]
+        "required": [
+          "email"
+        ]
       },
       "PasswordResetConfirmDto": {
         "type": "object",
@@ -3001,7 +3249,10 @@
             "minLength": 8
           }
         },
-        "required": ["token", "password"]
+        "required": [
+          "token",
+          "password"
+        ]
       },
       "CreateWorkspaceDto": {
         "type": "object",
@@ -3018,7 +3269,10 @@
             "pattern": "^[a-z0-9-]+$"
           }
         },
-        "required": ["name", "slug"]
+        "required": [
+          "name",
+          "slug"
+        ]
       },
       "UpdateWorkspaceDto": {
         "type": "object",
@@ -3038,17 +3292,25 @@
             "minLength": 1
           }
         },
-        "required": ["newOwnerUserId"]
+        "required": [
+          "newOwnerUserId"
+        ]
       },
       "UpdateMemberDto": {
         "type": "object",
         "properties": {
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "MEMBER", "GUEST"]
+            "enum": [
+              "ADMIN",
+              "MEMBER",
+              "GUEST"
+            ]
           }
         },
-        "required": ["role"]
+        "required": [
+          "role"
+        ]
       },
       "CreateInvitationDto": {
         "type": "object",
@@ -3060,10 +3322,17 @@
           },
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "MEMBER", "GUEST"]
+            "enum": [
+              "ADMIN",
+              "MEMBER",
+              "GUEST"
+            ]
           }
         },
-        "required": ["email", "role"]
+        "required": [
+          "email",
+          "role"
+        ]
       },
       "CreateProjectDto": {
         "type": "object",
@@ -3093,7 +3362,12 @@
             "maxLength": 500
           }
         },
-        "required": ["name", "slug", "color", "icon"]
+        "required": [
+          "name",
+          "slug",
+          "color",
+          "icon"
+        ]
       },
       "UpdateProjectDto": {
         "type": "object",
@@ -3119,7 +3393,10 @@
           },
           "status": {
             "type": "string",
-            "enum": ["ACTIVE", "ARCHIVED"]
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
           }
         }
       },
@@ -3136,7 +3413,10 @@
             "pattern": "^#[0-9a-fA-F]{6}$"
           }
         },
-        "required": ["name", "color"]
+        "required": [
+          "name",
+          "color"
+        ]
       },
       "UpdateLabelDto": {
         "type": "object",
@@ -3166,11 +3446,21 @@
           },
           "priority": {
             "type": "string",
-            "enum": ["LOW", "MEDIUM", "HIGH"]
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
           },
           "status": {
             "type": "string",
-            "enum": ["BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"]
+            "enum": [
+              "BACKLOG",
+              "TODO",
+              "IN_PROGRESS",
+              "IN_REVIEW",
+              "DONE"
+            ]
           },
           "assigneeUserId": {
             "type": "string",
@@ -3193,7 +3483,9 @@
             }
           }
         },
-        "required": ["title"]
+        "required": [
+          "title"
+        ]
       },
       "UpdateTaskDto": {
         "type": "object",
@@ -3209,7 +3501,11 @@
           },
           "priority": {
             "type": "string",
-            "enum": ["LOW", "MEDIUM", "HIGH"]
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
           },
           "assigneeUserId": {
             "type": "string",
@@ -3241,7 +3537,13 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"]
+            "enum": [
+              "BACKLOG",
+              "TODO",
+              "IN_PROGRESS",
+              "IN_REVIEW",
+              "DONE"
+            ]
           },
           "position": {
             "type": "string",
@@ -3257,7 +3559,11 @@
             "type": "boolean"
           }
         },
-        "required": ["status", "position", "ifUnchangedSince"]
+        "required": [
+          "status",
+          "position",
+          "ifUnchangedSince"
+        ]
       },
       "CreateDependencyDto": {
         "type": "object",
@@ -3267,7 +3573,9 @@
             "minLength": 1
           }
         },
-        "required": ["blockedByTaskId"]
+        "required": [
+          "blockedByTaskId"
+        ]
       },
       "CreateChecklistItemDto": {
         "type": "object",
@@ -3278,7 +3586,9 @@
             "maxLength": 200
           }
         },
-        "required": ["title"]
+        "required": [
+          "title"
+        ]
       },
       "UpdateChecklistItemDto": {
         "type": "object",
@@ -3308,7 +3618,9 @@
             "maxLength": 10000
           }
         },
-        "required": ["body"]
+        "required": [
+          "body"
+        ]
       },
       "UpdateCommentDto": {
         "type": "object",
@@ -3319,7 +3631,9 @@
             "maxLength": 10000
           }
         },
-        "required": ["body"]
+        "required": [
+          "body"
+        ]
       },
       "SignAttachmentDto": {
         "type": "object",
@@ -3342,14 +3656,24 @@
             "exclusiveMaximum": false
           }
         },
-        "required": ["filename", "mime", "sizeBytes"]
+        "required": [
+          "filename",
+          "mime",
+          "sizeBytes"
+        ]
       },
       "UpdateViewPreferencesDto": {
         "type": "object",
         "properties": {
           "defaultView": {
             "type": "string",
-            "enum": ["board", "list", "backlog", "calendar", "timeline"]
+            "enum": [
+              "board",
+              "list",
+              "backlog",
+              "calendar",
+              "timeline"
+            ]
           },
           "list": {
             "type": "object",
@@ -3379,13 +3703,23 @@
                   },
                   "dir": {
                     "type": "string",
-                    "enum": ["asc", "desc"]
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
                   }
                 },
-                "required": ["by", "dir"]
+                "required": [
+                  "by",
+                  "dir"
+                ]
               }
             },
-            "required": ["columns", "hidden", "sort"]
+            "required": [
+              "columns",
+              "hidden",
+              "sort"
+            ]
           },
           "timeline": {
             "type": "object",
@@ -3405,7 +3739,9 @@
                 ]
               }
             },
-            "required": ["windowWeeks"]
+            "required": [
+              "windowWeeks"
+            ]
           },
           "filtersMemo": {
             "type": "object",
@@ -3415,7 +3751,13 @@
                 "maxItems": 100,
                 "items": {
                   "type": "string",
-                  "enum": ["BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"]
+                  "enum": [
+                    "BACKLOG",
+                    "TODO",
+                    "IN_PROGRESS",
+                    "IN_REVIEW",
+                    "DONE"
+                  ]
                 }
               },
               "assigneeUserId": {
@@ -3435,7 +3777,11 @@
                 "maxItems": 100,
                 "items": {
                   "type": "string",
-                  "enum": ["LOW", "MEDIUM", "HIGH"]
+                  "enum": [
+                    "LOW",
+                    "MEDIUM",
+                    "HIGH"
+                  ]
                 }
               },
               "from": {
@@ -3448,11 +3794,20 @@
               },
               "sort": {
                 "type": "string",
-                "enum": ["dueDate", "updatedAt", "priority", "title", "position"]
+                "enum": [
+                  "dueDate",
+                  "updatedAt",
+                  "priority",
+                  "title",
+                  "position"
+                ]
               },
               "sortDir": {
                 "type": "string",
-                "enum": ["asc", "desc"]
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
               }
             }
           }
@@ -3482,7 +3837,11 @@
             "maxLength": 64
           }
         },
-        "required": ["name", "startDate", "endDate"]
+        "required": [
+          "name",
+          "startDate",
+          "endDate"
+        ]
       },
       "UpdateSprintDto": {
         "type": "object",
@@ -3509,7 +3868,9 @@
             "maxLength": 64
           }
         },
-        "required": ["goal"]
+        "required": [
+          "goal"
+        ]
       },
       "SprintTasksMutationDto": {
         "type": "object",
@@ -3559,11 +3920,16 @@
                   "exclusiveMaximum": false
                 }
               },
-              "required": ["memberUserId", "capacityPoints"]
+              "required": [
+                "memberUserId",
+                "capacityPoints"
+              ]
             }
           }
         },
-        "required": ["entries"]
+        "required": [
+          "entries"
+        ]
       },
       "CreateEpicDto": {
         "type": "object",
@@ -3588,11 +3954,20 @@
           },
           "status": {
             "type": "string",
-            "enum": ["PLANNED", "IN_PROGRESS", "DONE", "CANCELED"],
+            "enum": [
+              "PLANNED",
+              "IN_PROGRESS",
+              "DONE",
+              "CANCELED"
+            ],
             "default": "PLANNED"
           }
         },
-        "required": ["title", "startQuarter", "endQuarter"]
+        "required": [
+          "title",
+          "startQuarter",
+          "endQuarter"
+        ]
       },
       "UpdateEpicDto": {
         "type": "object",
@@ -3618,10 +3993,17 @@
           },
           "status": {
             "type": "string",
-            "enum": ["PLANNED", "IN_PROGRESS", "DONE", "CANCELED"]
+            "enum": [
+              "PLANNED",
+              "IN_PROGRESS",
+              "DONE",
+              "CANCELED"
+            ]
           }
         },
-        "required": ["description"]
+        "required": [
+          "description"
+        ]
       },
       "DashboardRefreshDto": {
         "type": "object",
@@ -3649,17 +4031,27 @@
                 },
                 "channel": {
                   "type": "string",
-                  "enum": ["IN_APP", "EMAIL", "PUSH"]
+                  "enum": [
+                    "IN_APP",
+                    "EMAIL",
+                    "PUSH"
+                  ]
                 },
                 "enabled": {
                   "type": "boolean"
                 }
               },
-              "required": ["eventType", "channel", "enabled"]
+              "required": [
+                "eventType",
+                "channel",
+                "enabled"
+              ]
             }
           }
         },
-        "required": ["preferences"]
+        "required": [
+          "preferences"
+        ]
       },
       "PushSubscriptionDto": {
         "type": "object",
@@ -3683,14 +4075,20 @@
                 "maxLength": 64
               }
             },
-            "required": ["p256dh", "auth"]
+            "required": [
+              "p256dh",
+              "auth"
+            ]
           },
           "userAgent": {
             "type": "string",
             "maxLength": 256
           }
         },
-        "required": ["endpoint", "keys"]
+        "required": [
+          "endpoint",
+          "keys"
+        ]
       },
       "CreateApiKeyDto": {
         "type": "object",
@@ -3725,7 +4123,10 @@
             "format": "date-time"
           }
         },
-        "required": ["name", "scopes"]
+        "required": [
+          "name",
+          "scopes"
+        ]
       }
     }
   }
