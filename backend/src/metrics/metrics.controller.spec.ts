@@ -8,8 +8,12 @@ import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
 import { IntegrationMetricsCollector } from '../platform/integrations/integration.metrics';
 import { RateLimitMetricsCollector } from '../platform/rate-limiting/rate-limit.metrics';
 import { WebhookMetricsCollector } from '../platform/webhooks/webhook.metrics';
+import { createTestMetricsRegistry } from './metrics-registry.test-helpers';
+import type { MetricsRegistryService } from './metrics-registry.service';
 
 describe('MetricsController', () => {
+  let registry: MetricsRegistryService;
+  let controller: MetricsController;
   let planning: PlanningMetricsCollector;
   let searchAudit: SearchAuditMetricsCollector;
   let realtime: RealtimeMetricsCollector;
@@ -18,30 +22,21 @@ describe('MetricsController', () => {
   let rateLimit: RateLimitMetricsCollector;
   let webhooks: WebhookMetricsCollector;
   let integrations: IntegrationMetricsCollector;
-  let controller: MetricsController;
 
   beforeEach(() => {
-    planning = new PlanningMetricsCollector();
-    searchAudit = new SearchAuditMetricsCollector();
-    realtime = new RealtimeMetricsCollector();
-    notifications = new NotificationsMetricsCollector();
-    ai = new AiMetricsCollector();
-    rateLimit = new RateLimitMetricsCollector();
-    webhooks = new WebhookMetricsCollector();
-    integrations = new IntegrationMetricsCollector();
-    controller = new MetricsController(
-      planning,
-      searchAudit,
-      realtime,
-      notifications,
-      ai,
-      rateLimit,
-      webhooks,
-      integrations,
-    );
+    registry = createTestMetricsRegistry();
+    planning = new PlanningMetricsCollector(registry);
+    searchAudit = new SearchAuditMetricsCollector(registry);
+    realtime = new RealtimeMetricsCollector(registry);
+    notifications = new NotificationsMetricsCollector(registry);
+    ai = new AiMetricsCollector(registry);
+    rateLimit = new RateLimitMetricsCollector(registry);
+    webhooks = new WebhookMetricsCollector(registry);
+    integrations = new IntegrationMetricsCollector(registry);
+    controller = new MetricsController(registry);
   });
 
-  it('concatenates output from every collector', () => {
+  it('renders every collector family through the shared registry', async () => {
     planning.incrementSprintTransition('PLANNED', 'ACTIVE');
     planning.incrementEpicWrite('created');
     searchAudit.incrementSearchQuery('task', 'success');
@@ -58,14 +53,14 @@ describe('MetricsController', () => {
     integrations.incrementSync('GITHUB', 'success');
     integrations.incrementConnection('GITHUB', 'connected');
 
-    const body = controller.scrape();
+    const body = await controller.scrape();
     expect(body).toContain('tasker_sprint_transition_total{from="PLANNED",to="ACTIVE"} 1');
     expect(body).toContain('tasker_epic_write_total{action="created"} 1');
     expect(body).toContain('tasker_search_query_total{type_set="task",outcome="success"} 1');
     expect(body).toContain('tasker_audit_write_total{event="task.created",outcome="success"} 1');
-    expect(body).toMatch(/tasker_realtime_connects_total\{result="success",[^}]*\} 1/);
+    expect(body).toMatch(/tasker_realtime_connects_total\{result="success",node="[^"]+"\} 1/);
     expect(body).toMatch(
-      /tasker_realtime_events_total\{type="task\.updated",result="success",[^}]*\} 1/,
+      /tasker_realtime_events_total\{type="task\.updated",result="success",node="[^"]+"\} 1/,
     );
     expect(body).toContain(
       'tasker_notification_delivered_total{channel="IN_APP",event_type="TASK_ASSIGNED",result="success"} 1',
@@ -85,5 +80,12 @@ describe('MetricsController', () => {
       'platform_integration_connections_total{provider="GITHUB",outcome="connected"} 1',
     );
     expect(body.endsWith('\n')).toBe(true);
+  });
+
+  it('includes build_info with release, service, and node_version labels', async () => {
+    const body = await controller.scrape();
+    expect(body).toMatch(
+      /tasker_build_info\{release="[^"]+",service="[^"]+",node_version="[^"]+"\} 1/,
+    );
   });
 });

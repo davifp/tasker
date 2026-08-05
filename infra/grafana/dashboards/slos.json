@@ -1,0 +1,164 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "uid": "slos",
+  "title": "Tasker — SLOs",
+  "tags": ["tasker", "slo"],
+  "schemaVersion": 39,
+  "timezone": "",
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "window",
+        "type": "custom",
+        "label": "Window",
+        "query": "24h,7d,30d",
+        "current": { "text": "24h", "value": "24h" },
+        "options": [
+          { "text": "24h", "value": "24h", "selected": true },
+          { "text": "7d", "value": "7d", "selected": false },
+          { "text": "30d", "value": "30d", "selected": false }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "P95 API latency (target < 300 ms)",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(tasker_http_request_duration_seconds_bucket[$window])))",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.25 },
+              { "color": "red", "value": 0.3 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Error rate (5xx / total)",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(tasker_http_requests_total{status_class=\"5xx\"}[$window])) / sum(rate(tasker_http_requests_total[$window]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.005 },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Availability (target ≥ 99.5%)",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "1 - (sum(rate(tasker_http_requests_total{status_class=\"5xx\"}[$window])) / sum(rate(tasker_http_requests_total[$window])))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0.99,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.99 },
+              { "color": "green", "value": 0.995 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Requests / sec",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(tasker_http_requests_total[$window]))", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "P50 / P95 / P99 latency",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(tasker_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(tasker_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "P95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(tasker_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "P99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Request rate by status class",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (status_class) (rate(tasker_http_requests_total[5m]))",
+          "legendFormat": "{{status_class}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Event-loop lag (Node runtime)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "tasker_nodejs_eventloop_lag_p99_seconds", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ]
+}

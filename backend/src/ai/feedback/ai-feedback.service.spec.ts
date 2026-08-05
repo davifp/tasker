@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AiMetricsCollector } from '../metrics/ai.metrics';
+import { createTestMetricsRegistry } from '../../metrics/metrics-registry.test-helpers';
 import { AiFeedbackService } from './ai-feedback.service';
 
 function makeService(opts: {
@@ -18,14 +19,15 @@ function makeService(opts: {
       aiFeedback: { create },
     }),
   } as unknown as ConstructorParameters<typeof AiFeedbackService>[0];
-  const metrics = new AiMetricsCollector();
+  const registry = createTestMetricsRegistry();
+  const metrics = new AiMetricsCollector(registry);
   const svc = new AiFeedbackService(prisma, metrics);
-  return { svc, create, findFirst, metrics };
+  return { svc, create, findFirst, metrics, registry };
 }
 
 describe('AiFeedbackService', () => {
   it('persists feedback and bumps the metric', async () => {
-    const { svc, metrics } = makeService({
+    const { svc, registry } = makeService({
       invocation: { id: 'inv-1', action: 'GENERATE_DESCRIPTION' },
     });
     const out = await svc.submit('ws-1', 'user-1', {
@@ -33,7 +35,8 @@ describe('AiFeedbackService', () => {
       rating: 'POSITIVE',
     });
     expect(out.id).toBe('fb-1');
-    expect(metrics.render()).toContain(
+    const scrape = await registry.render();
+    expect(scrape).toContain(
       'tasker_ai_feedback_total{action="GENERATE_DESCRIPTION",rating="POSITIVE"} 1',
     );
   });

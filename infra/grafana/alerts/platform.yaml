@@ -2,6 +2,61 @@
 # Integrations) surface. Load via `rule_files:` in prometheus.yml or import
 # through Grafana's alerting UI.
 groups:
+  - name: tasker-slo
+    interval: 1m
+    rules:
+      # Multi-window burn-rate alert against a 99.5% availability SLO
+      # (0.5% error budget). Fires when we're burning budget at >=14x the
+      # sustainable rate over 5m AND >=1x over 1h — a classic Google SRE
+      # short+long-window guard that avoids single-spike false positives.
+      - alert: ApiErrorBudgetFastBurn
+        expr: |
+          (
+            sum(rate(tasker_http_requests_total{status_class="5xx"}[5m]))
+            /
+            sum(rate(tasker_http_requests_total[5m]))
+          ) > 14 * 0.005
+          and
+          (
+            sum(rate(tasker_http_requests_total{status_class="5xx"}[1h]))
+            /
+            sum(rate(tasker_http_requests_total[1h]))
+          ) > 1 * 0.005
+        for: 5m
+        labels:
+          severity: page
+          team: platform
+        annotations:
+          summary: 'API 5xx error budget burning >=14x (fast burn)'
+          description: |
+            5xx rate is burning the 99.5% SLO budget faster than 14x over 5
+            minutes and above the sustainable rate over 1 hour. Investigate
+            the latest deploy and check Sentry for a spike.
+      - alert: ApiP95LatencyBreach
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(tasker_http_request_duration_seconds_bucket[5m]))
+          ) > 0.3
+        for: 10m
+        labels:
+          severity: page
+          team: platform
+        annotations:
+          summary: 'API P95 latency > 300 ms for 10 min'
+          description: 'The published SLO of P95 < 300 ms has been breached for 10 consecutive minutes.'
+      - alert: ApiReadinessFailing
+        # Backed by the Prometheus `up{}` metric — Prometheus flips a target
+        # to 0 when a scrape fails, so this catches both a hard down process
+        # and an unreachable /metrics endpoint. Task 5.0 will add a richer
+        # `tasker_readiness_ok` gauge from the deep readiness probe.
+        expr: up{job="tasker-api"} == 0
+        for: 2m
+        labels:
+          severity: page
+          team: platform
+        annotations:
+          summary: 'API readiness probe failing'
+          description: 'The API scrape target has been down for 2 minutes.'
   - name: tasker-platform
     interval: 1m
     rules:

@@ -1,26 +1,32 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { NotificationsMetricsCollector } from './notifications.metrics';
+import { createTestMetricsRegistry } from './metrics-registry.test-helpers';
+import type { MetricsRegistryService } from './metrics-registry.service';
 
 describe('NotificationsMetricsCollector', () => {
+  let registry: MetricsRegistryService;
   let collector: NotificationsMetricsCollector;
 
   beforeEach(() => {
-    collector = new NotificationsMetricsCollector();
+    registry = createTestMetricsRegistry();
+    collector = new NotificationsMetricsCollector(registry);
   });
 
-  it('renders empty scrape output with all metric families declared', () => {
-    const out = collector.render();
-    expect(out).toContain('tasker_notification_delivered_total');
-    expect(out).toContain('tasker_push_subscriptions_cleaned_total');
+  const scrape = () => registry.render();
+
+  it('declares every notification family (TYPE/HELP lines emitted even with no samples)', async () => {
+    const out = await scrape();
+    expect(out).toContain('# TYPE tasker_notification_delivered_total counter');
+    expect(out).toContain('# TYPE tasker_push_subscriptions_cleaned_total counter');
   });
 
-  it('counts deliveries per (channel, event, result)', () => {
+  it('counts deliveries per (channel, event, result)', async () => {
     collector.incrementDelivered('IN_APP', 'TASK_ASSIGNED', 'success');
     collector.incrementDelivered('IN_APP', 'TASK_ASSIGNED', 'success');
     collector.incrementDelivered('EMAIL', 'TASK_ASSIGNED', 'success');
     collector.incrementDelivered('EMAIL', 'TASK_ASSIGNED', 'failure');
     collector.incrementDelivered('PUSH', 'COMMENT_MENTION', 'success');
-    const out = collector.render();
+    const out = await scrape();
     expect(out).toContain(
       'tasker_notification_delivered_total{channel="IN_APP",event_type="TASK_ASSIGNED",result="success"} 2',
     );
@@ -35,20 +41,12 @@ describe('NotificationsMetricsCollector', () => {
     );
   });
 
-  it('separates push cleanup reasons', () => {
+  it('separates push cleanup reasons', async () => {
     collector.incrementPushCleaned('gone');
     collector.incrementPushCleaned('gone');
     collector.incrementPushCleaned('dormant');
-    const out = collector.render();
+    const out = await scrape();
     expect(out).toContain('tasker_push_subscriptions_cleaned_total{reason="gone"} 2');
     expect(out).toContain('tasker_push_subscriptions_cleaned_total{reason="dormant"} 1');
-  });
-
-  it('snapshot exposes internal maps for assertions', () => {
-    collector.incrementDelivered('IN_APP', 'COMMENT_MENTION', 'success');
-    collector.incrementPushCleaned('gone');
-    const snap = collector.snapshot();
-    expect(snap.deliveredTotal).toEqual({ 'IN_APP|COMMENT_MENTION|success': 1 });
-    expect(snap.pushCleanedTotal).toEqual({ gone: 1 });
   });
 });

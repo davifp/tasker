@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { AiMetricsCollector } from './ai.metrics';
+import { createTestMetricsRegistry } from '../../metrics/metrics-registry.test-helpers';
+
+function makeCollector(): { c: AiMetricsCollector; scrape: () => Promise<string> } {
+  const registry = createTestMetricsRegistry();
+  return { c: new AiMetricsCollector(registry), scrape: () => registry.render() };
+}
 
 describe('AiMetricsCollector', () => {
-  it('renders the six documented metric families with the spec label sets', () => {
-    const c = new AiMetricsCollector();
+  it('renders the six documented metric families with the spec label sets', async () => {
+    const { c, scrape } = makeCollector();
     c.incrementInvocation('GENERATE_DESCRIPTION', 'anthropic', 'claude-sonnet-4-6', 'OK');
     c.addTokens('GENERATE_DESCRIPTION', 'anthropic', 'input', 1200);
     c.addTokens('GENERATE_DESCRIPTION', 'anthropic', 'output', 350);
@@ -13,19 +19,15 @@ describe('AiMetricsCollector', () => {
     c.incrementFallback('anthropic', 'openai', 'overloaded');
     c.incrementFeedback('SUMMARIZE_COMMENTS', 'POSITIVE');
 
-    const out = c.render();
+    const out = await scrape();
 
-    // Metric names — all six families present.
-    expect(out).toContain('tasker_ai_invocations_total');
-    expect(out).toContain('tasker_ai_tokens_total');
-    expect(out).toContain('tasker_ai_latency_ms_bucket');
-    expect(out).toContain('tasker_ai_latency_ms_sum');
-    expect(out).toContain('tasker_ai_latency_ms_count');
-    expect(out).toContain('tasker_ai_budget_ratio');
-    expect(out).toContain('tasker_ai_provider_fallbacks_total');
-    expect(out).toContain('tasker_ai_feedback_total');
+    expect(out).toContain('# TYPE tasker_ai_invocations_total counter');
+    expect(out).toContain('# TYPE tasker_ai_tokens_total counter');
+    expect(out).toContain('# TYPE tasker_ai_latency_ms histogram');
+    expect(out).toContain('# TYPE tasker_ai_budget_ratio gauge');
+    expect(out).toContain('# TYPE tasker_ai_provider_fallbacks_total counter');
+    expect(out).toContain('# TYPE tasker_ai_feedback_total counter');
 
-    // Sample lines with all documented labels.
     expect(out).toContain(
       'tasker_ai_invocations_total{action="GENERATE_DESCRIPTION",provider="anthropic",model="claude-sonnet-4-6",status="OK"} 1',
     );
@@ -41,20 +43,19 @@ describe('AiMetricsCollector', () => {
     );
   });
 
-  it('places the latency observation in every bucket above its value + records the +Inf sentinel', () => {
-    const c = new AiMetricsCollector();
+  it('places the latency observation in every bucket at or above its value + records the +Inf sentinel', async () => {
+    const { c, scrape } = makeCollector();
     c.observeLatency('GENERATE_CHECKLIST', 'openai', 1200); // >1000, ≤2000
-    const out = c.render();
+    const out = await scrape();
 
-    // Bucket 1000 excludes, 2000/3000/5000/10000 include; +Inf and count always include.
     expect(out).toContain(
-      'tasker_ai_latency_ms_bucket{action="GENERATE_CHECKLIST",provider="openai",le="1000"} 0',
+      'tasker_ai_latency_ms_bucket{le="1000",action="GENERATE_CHECKLIST",provider="openai"} 0',
     );
     expect(out).toContain(
-      'tasker_ai_latency_ms_bucket{action="GENERATE_CHECKLIST",provider="openai",le="2000"} 1',
+      'tasker_ai_latency_ms_bucket{le="2000",action="GENERATE_CHECKLIST",provider="openai"} 1',
     );
     expect(out).toContain(
-      'tasker_ai_latency_ms_bucket{action="GENERATE_CHECKLIST",provider="openai",le="+Inf"} 1',
+      'tasker_ai_latency_ms_bucket{le="+Inf",action="GENERATE_CHECKLIST",provider="openai"} 1',
     );
     expect(out).toContain(
       'tasker_ai_latency_ms_sum{action="GENERATE_CHECKLIST",provider="openai"} 1200',
@@ -64,31 +65,29 @@ describe('AiMetricsCollector', () => {
     );
   });
 
-  it('ignores non-positive token counts', () => {
-    const c = new AiMetricsCollector();
+  it('ignores non-positive token counts', async () => {
+    const { c, scrape } = makeCollector();
     c.addTokens('GENERATE_DESCRIPTION', 'anthropic', 'input', 0);
     c.addTokens('GENERATE_DESCRIPTION', 'anthropic', 'input', -5);
-    const out = c.render();
-    expect(out).not.toContain(
-      'tasker_ai_tokens_total{action="GENERATE_DESCRIPTION",provider="anthropic",kind="input"}',
+    const out = await scrape();
+    expect(out).not.toMatch(
+      /tasker_ai_tokens_total\{action="GENERATE_DESCRIPTION",provider="anthropic",kind="input"\} \d/,
     );
   });
 
-  it('clamps budget ratio to [0, 2] so a runaway reconcile does not break rendering', () => {
-    const c = new AiMetricsCollector();
+  it('clamps budget ratio to [0, 2] so a runaway reconcile does not break rendering', async () => {
+    const { c, scrape } = makeCollector();
     c.setBudgetRatio('ws-a', -0.1);
     c.setBudgetRatio('ws-b', 3.5);
-    const out = c.render();
+    const out = await scrape();
     expect(out).toContain('tasker_ai_budget_ratio{workspaceId="ws-a"} 0');
     expect(out).toContain('tasker_ai_budget_ratio{workspaceId="ws-b"} 2');
   });
 
-  it('label cardinality: no free-text labels are emitted', () => {
-    const c = new AiMetricsCollector();
+  it('label cardinality: no free-text labels are emitted', async () => {
+    const { c, scrape } = makeCollector();
     c.incrementInvocation('GENERATE_DESCRIPTION', 'anthropic', 'claude-sonnet-4-6', 'OK');
-    const out = c.render();
-    // No obvious user-content labels — sanity check to catch a future
-    // refactor that "helpfully" adds workspace name / task title as a label.
+    const out = await scrape();
     expect(out).not.toMatch(/taskTitle=/);
     expect(out).not.toMatch(/workspaceName=/);
     expect(out).not.toMatch(/prompt=/);

@@ -1,51 +1,34 @@
 import { Injectable } from '@nestjs/common';
+import type { Counter } from 'prom-client';
+import { MetricsRegistryService } from './metrics-registry.service';
 
 @Injectable()
 export class NotificationsMetricsCollector {
-  // channel|eventType|result -> count
-  private readonly deliveredTotal = new Map<string, number>();
-  // reason -> count (only 'gone' at the moment; kept as a label so a future
-  // classifier can add 'dormant' without breaking the graph).
-  private readonly pushCleanedTotal = new Map<string, number>();
+  private readonly deliveredTotal: Counter<'channel' | 'event_type' | 'result'>;
+  private readonly pushCleanedTotal: Counter<'reason'>;
+
+  constructor(registry: MetricsRegistryService) {
+    this.deliveredTotal = registry.counter({
+      name: 'tasker_notification_delivered_total',
+      help: 'Notifications delivered by channel.',
+      labelNames: ['channel', 'event_type', 'result'] as const,
+    });
+    this.pushCleanedTotal = registry.counter({
+      name: 'tasker_push_subscriptions_cleaned_total',
+      help: 'Push subscription rows reaped.',
+      labelNames: ['reason'] as const,
+    });
+  }
 
   incrementDelivered(
     channel: 'IN_APP' | 'EMAIL' | 'PUSH',
     eventType: string,
     result: 'success' | 'failure' | 'skipped',
   ): void {
-    const key = `${channel}|${eventType}|${result}`;
-    this.deliveredTotal.set(key, (this.deliveredTotal.get(key) ?? 0) + 1);
+    this.deliveredTotal.inc({ channel, event_type: eventType, result });
   }
 
   incrementPushCleaned(reason: 'gone' | 'dormant'): void {
-    this.pushCleanedTotal.set(reason, (this.pushCleanedTotal.get(reason) ?? 0) + 1);
-  }
-
-  render(): string {
-    const lines: string[] = [];
-
-    lines.push('# HELP tasker_notification_delivered_total Notifications delivered by channel.');
-    lines.push('# TYPE tasker_notification_delivered_total counter');
-    for (const [key, value] of this.deliveredTotal) {
-      const [channel, eventType, result] = key.split('|');
-      lines.push(
-        `tasker_notification_delivered_total{channel="${channel}",event_type="${eventType}",result="${result}"} ${value}`,
-      );
-    }
-
-    lines.push('# HELP tasker_push_subscriptions_cleaned_total Push subscription rows reaped.');
-    lines.push('# TYPE tasker_push_subscriptions_cleaned_total counter');
-    for (const [reason, value] of this.pushCleanedTotal) {
-      lines.push(`tasker_push_subscriptions_cleaned_total{reason="${reason}"} ${value}`);
-    }
-
-    return lines.join('\n') + '\n';
-  }
-
-  snapshot() {
-    return {
-      deliveredTotal: Object.fromEntries(this.deliveredTotal),
-      pushCleanedTotal: Object.fromEntries(this.pushCleanedTotal),
-    };
+    this.pushCleanedTotal.inc({ reason });
   }
 }

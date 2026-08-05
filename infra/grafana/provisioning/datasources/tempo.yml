@@ -13,8 +13,12 @@ datasources:
         hide: false
       nodeGraph:
         enabled: true
-      # tracesToLogsV2 / tracesToMetrics / serviceMap intentionally omitted:
-      # they reference Loki/Prometheus datasources that Task 3.0 (Prometheus)
-      # and a future logs pipeline will add. Grafana surfaces broken links
-      # when the referenced UIDs don't exist, so we wire them in only when
-      # the target datasources land.
+      # tracesToMetrics + serviceMap wire the Tempo↔Prometheus click-through
+      # now that Task 3.0 has provisioned the `prometheus` datasource.
+      # tracesToLogsV2 stays absent until a Loki (or equivalent) sink is added.
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: -1h
+        spanEndTimeShift: 1h
+      serviceMap:
+        datasourceUid: prometheus

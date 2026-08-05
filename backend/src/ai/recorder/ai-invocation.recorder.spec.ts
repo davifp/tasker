@@ -3,6 +3,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { AuditEvent } from '../../common/audit/audit.events';
 import { TraceContext } from '../../common/trace/trace-context';
 import { AiMetricsCollector } from '../metrics/ai.metrics';
+import { createTestMetricsRegistry } from '../../metrics/metrics-registry.test-helpers';
 import { AiInvocationRecorder } from './ai-invocation.recorder';
 
 function makeRecorder() {
@@ -11,9 +12,10 @@ function makeRecorder() {
     forSystem: () => ({ aiInvocation: { create } }),
   } as never;
   const audit = { record: vi.fn().mockResolvedValue(undefined) } as unknown as AuditService;
-  const metrics = new AiMetricsCollector();
+  const registry = createTestMetricsRegistry();
+  const metrics = new AiMetricsCollector(registry);
   const recorder = new AiInvocationRecorder(prisma, audit, metrics);
-  return { recorder, create, audit, metrics };
+  return { recorder, create, audit, metrics, registry };
 }
 
 describe('AiInvocationRecorder', () => {
@@ -73,7 +75,7 @@ describe('AiInvocationRecorder', () => {
   });
 
   it('bumps invocations_total, tokens_total, and latency_ms via the metrics collector', async () => {
-    const { recorder, metrics } = makeRecorder();
+    const { recorder, registry } = makeRecorder();
     await recorder.record({
       workspaceId: 'ws-1',
       actorUserId: 'user-1',
@@ -86,7 +88,7 @@ describe('AiInvocationRecorder', () => {
       latencyMs: 800,
       status: 'OK',
     });
-    const out = metrics.render();
+    const out = await registry.render();
     expect(out).toContain(
       'tasker_ai_invocations_total{action="ESTIMATE_AND_SUGGEST",provider="openai",model="gpt-4o-mini",status="OK"} 1',
     );
@@ -99,12 +101,12 @@ describe('AiInvocationRecorder', () => {
   });
 
   it('counts a fallback via tasker_ai_provider_fallbacks_total{from,to,reason}', async () => {
-    const { recorder, metrics } = makeRecorder();
+    const { recorder, registry } = makeRecorder();
     await recorder.record({
       workspaceId: 'ws-1',
       actorUserId: 'user-1',
       action: 'GENERATE_DESCRIPTION',
-      provider: 'openai', // resolved provider after fallback
+      provider: 'openai',
       model: 'gpt-4o-mini',
       inputTokens: 10,
       outputTokens: 5,
@@ -113,7 +115,7 @@ describe('AiInvocationRecorder', () => {
       status: 'OK',
       fallback: { from: 'anthropic', reason: 'overloaded' },
     });
-    expect(metrics.render()).toContain(
+    expect(await registry.render()).toContain(
       'tasker_ai_provider_fallbacks_total{from="anthropic",to="openai",reason="overloaded"} 1',
     );
   });
@@ -154,7 +156,8 @@ describe('AiInvocationRecorder', () => {
     const create = vi.fn().mockRejectedValue(new Error('db down'));
     const prisma = { forSystem: () => ({ aiInvocation: { create } }) } as never;
     const audit = { record: vi.fn().mockResolvedValue(undefined) } as unknown as AuditService;
-    const metrics = new AiMetricsCollector();
+    const registry = createTestMetricsRegistry();
+    const metrics = new AiMetricsCollector(registry);
     const recorder = new AiInvocationRecorder(prisma, audit, metrics);
 
     await expect(
@@ -173,6 +176,6 @@ describe('AiInvocationRecorder', () => {
     ).resolves.toBeDefined();
     // Audit + metrics still fired.
     expect(audit.record).toHaveBeenCalled();
-    expect(metrics.render()).toContain('tasker_ai_invocations_total');
+    expect(await registry.render()).toContain('tasker_ai_invocations_total');
   });
 });

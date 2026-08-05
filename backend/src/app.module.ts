@@ -44,6 +44,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PushModule } from './push/push.module';
 import { AiModule } from './ai/ai.module';
 import { PlatformModule } from './platform/platform.module';
+import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 import { RateLimitInterceptor } from './platform/rate-limiting/rate-limit.interceptor';
 import { WorkspaceGuard } from './common/context/workspace.guard';
 import { RolesGuard } from './common/context/roles.guard';
@@ -243,6 +244,13 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     {
       provide: APP_INTERCEPTOR,
       useClass: RateLimitInterceptor,
+    },
+    // HTTP request duration + count histograms scraped by Prometheus.
+    // Registered last so `route`/`status_class` labels reflect the final
+    // response after auth, rate-limiting, and any transformation interceptors.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
     },
   ],
 })

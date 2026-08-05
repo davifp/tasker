@@ -1,82 +1,74 @@
 import { Injectable } from '@nestjs/common';
 import * as os from 'node:os';
+import type { Counter, Gauge } from 'prom-client';
+import { MetricsRegistryService } from './metrics-registry.service';
 
-// Follows the same in-house collector shape as `SearchAuditMetricsCollector`.
-// Node label is the local hostname so multi-node deployments can graph
-// per-instance connections without a service discovery layer.
+// Socket.IO / realtime metrics. Node label is the local hostname so
+// multi-node deployments can graph per-instance connections without a service
+// discovery layer.
 @Injectable()
 export class RealtimeMetricsCollector {
   private readonly nodeLabel: string;
-  private connectionsGauge = 0;
-  private readonly roomsGauge = new Map<string, number>(); // kind -> count
-  private readonly eventsTotal = new Map<string, number>(); // type|result -> count
-  private readonly connectsTotal = new Map<string, number>(); // result -> count
+  private readonly connectionsGauge: Gauge<'node'>;
+  private readonly roomsGauge: Gauge<'kind' | 'node'>;
+  private readonly eventsTotal: Counter<'type' | 'result' | 'node'>;
+  private readonly connectsTotal: Counter<'result' | 'node'>;
+  // Mirror of the gauge value used only for the non-negative clamp on decrement.
+  // Kept in sync with every inc/dec/set call so the guard doesn't need to await
+  // prom-client's async `get()`.
+  private connectionCount = 0;
 
-  constructor() {
+  constructor(registry: MetricsRegistryService) {
     this.nodeLabel = process.env.HOSTNAME || os.hostname();
+
+    this.connectionsGauge = registry.gauge({
+      name: 'tasker_realtime_connections',
+      help: 'Active socket.io connections.',
+      labelNames: ['node'] as const,
+    });
+    this.roomsGauge = registry.gauge({
+      name: 'tasker_realtime_rooms',
+      help: 'Active socket.io rooms by kind.',
+      labelNames: ['kind', 'node'] as const,
+    });
+    this.eventsTotal = registry.counter({
+      name: 'tasker_realtime_events_total',
+      help: 'Realtime events emitted.',
+      labelNames: ['type', 'result', 'node'] as const,
+    });
+    this.connectsTotal = registry.counter({
+      name: 'tasker_realtime_connects_total',
+      help: 'Socket.io handshake attempts.',
+      labelNames: ['result', 'node'] as const,
+    });
+
+    // Seed the gauge so `/metrics` returns a well-formed sample even before
+    // the first connection lands.
+    this.connectionsGauge.set({ node: this.nodeLabel }, 0);
   }
 
-  // ---- Mutators ----
-
   incrementConnect(result: 'success' | 'reject'): void {
-    this.connectsTotal.set(result, (this.connectsTotal.get(result) ?? 0) + 1);
-    if (result === 'success') this.connectionsGauge++;
+    this.connectsTotal.inc({ result, node: this.nodeLabel });
+    if (result === 'success') {
+      this.connectionCount += 1;
+      this.connectionsGauge.set({ node: this.nodeLabel }, this.connectionCount);
+    }
   }
 
   decrementConnection(): void {
-    if (this.connectionsGauge > 0) this.connectionsGauge--;
+    // Guard against going negative — a disconnect can arrive after the app
+    // restarted (gauge freshly zero) or after a doubled cleanup path fires
+    // twice. Prom-client would happily emit -1 otherwise.
+    if (this.connectionCount <= 0) return;
+    this.connectionCount -= 1;
+    this.connectionsGauge.set({ node: this.nodeLabel }, this.connectionCount);
   }
 
   observeRooms(kind: 'workspace' | 'task' | 'user', count: number): void {
-    this.roomsGauge.set(kind, count);
+    this.roomsGauge.set({ kind, node: this.nodeLabel }, count);
   }
 
   incrementEvent(type: string, result: 'success' | 'error' | 'dropped'): void {
-    const key = `${type}|${result}`;
-    this.eventsTotal.set(key, (this.eventsTotal.get(key) ?? 0) + 1);
-  }
-
-  // ---- Render ----
-
-  render(): string {
-    const lines: string[] = [];
-
-    lines.push('# HELP tasker_realtime_connections Active socket.io connections.');
-    lines.push('# TYPE tasker_realtime_connections gauge');
-    lines.push(`tasker_realtime_connections{node="${this.nodeLabel}"} ${this.connectionsGauge}`);
-
-    lines.push('# HELP tasker_realtime_rooms Active socket.io rooms by kind.');
-    lines.push('# TYPE tasker_realtime_rooms gauge');
-    for (const [kind, count] of this.roomsGauge) {
-      lines.push(`tasker_realtime_rooms{kind="${kind}",node="${this.nodeLabel}"} ${count}`);
-    }
-
-    lines.push('# HELP tasker_realtime_events_total Realtime events emitted.');
-    lines.push('# TYPE tasker_realtime_events_total counter');
-    for (const [key, value] of this.eventsTotal) {
-      const [type, result] = key.split('|');
-      lines.push(
-        `tasker_realtime_events_total{type="${type}",result="${result}",node="${this.nodeLabel}"} ${value}`,
-      );
-    }
-
-    lines.push('# HELP tasker_realtime_connects_total Socket.io handshake attempts.');
-    lines.push('# TYPE tasker_realtime_connects_total counter');
-    for (const [result, value] of this.connectsTotal) {
-      lines.push(
-        `tasker_realtime_connects_total{result="${result}",node="${this.nodeLabel}"} ${value}`,
-      );
-    }
-
-    return lines.join('\n') + '\n';
-  }
-
-  snapshot() {
-    return {
-      connectionsGauge: this.connectionsGauge,
-      roomsGauge: Object.fromEntries(this.roomsGauge),
-      eventsTotal: Object.fromEntries(this.eventsTotal),
-      connectsTotal: Object.fromEntries(this.connectsTotal),
-    };
+    this.eventsTotal.inc({ type, result, node: this.nodeLabel });
   }
 }

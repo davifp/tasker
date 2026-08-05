@@ -1,74 +1,84 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RealtimeMetricsCollector } from './realtime.metrics';
+import { createTestMetricsRegistry } from './metrics-registry.test-helpers';
+import type { MetricsRegistryService } from './metrics-registry.service';
 
 describe('RealtimeMetricsCollector', () => {
+  let registry: MetricsRegistryService;
   let collector: RealtimeMetricsCollector;
 
   beforeEach(() => {
-    collector = new RealtimeMetricsCollector();
+    registry = createTestMetricsRegistry();
+    collector = new RealtimeMetricsCollector(registry);
   });
 
-  it('renders empty scrape output with all metric families declared', () => {
-    const out = collector.render();
-    expect(out).toContain('tasker_realtime_connections');
-    expect(out).toContain('tasker_realtime_rooms');
-    expect(out).toContain('tasker_realtime_events_total');
-    expect(out).toContain('tasker_realtime_connects_total');
+  async function scrape(): Promise<string> {
+    return registry.render();
+  }
+
+  it('declares every realtime family (TYPE/HELP lines emitted even with no samples)', async () => {
+    const out = await scrape();
+    expect(out).toContain('# TYPE tasker_realtime_connections gauge');
+    expect(out).toContain('# TYPE tasker_realtime_rooms gauge');
+    expect(out).toContain('# TYPE tasker_realtime_events_total counter');
+    expect(out).toContain('# TYPE tasker_realtime_connects_total counter');
   });
 
-  it('tracks the connections gauge across connect/disconnect', () => {
+  it('tracks the connections gauge across connect/disconnect', async () => {
     collector.incrementConnect('success');
     collector.incrementConnect('success');
     collector.incrementConnect('success');
     collector.decrementConnection();
-    expect(collector.snapshot().connectionsGauge).toBe(2);
+    const out = await scrape();
+    expect(out).toMatch(/tasker_realtime_connections\{node="[^"]+"\} 2/);
   });
 
-  it('rejected handshakes count but do not touch the connections gauge', () => {
+  it('rejected handshakes count but do not touch the connections gauge', async () => {
     collector.incrementConnect('reject');
     collector.incrementConnect('reject');
-    expect(collector.snapshot().connectionsGauge).toBe(0);
-    expect(collector.snapshot().connectsTotal).toEqual({ reject: 2 });
+    const out = await scrape();
+    expect(out).toMatch(/tasker_realtime_connections\{node="[^"]+"\} 0/);
+    expect(out).toMatch(/tasker_realtime_connects_total\{result="reject",node="[^"]+"\} 2/);
   });
 
-  it('never lets the connections gauge go negative when disconnects outpace connects', () => {
+  it('never lets the connections gauge go negative when disconnects outpace connects', async () => {
     collector.decrementConnection();
     collector.decrementConnection();
-    expect(collector.snapshot().connectionsGauge).toBe(0);
+    const out = await scrape();
+    expect(out).toMatch(/tasker_realtime_connections\{node="[^"]+"\} 0/);
   });
 
-  it('renders per-type/result event counters', () => {
+  it('renders per-type/result event counters', async () => {
     collector.incrementEvent('task.updated', 'success');
     collector.incrementEvent('task.updated', 'success');
     collector.incrementEvent('task.updated', 'error');
     collector.incrementEvent('notification.new', 'dropped');
-    const out = collector.render();
+    const out = await scrape();
     expect(out).toMatch(
-      /tasker_realtime_events_total\{type="task\.updated",result="success",[^}]*\} 2/,
+      /tasker_realtime_events_total\{type="task\.updated",result="success",node="[^"]+"\} 2/,
     );
     expect(out).toMatch(
-      /tasker_realtime_events_total\{type="task\.updated",result="error",[^}]*\} 1/,
+      /tasker_realtime_events_total\{type="task\.updated",result="error",node="[^"]+"\} 1/,
     );
     expect(out).toMatch(
-      /tasker_realtime_events_total\{type="notification\.new",result="dropped",[^}]*\} 1/,
+      /tasker_realtime_events_total\{type="notification\.new",result="dropped",node="[^"]+"\} 1/,
     );
   });
 
-  it('observes rooms gauge by kind', () => {
+  it('observes rooms gauge by kind', async () => {
     collector.observeRooms('workspace', 4);
     collector.observeRooms('task', 12);
     collector.observeRooms('workspace', 5);
-    const snap = collector.snapshot();
-    expect(snap.roomsGauge).toEqual({ workspace: 5, task: 12 });
-    const out = collector.render();
-    expect(out).toMatch(/tasker_realtime_rooms\{kind="workspace",[^}]*\} 5/);
-    expect(out).toMatch(/tasker_realtime_rooms\{kind="task",[^}]*\} 12/);
+    const out = await scrape();
+    expect(out).toMatch(/tasker_realtime_rooms\{kind="workspace",node="[^"]+"\} 5/);
+    expect(out).toMatch(/tasker_realtime_rooms\{kind="task",node="[^"]+"\} 12/);
   });
 
-  it('labels every metric with the node identifier', () => {
+  it('labels every metric with the node identifier', async () => {
     collector.incrementConnect('success');
     collector.incrementEvent('task.updated', 'success');
-    const out = collector.render();
-    expect(out).toMatch(/node="[^"]+"/);
+    const out = await scrape();
+    expect(out).toMatch(/tasker_realtime_events_total\{[^}]*node="[^"]+"\}/);
+    expect(out).toMatch(/tasker_realtime_connections\{node="[^"]+"\}/);
   });
 });

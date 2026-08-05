@@ -1,51 +1,33 @@
 import { Injectable } from '@nestjs/common';
+import type { Counter } from 'prom-client';
 import type { IntegrationProvider } from '@prisma/client';
+import { MetricsRegistryService } from '../../metrics/metrics-registry.service';
 
 type Outcome = 'success' | 'unauthorized' | 'timeout' | 'error';
 
 @Injectable()
 export class IntegrationMetricsCollector {
-  private readonly syncsTotal = new Map<string, number>();
-  private readonly connectionsTotal = new Map<string, number>();
+  private readonly syncsTotal: Counter<'provider' | 'outcome'>;
+  private readonly connectionsTotal: Counter<'provider' | 'outcome'>;
+
+  constructor(registry: MetricsRegistryService) {
+    this.syncsTotal = registry.counter({
+      name: 'platform_integration_syncs_total',
+      help: 'Outbound integration sync attempts.',
+      labelNames: ['provider', 'outcome'] as const,
+    });
+    this.connectionsTotal = registry.counter({
+      name: 'platform_integration_connections_total',
+      help: 'Integration lifecycle events.',
+      labelNames: ['provider', 'outcome'] as const,
+    });
+  }
 
   incrementSync(provider: IntegrationProvider, outcome: Outcome): void {
-    const label = `${provider}|${outcome}`;
-    this.syncsTotal.set(label, (this.syncsTotal.get(label) ?? 0) + 1);
+    this.syncsTotal.inc({ provider, outcome });
   }
 
   incrementConnection(provider: IntegrationProvider, outcome: 'connected' | 'disconnected'): void {
-    const label = `${provider}|${outcome}`;
-    this.connectionsTotal.set(label, (this.connectionsTotal.get(label) ?? 0) + 1);
-  }
-
-  render(): string {
-    const lines: string[] = [];
-
-    lines.push('# HELP platform_integration_syncs_total Outbound integration sync attempts.');
-    lines.push('# TYPE platform_integration_syncs_total counter');
-    for (const [label, value] of this.syncsTotal) {
-      const [provider, outcome] = label.split('|');
-      lines.push(
-        `platform_integration_syncs_total{provider="${provider}",outcome="${outcome}"} ${value}`,
-      );
-    }
-
-    lines.push('# HELP platform_integration_connections_total Integration lifecycle events.');
-    lines.push('# TYPE platform_integration_connections_total counter');
-    for (const [label, value] of this.connectionsTotal) {
-      const [provider, outcome] = label.split('|');
-      lines.push(
-        `platform_integration_connections_total{provider="${provider}",outcome="${outcome}"} ${value}`,
-      );
-    }
-
-    return lines.join('\n') + '\n';
-  }
-
-  snapshot() {
-    return {
-      syncsTotal: Object.fromEntries(this.syncsTotal),
-      connectionsTotal: Object.fromEntries(this.connectionsTotal),
-    };
+    this.connectionsTotal.inc({ provider, outcome });
   }
 }

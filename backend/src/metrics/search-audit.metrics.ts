@@ -1,169 +1,89 @@
 import { Injectable } from '@nestjs/common';
+import type { Counter, Histogram } from 'prom-client';
+import { MetricsRegistryService } from './metrics-registry.service';
 
-// In-house Prometheus collector for the Search & Audit surface (Phase 7).
-// Follows the same shape as `PlanningMetricsCollector`: `observe*` /
-// `increment*` methods for callers, `render()` for the scrape endpoint.
-// A future rewrite around `prom-client` stays purely additive because the
-// metric names and labels defined here are the contract.
-
-const HISTOGRAM_MAX_SAMPLES = 500;
-
-interface Histogram {
-  samples: number[];
-  observe(value: number): void;
-}
-
-function makeHistogram(): Histogram {
-  const samples: number[] = [];
-  return {
-    samples,
-    observe(value: number) {
-      samples.push(value);
-      if (samples.length > HISTOGRAM_MAX_SAMPLES) samples.shift();
-    },
-  };
-}
+const QUERY_MS_BUCKETS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
+const AUDIT_READ_MS_BUCKETS = [10, 25, 50, 100, 250, 500, 1000, 2500];
+const CSV_ROWS_BUCKETS = [10, 100, 1000, 10_000, 100_000];
 
 @Injectable()
 export class SearchAuditMetricsCollector {
-  private readonly searchQueryDurationMs = new Map<string, Histogram>();
-  private readonly searchQueryTotal = new Map<string, number>();
-  private readonly searchZeroResultTotal = new Map<string, number>();
-  private readonly auditWriteTotal = new Map<string, number>();
-  private readonly auditReadDurationMs = new Map<string, Histogram>();
-  private readonly auditCsvExportTotal = new Map<string, number>();
-  private readonly auditCsvExportRows = makeHistogram();
+  private readonly searchQueryDurationMs: Histogram<'type_set' | 'has_filter'>;
+  private readonly searchQueryTotal: Counter<'type_set' | 'outcome'>;
+  private readonly searchZeroResultTotal: Counter<'type_set'>;
+  private readonly auditWriteTotal: Counter<'event' | 'outcome'>;
+  private readonly auditReadDurationMs: Histogram<'has_filter'>;
+  private readonly auditCsvExportTotal: Counter<'capped'>;
+  private readonly auditCsvExportRows: Histogram<never>;
 
-  // -------------------------------------------------------------------------
-  // Emit
-  // -------------------------------------------------------------------------
+  constructor(registry: MetricsRegistryService) {
+    this.searchQueryDurationMs = registry.histogram({
+      name: 'tasker_search_query_duration_ms',
+      help: 'Search query latency in ms.',
+      labelNames: ['type_set', 'has_filter'] as const,
+      buckets: QUERY_MS_BUCKETS,
+    });
+    this.searchQueryTotal = registry.counter({
+      name: 'tasker_search_query_total',
+      help: 'Search queries executed.',
+      labelNames: ['type_set', 'outcome'] as const,
+    });
+    this.searchZeroResultTotal = registry.counter({
+      name: 'tasker_search_zero_result_total',
+      help: 'Search queries that returned no hits.',
+      labelNames: ['type_set'] as const,
+    });
+    this.auditWriteTotal = registry.counter({
+      name: 'tasker_audit_write_total',
+      help: 'AuditLog rows written.',
+      labelNames: ['event', 'outcome'] as const,
+    });
+    this.auditReadDurationMs = registry.histogram({
+      name: 'tasker_audit_read_duration_ms',
+      help: 'Audit read latency in ms.',
+      labelNames: ['has_filter'] as const,
+      buckets: AUDIT_READ_MS_BUCKETS,
+    });
+    this.auditCsvExportTotal = registry.counter({
+      name: 'tasker_audit_csv_export_total',
+      help: 'Audit CSV exports performed.',
+      labelNames: ['capped'] as const,
+    });
+    this.auditCsvExportRows = registry.histogram({
+      name: 'tasker_audit_csv_export_rows',
+      help: 'Rows emitted per CSV export.',
+      buckets: CSV_ROWS_BUCKETS,
+    });
+  }
 
   observeSearchQueryMs(typeSet: string, hasFilter: boolean, ms: number): void {
-    const key = `${typeSet}|${hasFilter ? 'yes' : 'no'}`;
-    const h = this.searchQueryDurationMs.get(key) ?? makeHistogram();
-    h.observe(ms);
-    this.searchQueryDurationMs.set(key, h);
+    this.searchQueryDurationMs.observe(
+      { type_set: typeSet, has_filter: hasFilter ? 'yes' : 'no' },
+      ms,
+    );
   }
 
   incrementSearchQuery(typeSet: string, outcome: 'success' | 'error'): void {
-    const key = `${typeSet}|${outcome}`;
-    this.searchQueryTotal.set(key, (this.searchQueryTotal.get(key) ?? 0) + 1);
+    this.searchQueryTotal.inc({ type_set: typeSet, outcome });
   }
 
   incrementSearchZeroResult(typeSet: string): void {
-    this.searchZeroResultTotal.set(typeSet, (this.searchZeroResultTotal.get(typeSet) ?? 0) + 1);
+    this.searchZeroResultTotal.inc({ type_set: typeSet });
   }
 
   incrementAuditWrite(event: string, outcome: 'success' | 'failure'): void {
-    const key = `${event}|${outcome}`;
-    this.auditWriteTotal.set(key, (this.auditWriteTotal.get(key) ?? 0) + 1);
+    this.auditWriteTotal.inc({ event, outcome });
   }
 
   observeAuditReadMs(hasFilter: boolean, ms: number): void {
-    const key = hasFilter ? 'yes' : 'no';
-    const h = this.auditReadDurationMs.get(key) ?? makeHistogram();
-    h.observe(ms);
-    this.auditReadDurationMs.set(key, h);
+    this.auditReadDurationMs.observe({ has_filter: hasFilter ? 'yes' : 'no' }, ms);
   }
 
   incrementAuditCsvExport(capped: boolean): void {
-    const key = capped ? 'yes' : 'no';
-    this.auditCsvExportTotal.set(key, (this.auditCsvExportTotal.get(key) ?? 0) + 1);
+    this.auditCsvExportTotal.inc({ capped: capped ? 'yes' : 'no' });
   }
 
   observeAuditCsvExportRows(rows: number): void {
     this.auditCsvExportRows.observe(rows);
   }
-
-  // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
-
-  render(): string {
-    const lines: string[] = [];
-
-    lines.push('# HELP tasker_search_query_duration_ms Search query latency in ms.');
-    lines.push('# TYPE tasker_search_query_duration_ms summary');
-    for (const [key, hist] of this.searchQueryDurationMs) {
-      const [type_set, has_filter] = key.split('|');
-      lines.push(
-        ...summaryLines(
-          'tasker_search_query_duration_ms',
-          { type_set: type_set!, has_filter: has_filter! },
-          hist.samples,
-        ),
-      );
-    }
-
-    lines.push('# HELP tasker_search_query_total Search queries executed.');
-    lines.push('# TYPE tasker_search_query_total counter');
-    for (const [key, value] of this.searchQueryTotal) {
-      const [type_set, outcome] = key.split('|');
-      lines.push(`tasker_search_query_total{type_set="${type_set}",outcome="${outcome}"} ${value}`);
-    }
-
-    lines.push('# HELP tasker_search_zero_result_total Search queries that returned no hits.');
-    lines.push('# TYPE tasker_search_zero_result_total counter');
-    for (const [key, value] of this.searchZeroResultTotal) {
-      lines.push(`tasker_search_zero_result_total{type_set="${key}"} ${value}`);
-    }
-
-    lines.push('# HELP tasker_audit_write_total AuditLog rows written.');
-    lines.push('# TYPE tasker_audit_write_total counter');
-    for (const [key, value] of this.auditWriteTotal) {
-      const [event, outcome] = key.split('|');
-      lines.push(`tasker_audit_write_total{event="${event}",outcome="${outcome}"} ${value}`);
-    }
-
-    lines.push('# HELP tasker_audit_read_duration_ms Audit read latency in ms.');
-    lines.push('# TYPE tasker_audit_read_duration_ms summary');
-    for (const [key, hist] of this.auditReadDurationMs) {
-      lines.push(
-        ...summaryLines('tasker_audit_read_duration_ms', { has_filter: key }, hist.samples),
-      );
-    }
-
-    lines.push('# HELP tasker_audit_csv_export_total Audit CSV exports performed.');
-    lines.push('# TYPE tasker_audit_csv_export_total counter');
-    for (const [key, value] of this.auditCsvExportTotal) {
-      lines.push(`tasker_audit_csv_export_total{capped="${key}"} ${value}`);
-    }
-
-    lines.push('# HELP tasker_audit_csv_export_rows Rows emitted per CSV export.');
-    lines.push('# TYPE tasker_audit_csv_export_rows summary');
-    lines.push(
-      ...summaryLines('tasker_audit_csv_export_rows', {}, this.auditCsvExportRows.samples),
-    );
-
-    return lines.join('\n') + '\n';
-  }
-
-  snapshot() {
-    return {
-      searchQueryTotal: Object.fromEntries(this.searchQueryTotal),
-      searchZeroResultTotal: Object.fromEntries(this.searchZeroResultTotal),
-      auditWriteTotal: Object.fromEntries(this.auditWriteTotal),
-      auditCsvExportTotal: Object.fromEntries(this.auditCsvExportTotal),
-      auditCsvExportRows: [...this.auditCsvExportRows.samples],
-    };
-  }
-}
-
-function summaryLines(name: string, labels: Record<string, string>, samples: number[]): string[] {
-  if (samples.length === 0) return [];
-  const sorted = [...samples].sort((a, b) => a - b);
-  const p = (q: number): number =>
-    sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))]!;
-  const labelStr = Object.entries(labels)
-    .map(([k, v]) => `${k}="${v}"`)
-    .join(',');
-  const prefix = labelStr ? `${labelStr},` : '';
-  const sum = sorted.reduce((a, b) => a + b, 0);
-  return [
-    `${name}{${prefix}quantile="0.5"} ${p(0.5)}`,
-    `${name}{${prefix}quantile="0.9"} ${p(0.9)}`,
-    `${name}{${prefix}quantile="0.95"} ${p(0.95)}`,
-    `${name}_sum{${labelStr}} ${sum}`,
-    `${name}_count{${labelStr}} ${sorted.length}`,
-  ];
 }

@@ -6,6 +6,7 @@ import { RedisModule } from '../common/redis/redis.module';
 import { METRICS_QUEUE } from '../queues/constants';
 import { DashboardController } from './dashboard.controller';
 import { MetricsController } from './metrics.controller';
+import { MetricsRegistryService } from './metrics-registry.service';
 import { MetricsService } from './metrics.service';
 import { MetricsRefreshProcessor } from './metrics-refresh.processor';
 import { TaskStatusChangedListener } from './task-status-changed.listener';
@@ -31,6 +32,7 @@ import { WebhooksModule } from '../platform/webhooks/webhooks.module';
   ],
   controllers: [DashboardController, MetricsController],
   providers: [
+    MetricsRegistryService,
     MetricsService,
     MetricsRefreshProcessor,
     TaskStatusChangedListener,
@@ -41,6 +43,7 @@ import { WebhooksModule } from '../platform/webhooks/webhooks.module';
     AiMetricsCollector,
   ],
   exports: [
+    MetricsRegistryService,
     MetricsService,
     PlanningMetricsCollector,
     SearchAuditMetricsCollector,
