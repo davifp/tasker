@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -7,8 +7,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { envSchema } from '@tasker/config';
 import { LoggerModule } from './common/logger/logger.module';
+import { ClsContextModule } from './common/cls/cls.module';
+import { ContextEnrichmentInterceptor } from './common/cls/context-enrichment.interceptor';
 import { RedisConnectionFactory } from './common/redis/redis-connection.factory';
-import { TraceIdMiddleware } from './common/middleware/trace-id.middleware';
 import { ProblemDetailsFilter } from './common/filters/problem-details.filter';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
@@ -147,6 +148,10 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
         storage: new RedisThrottlerStorage(redis),
       }),
     }),
+    // ClsContextModule MUST be imported before LoggerModule so the CLS
+    // middleware is mounted first — pino-http would otherwise emit its first
+    // request-scoped logs before the CLS store is initialised.
+    ClsContextModule,
     LoggerModule,
     SecurityModule,
     StorageModule,
@@ -214,6 +219,13 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
       provide: APP_INTERCEPTOR,
       useClass: WorkspaceContextInterceptor,
     },
+    // Enriches the CLS log context with userId/workspaceId once WorkspaceGuard
+    // and WorkspaceContextInterceptor have populated the request; must run
+    // after them so req.user and req.workspaceContext are set.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ContextEnrichmentInterceptor,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: IdempotencyInterceptor,
@@ -234,8 +246,4 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(TraceIdMiddleware).forRoutes({ path: '{*path}', method: RequestMethod.ALL });
-  }
-}
+export class AppModule {}

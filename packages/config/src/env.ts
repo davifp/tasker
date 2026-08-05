@@ -7,6 +7,11 @@ export const envSchema = z.object({
   REDIS_URL: z.string().url(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
+  // Release identifier — ties every log, metric, trace, and error report to the
+  // deployed build. Populated at container entrypoint (`${GITHUB_SHA:0:8}-${ISO_DATE}`);
+  // falls back to `dev-${hostname}` when unset so local runs still carry a value.
+  RELEASE_ID: z.string().default(''),
+
   // App
   APP_BASE_URL: z.string().url().default('http://localhost:3000'),
 

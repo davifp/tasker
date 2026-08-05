@@ -6,6 +6,7 @@ import { config as loadDotenv } from 'dotenv';
 // Load .env from workspace root (two levels up from src/)
 loadDotenv({ path: path.resolve(__dirname, '../../.env') });
 
+import { hostname } from 'node:os';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -16,11 +17,20 @@ const pkg = JSON.parse(readFileSync(path.resolve(__dirname, '../package.json'), 
   version: string;
 };
 
+// Resolved once at boot so every log line and every observability signal
+// (metrics `build_info`, Sentry `release`, OTel resource) shares the same id.
+const releaseId = process.env['RELEASE_ID'] || `dev-${hostname()}`;
+
 async function bootstrap(): Promise<void> {
   // `rawBody: true` stashes the exact request bytes on `req.rawBody` for
   // signature-verifying webhook receivers (e.g. GitHub's X-Hub-Signature-256).
   const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
-  app.useLogger(app.get(Logger));
+  const logger = app.get(Logger);
+  app.useLogger(logger);
+  logger.log(
+    { releaseId, version: pkg.version, nodeVersion: process.version },
+    'API bootstrap starting',
+  );
   app.setGlobalPrefix('api/v1');
   setupOpenApiDocs(app, { version: pkg.version });
   // Wire the Socket.IO Redis adapter before app.listen so the WS server is
