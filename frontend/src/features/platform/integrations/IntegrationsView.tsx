@@ -11,6 +11,7 @@ import {
   useDisconnectIntegration,
   useIntegrations,
   useStartGithubConnection,
+  useStartGoogleCalendarConnection,
 } from './hooks/useIntegrations';
 
 interface Props {
@@ -31,7 +32,6 @@ const PROVIDERS: readonly ProviderCard[] = [
     provider: 'GOOGLE_CALENDAR',
     labelKey: 'google.label',
     descriptionKey: 'google.description',
-    disabled: true,
   },
 ];
 
@@ -40,6 +40,7 @@ export function IntegrationsView({ workspaceSlug, canManage }: Props) {
   const query = useIntegrations(workspaceSlug);
   const disconnect = useDisconnectIntegration(workspaceSlug);
   const startGithub = useStartGithubConnection(workspaceSlug);
+  const startGoogle = useStartGoogleCalendarConnection(workspaceSlug);
 
   const byProvider = new Map<IntegrationProviderName, IntegrationSummary>();
   for (const item of query.data?.items ?? []) {
@@ -49,9 +50,15 @@ export function IntegrationsView({ workspaceSlug, canManage }: Props) {
   async function handleConnectGithub() {
     try {
       const result = await startGithub.mutateAsync(undefined);
-      // Redirect the browser to GitHub's authorize URL. On success GitHub
-      // will redirect back to our OAUTH_CALLBACK_BASE_URL, which the API
-      // side finishes with a `complete` call.
+      window.location.href = result.authorizeUrl;
+    } catch {
+      toast.error(t('toast.startFailed'));
+    }
+  }
+
+  async function handleConnectGoogle() {
+    try {
+      const result = await startGoogle.mutateAsync(undefined);
       window.location.href = result.authorizeUrl;
     } catch {
       toast.error(t('toast.startFailed'));
@@ -115,11 +122,18 @@ export function IntegrationsView({ workspaceSlug, canManage }: Props) {
                   ) : (
                     <Button
                       size="sm"
-                      onClick={card.provider === 'GITHUB' ? handleConnectGithub : undefined}
+                      onClick={
+                        card.provider === 'GITHUB'
+                          ? handleConnectGithub
+                          : card.provider === 'GOOGLE_CALENDAR'
+                            ? handleConnectGoogle
+                            : undefined
+                      }
                       disabled={
                         !canManage ||
                         card.disabled ||
-                        (card.provider === 'GITHUB' && startGithub.isPending)
+                        (card.provider === 'GITHUB' && startGithub.isPending) ||
+                        (card.provider === 'GOOGLE_CALENDAR' && startGoogle.isPending)
                       }
                     >
                       {card.disabled ? t('actions.comingSoon') : t('actions.connect')}

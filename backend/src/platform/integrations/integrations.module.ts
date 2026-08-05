@@ -7,6 +7,8 @@ import { GithubIntegrationService } from './github/github-integration.service';
 import { GithubLinkController } from './github/github-link.controller';
 import { GithubLinkService } from './github/github-link.service';
 import { GithubWebhookController } from './github/github-webhook.controller';
+import { GoogleCalendarController } from './google-calendar/google-calendar.controller';
+import { GoogleCalendarService } from './google-calendar/google-calendar.service';
 import { IntegrationOAuthStateService } from './integration-oauth-state.service';
 import { integrationTokenVaultProvider } from './integration-token-vault.provider';
 import { IntegrationsController } from './integrations.controller';
@@ -19,6 +21,7 @@ import { IntegrationsService } from './integrations.service';
     GithubIntegrationController,
     GithubLinkController,
     GithubWebhookController,
+    GoogleCalendarController,
   ],
   providers: [
     IntegrationsService,
@@ -26,7 +29,13 @@ import { IntegrationsService } from './integrations.service';
     integrationTokenVaultProvider,
     GithubIntegrationService,
     GithubLinkService,
+    GoogleCalendarService,
   ],
-  exports: [IntegrationsService, GithubLinkService, GithubIntegrationService],
+  exports: [
+    IntegrationsService,
+    GithubLinkService,
+    GithubIntegrationService,
+    GoogleCalendarService,
+  ],
 })
 export class IntegrationsModule {}

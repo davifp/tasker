@@ -32,3 +32,10 @@ export function useStartGithubConnection(workspaceSlug: string) {
     mutationFn: (returnTo?: string) => integrationsHttp.startGithub(workspaceSlug, returnTo),
   });
 }
+
+export function useStartGoogleCalendarConnection(workspaceSlug: string) {
+  return useMutation({
+    mutationFn: (returnTo?: string) =>
+      integrationsHttp.startGoogleCalendar(workspaceSlug, returnTo),
+  });
+}

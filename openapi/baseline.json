@@ -3776,6 +3776,54 @@
           "GithubWebhook"
         ]
       }
+    },
+    "/api/v1/workspaces/{slug}/integrations/google-calendar/start": {
+      "post": {
+        "operationId": "GoogleCalendarController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartIntegrationConnectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GoogleCalendar"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/integrations/google-calendar/complete": {
+      "post": {
+        "operationId": "GoogleCalendarController_complete",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteIntegrationConnectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GoogleCalendar"
+        ]
+      }
     }
   },
   "info": {

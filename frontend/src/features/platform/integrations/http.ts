@@ -52,4 +52,22 @@ export const integrationsHttp = {
       { idempotencyKey },
     );
   },
+  startGoogleCalendar(slug: string, returnTo?: string): Promise<StartConnectionResponse> {
+    return browserHttp.post<StartConnectionResponse>(
+      `${base(slug)}/google-calendar/start`,
+      returnTo ? { returnTo } : {},
+    );
+  },
+  completeGoogleCalendar(
+    slug: string,
+    code: string,
+    state: string,
+    idempotencyKey: string,
+  ): Promise<{ integrationId: string; googleEmail: string }> {
+    return browserHttp.post<{ integrationId: string; googleEmail: string }>(
+      `${base(slug)}/google-calendar/complete`,
+      { code, state },
+      { idempotencyKey },
+    );
+  },
 };
