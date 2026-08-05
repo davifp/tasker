@@ -34,11 +34,19 @@ All notable changes to Tasker are recorded here.
 - **Docs**: [`docs/platform.md`](docs/platform.md) with curl quickstart,
   Node/Python signature-verification snippets, and integration connect flow.
 
+### Changed
+
+- Webhook delivery backoff now uses a custom BullMQ strategy that clamps to
+  `WEBHOOK_BACKOFF_CAP_MS` (default 1 h) — the env var was declared but
+  previously unenforced. Values remain configurable via
+  `WEBHOOK_BACKOFF_BASE_MS` and `WEBHOOK_MAX_ATTEMPTS`.
+- `WebhookSigner` and `IntegrationTokenVault` prefer dedicated
+  `WEBHOOK_MASTER_KEY` / `INTEGRATION_MASTER_KEY` when set, falling back to
+  `JWT_SECRET` for backwards compatibility. Rotating either concern no
+  longer requires rotating session signing.
+
 ### Deferred (documented in per-task review reports)
 
 - Bidirectional GitHub comment mirror (primitives in place; wiring pending).
 - Google Calendar event export processor (mapper unit-tested; BullMQ worker pending).
 - Playwright cross-flow E2E spec.
-- Custom BullMQ backoff strategy enforcing the 24-hour webhook cap.
-- Dedicated `WEBHOOK_MASTER_KEY` and `INTEGRATION_MASTER_KEY` env vars to
-  decouple encryption from `JWT_SECRET`.

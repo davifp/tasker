@@ -187,6 +187,12 @@ export const envSchema = z.object({
 
   // Per-provider HTTP timeout for outbound integration calls (techspec: 15 s).
   INTEGRATION_HTTP_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+
+  // Dedicated master keys for the AES-256-GCM vaults so they rotate
+  // independently of JWT_SECRET. Empty → the vault derives its key from
+  // JWT_SECRET (backwards compatible with pre-key deployments).
+  WEBHOOK_MASTER_KEY: z.string().default(''),
+  INTEGRATION_MASTER_KEY: z.string().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -25,6 +25,7 @@ import type {
   TaskUpdatedEvent,
 } from '../../tasks/events/task.events';
 import { WEBHOOK_DELIVERY_JOB, WEBHOOK_DELIVERY_QUEUE } from '../../queues/constants';
+import { WEBHOOK_BACKOFF_STRATEGY_NAME } from './webhook-backoff.strategy';
 import type { WebhookDeliveryJobData } from './webhook-delivery.types';
 import { WebhooksService } from './webhooks.service';
 
@@ -39,7 +40,6 @@ import { WebhooksService } from './webhooks.service';
 export class WebhookDispatcherListener {
   private readonly logger = new Logger(WebhookDispatcherListener.name);
   private readonly maxAttempts: number;
-  private readonly backoffBaseMs: number;
 
   constructor(
     private readonly webhooks: WebhooksService,
@@ -47,7 +47,6 @@ export class WebhookDispatcherListener {
     @InjectQueue(WEBHOOK_DELIVERY_QUEUE) private readonly queue: Queue,
   ) {
     this.maxAttempts = config.get<number>('WEBHOOK_MAX_ATTEMPTS', 24);
-    this.backoffBaseMs = config.get<number>('WEBHOOK_BACKOFF_BASE_MS', 1000);
   }
 
   @OnEvent(TaskEvents.CREATED, { async: true })
@@ -169,7 +168,7 @@ export class WebhookDispatcherListener {
       try {
         await this.queue.add(WEBHOOK_DELIVERY_JOB, data, {
           attempts: this.maxAttempts,
-          backoff: { type: 'exponential', delay: this.backoffBaseMs },
+          backoff: { type: WEBHOOK_BACKOFF_STRATEGY_NAME },
           removeOnComplete: 100,
           removeOnFail: 100,
         });

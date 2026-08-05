@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { WEBHOOK_DELIVERY_QUEUE, WEBHOOK_DLQ_JOB, WEBHOOK_DLQ_QUEUE } from '../../queues/constants';
 import { WebhookMetricsCollector } from './webhook.metrics';
 import { WebhookSigner } from './webhook-signer';
+import { webhookBackoffStrategy } from './webhook-backoff.strategy';
 import type { WebhookDeliveryJobData, WebhookDlqJobData } from './webhook-delivery.types';
 
 // A response body larger than this is truncated before we persist it — the
@@ -13,7 +14,7 @@ import type { WebhookDeliveryJobData, WebhookDlqJobData } from './webhook-delive
 const RESPONSE_SNIPPET_MAX_BYTES = 1024;
 
 @Injectable()
-@Processor(WEBHOOK_DELIVERY_QUEUE)
+@Processor(WEBHOOK_DELIVERY_QUEUE, { settings: { backoffStrategy: webhookBackoffStrategy } })
 export class WebhookDeliveryProcessor extends WorkerHost {
   private readonly logger = new Logger(WebhookDeliveryProcessor.name);
   private readonly timeoutMs: number;

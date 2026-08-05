@@ -5,9 +5,13 @@ export const integrationTokenVaultProvider = {
   provide: IntegrationTokenVault,
   inject: [ConfigService],
   useFactory: (config: ConfigService): IntegrationTokenVault => {
-    const masterKey = config.get<string>('JWT_SECRET');
+    const dedicated = config.get<string>('INTEGRATION_MASTER_KEY');
+    const masterKey =
+      dedicated && dedicated.length > 0 ? dedicated : config.get<string>('JWT_SECRET');
     if (!masterKey) {
-      throw new Error('JWT_SECRET is required to derive the integration token vault key');
+      throw new Error(
+        'INTEGRATION_MASTER_KEY or JWT_SECRET is required to derive the integration token vault key',
+      );
     }
     return new IntegrationTokenVault(masterKey);
   },

@@ -102,10 +102,22 @@ def hook():
 
 ### Retry + DLQ
 
-Failed deliveries retry with exponential backoff up to 24 attempts (default,
-tunable via `WEBHOOK_MAX_ATTEMPTS`). Exhausted deliveries land in the
+Failed deliveries retry with a capped exponential backoff — `base * 2^(attempt-1)`
+milliseconds, clamped to `WEBHOOK_BACKOFF_CAP_MS` (default 1 h). Up to
+`WEBHOOK_MAX_ATTEMPTS` (default 24) attempts, targeting a ~24-hour ceiling
+regardless of how the base grows. Exhausted deliveries land in the
 **dead-letter queue** and can be inspected via `GET /webhooks/:id/dlq`.
 Retention is 30 days for both delivery attempts and DLQ rows.
+
+### Key management
+
+By default the AES-256-GCM key used to encrypt the stored signing secret is
+derived from `JWT_SECRET`. To rotate secret storage independently of session
+signing, set `WEBHOOK_MASTER_KEY` — the provider prefers it when non-empty
+and falls back to `JWT_SECRET` otherwise. Rotating either key invalidates
+existing sealed secrets, so pre-rotate: dual-write in code is not required
+because the fields only exist for active subscriptions and can be rotated
+via the admin UI's `Rotate secret` action.
 
 ## Integrations
 
@@ -125,6 +137,9 @@ Connect from **Settings → Platform → Integrations**. The flow:
 
 Disconnect removes the `Integration` row, halting sync on the next job cycle.
 Already-exported data on the provider side is preserved.
+
+The AES key used by the token vault is derived from `INTEGRATION_MASTER_KEY`
+if set (recommended), otherwise from `JWT_SECRET` for backwards compatibility.
 
 ### GitHub
 
