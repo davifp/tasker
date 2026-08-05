@@ -5,6 +5,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { randomUUID } from 'node:crypto';
 import { Queue } from 'bullmq';
 import type { WebhookEventType } from '@tasker/config';
+import { withJobTelemetry } from '../../observability/bullmq-tracing';
 import { ProjectEvents } from '../../projects/events/project.events';
 import type {
   ProjectCreatedEvent,
@@ -166,7 +167,7 @@ export class WebhookDispatcherListener {
         payload,
       };
       try {
-        await this.queue.add(WEBHOOK_DELIVERY_JOB, data, {
+        await this.queue.add(WEBHOOK_DELIVERY_JOB, withJobTelemetry(data, { workspaceId }), {
           attempts: this.maxAttempts,
           backoff: { type: WEBHOOK_BACKOFF_STRATEGY_NAME },
           removeOnComplete: 100,

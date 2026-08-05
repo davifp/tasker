@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { ClsService } from 'nestjs-cls';
 import { UnrecoverableError } from 'bullmq';
 import type { Job } from 'bullmq';
 import { MailProcessor } from './mail.processor';
@@ -24,7 +25,13 @@ vi.mock('handlebars', () => ({
 vi.mock('node:fs', () => ({ readFileSync: () => '{{var}}' }));
 
 function makeJob(data: MailSendInput, attemptsMade = 0): Job<MailSendInput> {
-  return { id: 'j1', data, attemptsMade } as unknown as Job<MailSendInput>;
+  return {
+    id: 'j1',
+    data,
+    attemptsMade,
+    name: 'send',
+    queueName: 'mail',
+  } as unknown as Job<MailSendInput>;
 }
 
 async function buildProcessor(): Promise<MailProcessor> {
@@ -35,6 +42,14 @@ async function buildProcessor(): Promise<MailProcessor> {
         provide: ConfigService,
         useValue: {
           get: (key: string, def: unknown) => def,
+        },
+      },
+      {
+        provide: ClsService,
+        useValue: {
+          run: (fn: () => unknown) => fn(),
+          set: () => undefined,
+          get: () => undefined,
         },
       },
     ],

@@ -4,7 +4,20 @@ import { CleanupProcessor } from './cleanup.processor';
 import { CLEANUP_JOB, PURGE_WARNING_JOB } from './constants';
 
 function makeJob(name: string, data: unknown = {}): Job {
-  return { id: `${name}-1`, name, data } as unknown as Job;
+  return { id: `${name}-1`, name, data, queueName: 'cleanup' } as unknown as Job;
+}
+
+// Minimal ClsService stub — runInJobContext calls cls.run/set only.
+function makeClsStub(): {
+  run: (fn: () => unknown) => unknown;
+  set: () => void;
+  get: () => undefined;
+} {
+  return {
+    run: (fn) => fn(),
+    set: () => undefined,
+    get: () => undefined,
+  };
 }
 
 describe('CleanupProcessor.runCleanup', () => {
@@ -71,6 +84,7 @@ describe('CleanupProcessor.runCleanup', () => {
       config as never,
       mail as never,
       queue as never,
+      makeClsStub() as never,
     );
 
     const result = await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
@@ -99,6 +113,7 @@ describe('CleanupProcessor.runCleanup', () => {
       config as never,
       mail as never,
       queue as never,
+      makeClsStub() as never,
     );
 
     const result = await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
@@ -123,6 +138,7 @@ describe('CleanupProcessor.runCleanup', () => {
       config as never,
       mail as never,
       queue as never,
+      makeClsStub() as never,
     );
 
     const result = await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
@@ -147,6 +163,7 @@ describe('CleanupProcessor.runCleanup', () => {
       config as never,
       mail as never,
       queue as never,
+      makeClsStub() as never,
     );
 
     const result = await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
@@ -166,6 +183,7 @@ describe('CleanupProcessor.runCleanup', () => {
       config as never,
       mail as never,
       queue as never,
+      makeClsStub() as never,
     );
 
     const result = await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
@@ -190,6 +208,7 @@ describe('CleanupProcessor.runCleanup', () => {
       config as never,
       mail as never,
       queue as never,
+      makeClsStub() as never,
     );
 
     await processor.runCleanup(makeJob(CLEANUP_JOB) as never);
@@ -226,6 +245,7 @@ describe('CleanupProcessor.process — purge-warning branch', () => {
       config as never,
       mail as never,
       queue as never,
+      makeClsStub() as never,
     );
 
     await processor.process(
@@ -254,6 +274,7 @@ describe('CleanupProcessor.process — purge-warning branch', () => {
       config as never,
       mail as never,
       queue as never,
+      makeClsStub() as never,
     );
 
     await processor.process(

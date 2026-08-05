@@ -2,7 +2,9 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Job, Queue } from 'bullmq';
+import { ClsService } from 'nestjs-cls';
 import { AttachmentsService } from '../tasks/attachments/attachments.service';
+import { runInJobContext, withJobTelemetry } from '../observability/bullmq-tracing';
 import { ATTACHMENTS_JANITOR_JOB, ATTACHMENTS_QUEUE } from './constants';
 
 /**
@@ -25,6 +27,7 @@ export class AttachmentsJanitorProcessor extends WorkerHost implements OnModuleI
     private readonly attachments: AttachmentsService,
     private readonly config: ConfigService,
     @InjectQueue(ATTACHMENTS_QUEUE) private readonly queue: Queue,
+    private readonly cls: ClsService,
   ) {
     super();
   }
@@ -33,16 +36,12 @@ export class AttachmentsJanitorProcessor extends WorkerHost implements OnModuleI
     const bootTimeoutMs = this.config.get<number>('ATTACHMENTS_JANITOR_REGISTER_TIMEOUT_MS', 2000);
     try {
       await Promise.race([
-        this.queue.add(
-          ATTACHMENTS_JANITOR_JOB,
-          {},
-          {
-            // Every 5 minutes.
-            repeat: { pattern: '*/5 * * * *' },
-            removeOnComplete: 100,
-            removeOnFail: 100,
-          },
-        ),
+        this.queue.add(ATTACHMENTS_JANITOR_JOB, withJobTelemetry({}), {
+          // Every 5 minutes.
+          repeat: { pattern: '*/5 * * * *' },
+          removeOnComplete: 100,
+          removeOnFail: 100,
+        }),
         new Promise((_, reject) =>
           setTimeout(
             () =>
@@ -62,12 +61,14 @@ export class AttachmentsJanitorProcessor extends WorkerHost implements OnModuleI
     }
   }
 
-  async process(_job: Job): Promise<{ swept: number }> {
-    const cutoff = new Date(Date.now() - this.staleThresholdMs);
-    const result = await this.attachments.sweepOrphanPending(cutoff);
-    if (result.swept > 0) {
-      this.logger.log({ swept: result.swept }, 'attachments.janitor.swept');
-    }
-    return result;
+  async process(job: Job): Promise<{ swept: number }> {
+    return runInJobContext(job, this.cls, `process.${ATTACHMENTS_QUEUE}.${job.name}`, async () => {
+      const cutoff = new Date(Date.now() - this.staleThresholdMs);
+      const result = await this.attachments.sweepOrphanPending(cutoff);
+      if (result.swept > 0) {
+        this.logger.log({ swept: result.swept }, 'attachments.janitor.swept');
+      }
+      return result;
+    });
   }
 }

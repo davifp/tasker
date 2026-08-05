@@ -6,6 +6,7 @@ import Redis from 'ioredis';
 import { NotificationEventType, NotificationSourceKind } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisConnectionFactory } from '../common/redis/redis-connection.factory';
+import { withJobTelemetry } from '../observability/bullmq-tracing';
 import { NOTIFICATIONS_QUEUE, NOTIFICATION_FANOUT_JOB } from '../queues/constants';
 import { PreferencesService } from './preferences.service';
 import { InAppChannel } from './channels/in-app.channel';
@@ -99,19 +100,25 @@ export class NotificationsService {
       if (eventPrefs.EMAIL || eventPrefs.PUSH) {
         await this.queue.add(
           NOTIFICATION_FANOUT_JOB,
-          {
-            type: 'notification.fanout',
-            workspaceId: input.workspaceId,
-            eventType: input.eventType,
-            recipientUserId,
-            notificationId: notificationId ?? '',
-            sourceKind: input.sourceEntity.kind,
-            sourceId: input.sourceEntity.id,
-            ...(input.actorUserId ? { actorUserId: input.actorUserId } : {}),
-            // Denormalised copy so the email/push workers do not need to
-            // hit Postgres per item to render.
-            payload: input.payload,
-          },
+          withJobTelemetry(
+            {
+              type: 'notification.fanout',
+              workspaceId: input.workspaceId,
+              eventType: input.eventType,
+              recipientUserId,
+              notificationId: notificationId ?? '',
+              sourceKind: input.sourceEntity.kind,
+              sourceId: input.sourceEntity.id,
+              ...(input.actorUserId ? { actorUserId: input.actorUserId } : {}),
+              // Denormalised copy so the email/push workers do not need to
+              // hit Postgres per item to render.
+              payload: input.payload,
+            },
+            {
+              workspaceId: input.workspaceId,
+              ...(input.actorUserId ? { userId: input.actorUserId } : {}),
+            },
+          ),
           {
             jobId: `fanout-${input.eventType}-${recipientUserId}-${input.sourceEntity.id}`,
             removeOnComplete: 500,

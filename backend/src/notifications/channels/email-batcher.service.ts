@@ -7,6 +7,7 @@ import { NotificationEventType } from '@prisma/client';
 import { RedisConnectionFactory } from '../../common/redis/redis-connection.factory';
 import { MAIL_PROVIDER, MailProvider, MailTemplate } from '../../common/mail/mail.provider';
 import { PrismaService } from '../../prisma/prisma.service';
+import { withJobTelemetry } from '../../observability/bullmq-tracing';
 import { NOTIFICATIONS_QUEUE, NOTIFICATION_EMAIL_BATCH_JOB } from '../../queues/constants';
 import { NotificationsMetricsCollector } from '../../metrics/notifications.metrics';
 import { BufferedEmailItem, emailBucketIndexKey, emailBucketKey } from './email.channel';
@@ -68,7 +69,7 @@ export class EmailBatcher implements OnModuleInit {
       await Promise.race([
         this.queue.add(
           NOTIFICATION_EMAIL_BATCH_JOB,
-          { type: 'notification.email-batch' },
+          withJobTelemetry({ type: 'notification.email-batch' }),
           {
             repeat: { every: this.batchWindowSeconds * 1000 },
             removeOnComplete: 100,

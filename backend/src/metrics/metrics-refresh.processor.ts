@@ -3,8 +3,10 @@ import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Job, Queue } from 'bullmq';
 import Redis from 'ioredis';
+import { ClsService } from 'nestjs-cls';
 import { METRICS_REFRESH_CRON_DEFAULT } from '@tasker/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { runInJobContext, withJobTelemetry } from '../observability/bullmq-tracing';
 import {
   METRICS_QUEUE,
   METRICS_REFRESH_JOB_GLOBAL,
@@ -27,6 +29,7 @@ export class MetricsRefreshProcessor extends WorkerHost implements OnModuleInit 
     private readonly config: ConfigService,
     private readonly redis: Redis,
     @InjectQueue(METRICS_QUEUE) private readonly queue: Queue,
+    private readonly cls: ClsService,
   ) {
     super();
   }
@@ -38,15 +41,11 @@ export class MetricsRefreshProcessor extends WorkerHost implements OnModuleInit 
     const timeoutMs = this.config.get<number>('METRICS_REFRESH_REGISTER_TIMEOUT_MS', 2000);
     try {
       await Promise.race([
-        this.queue.add(
-          METRICS_REFRESH_JOB_GLOBAL,
-          {},
-          {
-            repeat: { pattern: cron },
-            removeOnComplete: 100,
-            removeOnFail: 100,
-          },
-        ),
+        this.queue.add(METRICS_REFRESH_JOB_GLOBAL, withJobTelemetry({}), {
+          repeat: { pattern: cron },
+          removeOnComplete: 100,
+          removeOnFail: 100,
+        }),
         new Promise((_, reject) =>
           setTimeout(
             () => reject(new Error(`register metrics refresh job timed out after ${timeoutMs}ms`)),
@@ -64,6 +63,12 @@ export class MetricsRefreshProcessor extends WorkerHost implements OnModuleInit 
   }
 
   async process(job: Job): Promise<{ refreshed: string[] } | { skipped: true }> {
+    return runInJobContext(job, this.cls, `process.${METRICS_QUEUE}.${job.name}`, () =>
+      this.doProcess(job),
+    );
+  }
+
+  private async doProcess(job: Job): Promise<{ refreshed: string[] } | { skipped: true }> {
     const workspaceId =
       job.name === METRICS_REFRESH_JOB_WORKSPACE
         ? (job.data as WorkspaceRefreshData).workspaceId

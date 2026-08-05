@@ -2,8 +2,10 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Job, Queue } from 'bullmq';
+import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../prisma/prisma.service';
 import { MAIL_PROVIDER, MailProvider } from '../common/mail/mail.provider';
+import { runInJobContext, withJobTelemetry } from '../observability/bullmq-tracing';
 import { CLEANUP_JOB, CLEANUP_QUEUE, PURGE_WARNING_JOB } from './constants';
 
 type CleanupJobData = Record<string, never>;
@@ -36,6 +38,7 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
     private readonly config: ConfigService,
     @Inject(MAIL_PROVIDER) private readonly mail: MailProvider,
     @InjectQueue(CLEANUP_QUEUE) private readonly queue: Queue,
+    private readonly cls: ClsService,
   ) {
     super();
   }
@@ -51,15 +54,11 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
     const bootTimeoutMs = this.config.get<number>('CLEANUP_REGISTER_TIMEOUT_MS', 2000);
     try {
       await Promise.race([
-        this.queue.add(
-          CLEANUP_JOB,
-          {},
-          {
-            repeat: { pattern: cron },
-            removeOnComplete: 100,
-            removeOnFail: 100,
-          },
-        ),
+        this.queue.add(CLEANUP_JOB, withJobTelemetry({}), {
+          repeat: { pattern: cron },
+          removeOnComplete: 100,
+          removeOnFail: 100,
+        }),
         new Promise((_, reject) =>
           setTimeout(
             () => reject(new Error(`register cleanup job timed out after ${bootTimeoutMs}ms`)),
@@ -77,12 +76,13 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
   }
 
   async process(job: Job): Promise<CleanupResult | { skipped: true }> {
-    if (job.name === PURGE_WARNING_JOB) {
-      await this.sendPurgeWarning(job as Job<PurgeWarningJobData>);
-      return { skipped: false } as unknown as CleanupResult;
-    }
-
-    return this.runCleanup(job as Job<CleanupJobData>);
+    return runInJobContext(job, this.cls, `process.${CLEANUP_QUEUE}.${job.name}`, async () => {
+      if (job.name === PURGE_WARNING_JOB) {
+        await this.sendPurgeWarning(job as Job<PurgeWarningJobData>);
+        return { skipped: false } as unknown as CleanupResult;
+      }
+      return this.runCleanup(job as Job<CleanupJobData>);
+    });
   }
 
   // Public for direct invocation from tests — the processor entry point above
@@ -236,12 +236,15 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
       try {
         await this.queue.add(
           PURGE_WARNING_JOB,
-          {
-            workspaceId: workspace.id,
-            workspaceName: workspace.name,
-            ownerEmail: workspace.owner.email,
-            purgeAt: purgeIso,
-          } satisfies PurgeWarningJobData,
+          withJobTelemetry(
+            {
+              workspaceId: workspace.id,
+              workspaceName: workspace.name,
+              ownerEmail: workspace.owner.email,
+              purgeAt: purgeIso,
+            } satisfies PurgeWarningJobData,
+            { workspaceId: workspace.id },
+          ),
           {
             jobId,
             removeOnComplete: false,

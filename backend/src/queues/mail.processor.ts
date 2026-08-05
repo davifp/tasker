@@ -1,5 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { ClsService } from 'nestjs-cls';
+import { runInJobContext } from '../observability/bullmq-tracing';
 import { ConfigService } from '@nestjs/config';
 import { Job, UnrecoverableError } from 'bullmq';
 import * as nodemailer from 'nodemailer';
@@ -46,7 +48,10 @@ export class MailProcessor extends WorkerHost {
   private readonly transporter: nodemailer.Transporter;
   private readonly from: string;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly cls: ClsService,
+  ) {
     super();
     this.from = config.get<string>('SMTP_FROM', '"Tasker" <noreply@tasker.dev>');
     const user = config.get<string | undefined>('SMTP_USER');
@@ -59,36 +64,38 @@ export class MailProcessor extends WorkerHost {
   }
 
   async process(job: Job<MailSendInput>): Promise<void> {
-    const { template, to, variables } = job.data;
-    this.logger.log({ jobId: job.id, template, to }, 'Processing mail job');
+    return runInJobContext(job, this.cls, `process.${MAIL_QUEUE}.${job.name}`, async () => {
+      const { template, to, variables } = job.data;
+      this.logger.log({ jobId: job.id, template, to }, 'Processing mail job');
 
-    const { html: htmlFn, text: textFn } = loadTemplate(template);
-    const html = htmlFn(variables);
-    const text = textFn(variables);
+      const { html: htmlFn, text: textFn } = loadTemplate(template);
+      const html = htmlFn(variables);
+      const text = textFn(variables);
 
-    try {
-      await this.transporter.sendMail({
-        from: this.from,
-        to,
-        subject: SUBJECTS[template],
-        html,
-        text,
-      });
-      this.logger.log({ jobId: job.id, template, to }, 'Mail sent');
-    } catch (err: unknown) {
-      const code = (err as { responseCode?: number }).responseCode ?? 0;
-      if (PERMANENT_SMTP_CODES.has(code)) {
-        this.logger.error(
-          { jobId: job.id, template, to, code },
-          'Permanent SMTP error — moving to DLQ',
+      try {
+        await this.transporter.sendMail({
+          from: this.from,
+          to,
+          subject: SUBJECTS[template],
+          html,
+          text,
+        });
+        this.logger.log({ jobId: job.id, template, to }, 'Mail sent');
+      } catch (err: unknown) {
+        const code = (err as { responseCode?: number }).responseCode ?? 0;
+        if (PERMANENT_SMTP_CODES.has(code)) {
+          this.logger.error(
+            { jobId: job.id, template, to, code },
+            'Permanent SMTP error — moving to DLQ',
+          );
+          throw new UnrecoverableError(`Permanent SMTP error ${code}`);
+        }
+        this.logger.warn(
+          { jobId: job.id, template, to, attempt: job.attemptsMade },
+          'Transient SMTP error — will retry',
         );
-        throw new UnrecoverableError(`Permanent SMTP error ${code}`);
+        throw err;
       }
-      this.logger.warn(
-        { jobId: job.id, template, to, attempt: job.attemptsMade },
-        'Transient SMTP error — will retry',
-      );
-      throw err;
-    }
+    });
   }
 }

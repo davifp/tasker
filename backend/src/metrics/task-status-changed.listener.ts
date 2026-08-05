@@ -6,6 +6,7 @@ import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 import { METRICS_REFRESH_DEBOUNCE_SEC_DEFAULT } from '@tasker/config';
 import type { ActivityBusEvent } from '../common/activity/activity.bus';
+import { withJobTelemetry } from '../observability/bullmq-tracing';
 import { METRICS_QUEUE, METRICS_REFRESH_JOB_WORKSPACE } from '../queues/constants';
 
 /**
@@ -62,7 +63,7 @@ export class TaskStatusChangedListener implements OnModuleInit {
     try {
       await this.queue.add(
         METRICS_REFRESH_JOB_WORKSPACE,
-        { workspaceId },
+        withJobTelemetry({ workspaceId }, { workspaceId }),
         { removeOnComplete: 100, removeOnFail: 100 },
       );
     } catch (err) {

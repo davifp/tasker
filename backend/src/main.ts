@@ -1,11 +1,9 @@
+// MUST be first: bootstraps the OpenTelemetry SDK so it can patch @nestjs/*,
+// pg, ioredis, socket.io, and undici on require. Also loads .env.
+import './observability/telemetry.bootstrap';
 import 'reflect-metadata';
 import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
-import { config as loadDotenv } from 'dotenv';
-
-// Load .env from workspace root (two levels up from src/)
-loadDotenv({ path: path.resolve(__dirname, '../../.env') });
-
 import { hostname } from 'node:os';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
