@@ -33,6 +33,11 @@ export const AuditEvent = {
   WEBHOOK_DELETED: 'webhook.deleted',
   WEBHOOK_SECRET_ROTATED: 'webhook.secret_rotated',
   WEBHOOK_DELIVERY_FAILED: 'webhook.delivery_failed',
+  INTEGRATION_CONNECTED: 'integration.connected',
+  INTEGRATION_DISCONNECTED: 'integration.disconnected',
+  INTEGRATION_TOKEN_EXPIRED: 'integration.token_expired',
+  INTEGRATION_TASK_LINKED: 'integration.task_linked',
+  INTEGRATION_TASK_UNLINKED: 'integration.task_unlinked',
   // Phase 7 — audit self-audit for CSV exports.
   AUDIT_EXPORT: 'audit.export',
   // Phase 9 — one row per AI invocation (success or failure). Metadata

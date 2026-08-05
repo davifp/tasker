@@ -1101,6 +1101,35 @@
         "deleteFailed": "Could not delete the webhook. Please try again.",
         "rotateFailed": "Could not rotate the secret. Please try again."
       }
+    },
+    "integrations": {
+      "title": "Integrations",
+      "subtitle": "Connect Tasker to external services so tasks can mirror activity from GitHub and Google Calendar.",
+      "forbiddenTitle": "You don't have access to integrations",
+      "forbiddenBody": "Only workspace admins and owners can connect or disconnect integrations.",
+      "actions": {
+        "connect": "Connect",
+        "disconnect": "Disconnect",
+        "comingSoon": "Coming soon"
+      },
+      "state": {
+        "CONNECTED": "Connected",
+        "NEEDS_RECONNECT": "Needs reconnect",
+        "DISCONNECTED": "Disconnected"
+      },
+      "github": {
+        "label": "GitHub",
+        "description": "Link tasks to issues and pull requests, mirror comments both ways."
+      },
+      "google": {
+        "label": "Google Calendar",
+        "description": "Publish task deadlines as calendar events on a chosen calendar."
+      },
+      "toast": {
+        "startFailed": "Could not start the connection flow. Please try again.",
+        "disconnected": "Integration disconnected",
+        "disconnectFailed": "Could not disconnect the integration. Please try again."
+      }
     }
   }
 }

@@ -17,7 +17,9 @@ const pkg = JSON.parse(readFileSync(path.resolve(__dirname, '../package.json'), 
 };
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // `rawBody: true` stashes the exact request bytes on `req.rawBody` for
+  // signature-verifying webhook receivers (e.g. GitHub's X-Hub-Signature-256).
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api/v1');
   setupOpenApiDocs(app, { version: pkg.version });

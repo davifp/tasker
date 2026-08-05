@@ -1101,6 +1101,35 @@
         "deleteFailed": "Não foi possível excluir o webhook. Tente novamente.",
         "rotateFailed": "Não foi possível rotacionar o segredo. Tente novamente."
       }
+    },
+    "integrations": {
+      "title": "Integrações",
+      "subtitle": "Conecte o Tasker a serviços externos para espelhar atividade do GitHub e do Google Calendar.",
+      "forbiddenTitle": "Você não tem acesso a integrações",
+      "forbiddenBody": "Apenas admins e owners do workspace podem conectar ou desconectar integrações.",
+      "actions": {
+        "connect": "Conectar",
+        "disconnect": "Desconectar",
+        "comingSoon": "Em breve"
+      },
+      "state": {
+        "CONNECTED": "Conectado",
+        "NEEDS_RECONNECT": "Precisa reconectar",
+        "DISCONNECTED": "Desconectado"
+      },
+      "github": {
+        "label": "GitHub",
+        "description": "Ligue tarefas a issues e pull requests, espelhando comentários nas duas direções."
+      },
+      "google": {
+        "label": "Google Calendar",
+        "description": "Publique prazos das tarefas como eventos em um calendário escolhido."
+      },
+      "toast": {
+        "startFailed": "Não foi possível iniciar o fluxo de conexão. Tente novamente.",
+        "disconnected": "Integração desconectada",
+        "disconnectFailed": "Não foi possível desconectar a integração. Tente novamente."
+      }
     }
   }
 }

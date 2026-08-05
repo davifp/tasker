@@ -106,3 +106,33 @@ export const listWebhookDeliveriesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional(),
 });
 export type ListWebhookDeliveriesQuery = z.infer<typeof listWebhookDeliveriesQuerySchema>;
+
+// Providers wired in Phase 10 v1. Kept as literals rather than mirroring the
+// full Prisma enum because Zod inference works better with a closed union.
+export const INTEGRATION_PROVIDERS = ['GITHUB', 'GOOGLE_CALENDAR'] as const;
+export type IntegrationProviderName = (typeof INTEGRATION_PROVIDERS)[number];
+export const integrationProviderSchema = z.enum(INTEGRATION_PROVIDERS);
+
+// Frontend requests an OAuth authorize URL from the API — the API generates
+// state, persists a short-lived nonce, and returns the URL to redirect to.
+export const startIntegrationConnectionSchema = z.object({
+  returnTo: z.string().max(500).optional(),
+});
+export type StartIntegrationConnectionInput = z.infer<typeof startIntegrationConnectionSchema>;
+
+// Payload posted from the frontend when the OAuth callback returns to the
+// browser with `?code=&state=`.
+export const completeIntegrationConnectionSchema = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+});
+export type CompleteIntegrationConnectionInput = z.infer<
+  typeof completeIntegrationConnectionSchema
+>;
+
+const externalLinkTypeSchema = z.enum(['ISSUE', 'PR']);
+export const createTaskLinkSchema = z.object({
+  externalRef: z.string().min(1).max(200), // owner/repo#N
+  externalType: externalLinkTypeSchema,
+});
+export type CreateTaskLinkInput = z.infer<typeof createTaskLinkSchema>;

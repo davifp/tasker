@@ -3568,6 +3568,214 @@
           "PublicTasks"
         ]
       }
+    },
+    "/api/v1/workspaces/{slug}/integrations": {
+      "get": {
+        "operationId": "IntegrationsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integrations"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/integrations/{provider}": {
+      "delete": {
+        "operationId": "IntegrationsController_disconnect",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integrations"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/integrations/github/start": {
+      "post": {
+        "operationId": "GithubIntegrationController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartIntegrationConnectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GithubIntegration"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/integrations/github/complete": {
+      "post": {
+        "operationId": "GithubIntegrationController_complete",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteIntegrationConnectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GithubIntegration"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/github-links": {
+      "get": {
+        "operationId": "GithubLinkController_list",
+        "parameters": [
+          {
+            "name": "projectSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "number",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GithubLink"
+        ]
+      },
+      "post": {
+        "operationId": "GithubLinkController_create",
+        "parameters": [
+          {
+            "name": "projectSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "number",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GithubLink"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/projects/{projectSlug}/tasks/{number}/github-links/{linkId}": {
+      "delete": {
+        "operationId": "GithubLinkController_remove",
+        "parameters": [
+          {
+            "name": "projectSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "number",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "linkId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GithubLink"
+        ]
+      }
+    },
+    "/api/v1/internal/integrations/github/events": {
+      "post": {
+        "operationId": "GithubWebhookController_handleEvent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GithubWebhook"
+        ]
+      }
     }
   },
   "info": {
@@ -4660,6 +4868,53 @@
         "required": [
           "name",
           "scopes"
+        ]
+      },
+      "StartIntegrationConnectionDto": {
+        "type": "object",
+        "properties": {
+          "returnTo": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "CompleteIntegrationConnectionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "code",
+          "state"
+        ]
+      },
+      "CreateTaskLinkDto": {
+        "type": "object",
+        "properties": {
+          "externalRef": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "externalType": {
+            "type": "string",
+            "enum": [
+              "ISSUE",
+              "PR"
+            ]
+          }
+        },
+        "required": [
+          "externalRef",
+          "externalType"
         ]
       }
     }
