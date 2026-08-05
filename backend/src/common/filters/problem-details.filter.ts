@@ -6,6 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import * as Sentry from '@sentry/node';
 import { ZodError } from 'zod';
 import { ZodValidationException } from 'nestjs-zod';
 import { TraceContext } from '../trace/trace-context';
@@ -41,6 +42,29 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const isProduction = process.env['NODE_ENV'] === 'production';
 
     const body = this.buildProblemDetails(exception, request, traceId, isProduction);
+
+    // Forward 5xx (and truly-unknown exceptions) to Sentry with the request
+    // trace context. The `beforeSend` filter drops 4xx before they hit the
+    // network, so this call is safe for every status class.
+    if (body.status >= 500) {
+      Sentry.withScope((scope) => {
+        scope.setTag('traceId', traceId);
+        const reqWithCtx = request as Request & {
+          user?: { userId?: string };
+          workspaceContext?: { workspaceId?: string };
+        };
+        const userId = reqWithCtx.user?.userId;
+        const workspaceId = reqWithCtx.workspaceContext?.workspaceId;
+        if (userId) scope.setUser({ id: userId });
+        if (workspaceId) scope.setTag('workspaceId', workspaceId);
+        scope.setContext('request', {
+          method: request.method,
+          url: request.originalUrl ?? request.url,
+        });
+        scope.setContext('response', { status_code: body.status });
+        Sentry.captureException(exception);
+      });
+    }
 
     response.status(body.status).header('Content-Type', 'application/problem+json').json(body);
   }

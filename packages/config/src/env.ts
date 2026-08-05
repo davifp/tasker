@@ -12,6 +12,16 @@ export const envSchema = z.object({
   // falls back to `dev-${hostname}` when unset so local runs still carry a value.
   RELEASE_ID: z.string().default(''),
 
+  // Sentry — backend error capture. DSN is safe to commit (public by design;
+  // the browser bundle embeds the frontend equivalent), but we still read it
+  // from env so dev/test builds don't spam the prod project. When SENTRY_DSN
+  // is empty the SDK becomes a no-op, matching the OTel exporter fallback.
+  SENTRY_DSN: z.string().default(''),
+  SENTRY_ENVIRONMENT: z.string().default('development'),
+  // Fraction of successful transactions Sentry keeps (0..1). Errored events
+  // are always kept regardless of this rate.
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
+
   // App
   APP_BASE_URL: z.string().url().default('http://localhost:3000'),
 
