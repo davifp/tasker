@@ -5,6 +5,7 @@ import { SearchAuditMetricsCollector } from './search-audit.metrics';
 import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
+import { IntegrationMetricsCollector } from '../platform/integrations/integration.metrics';
 import { RateLimitMetricsCollector } from '../platform/rate-limiting/rate-limit.metrics';
 import { WebhookMetricsCollector } from '../platform/webhooks/webhook.metrics';
 
@@ -16,6 +17,7 @@ describe('MetricsController', () => {
   let ai: AiMetricsCollector;
   let rateLimit: RateLimitMetricsCollector;
   let webhooks: WebhookMetricsCollector;
+  let integrations: IntegrationMetricsCollector;
   let controller: MetricsController;
 
   beforeEach(() => {
@@ -26,6 +28,7 @@ describe('MetricsController', () => {
     ai = new AiMetricsCollector();
     rateLimit = new RateLimitMetricsCollector();
     webhooks = new WebhookMetricsCollector();
+    integrations = new IntegrationMetricsCollector();
     controller = new MetricsController(
       planning,
       searchAudit,
@@ -34,6 +37,7 @@ describe('MetricsController', () => {
       ai,
       rateLimit,
       webhooks,
+      integrations,
     );
   });
 
@@ -51,6 +55,8 @@ describe('MetricsController', () => {
     rateLimit.incrementRateLimitHit('tsk_live');
     webhooks.incrementDelivery('success');
     webhooks.observeLatency('success', 0.123);
+    integrations.incrementSync('GITHUB', 'success');
+    integrations.incrementConnection('GITHUB', 'connected');
 
     const body = controller.scrape();
     expect(body).toContain('tasker_sprint_transition_total{from="PLANNED",to="ACTIVE"} 1');
@@ -72,6 +78,12 @@ describe('MetricsController', () => {
     expect(body).toContain('platform_api_ratelimit_hits_total{key_prefix="tsk_live"} 1');
     expect(body).toContain('platform_webhook_delivery_total{outcome="success"} 1');
     expect(body).toContain('platform_webhook_delivery_latency_seconds_count{outcome="success"} 1');
+    expect(body).toContain(
+      'platform_integration_syncs_total{provider="GITHUB",outcome="success"} 1',
+    );
+    expect(body).toContain(
+      'platform_integration_connections_total{provider="GITHUB",outcome="connected"} 1',
+    );
     expect(body.endsWith('\n')).toBe(true);
   });
 });

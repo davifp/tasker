@@ -73,6 +73,21 @@ missing-auth responses use `#api-key-unauthorized` (401); rate limit
 exhaustion returns `#rate-limit-exceeded` (429) with a `Retry-After` header
 in seconds.
 
+### Webhooks
+
+Register a subscription from Settings → Platform → Webhooks. Each delivery
+carries `Tasker-Signature: t=<unix>,v1=<hex hmac_sha256(secret, "<t>.<body>")>`.
+Signing secret is shown once at create + once after rotate. See
+[`docs/platform.md`](docs/platform.md) for the receiver-side verification
+snippets (Node + Python) and DLQ semantics.
+
+### Integrations
+
+GitHub and Google Calendar connect from Settings → Platform → Integrations.
+Both flows encrypt the OAuth access token with AES-256-GCM before storing it
+in `Integration.config`. Disconnect halts sync on the next job cycle without
+touching data already exported to the provider.
+
 ### Public API — OpenAPI baseline
 
 `openapi/baseline.json` is a committed snapshot of the OpenAPI 3.x document

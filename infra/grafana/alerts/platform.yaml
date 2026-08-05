@@ -1,0 +1,68 @@
+# Prometheus alerting rules for the Platform (Public API, Webhooks,
+# Integrations) surface. Load via `rule_files:` in prometheus.yml or import
+# through Grafana's alerting UI.
+groups:
+  - name: tasker-platform
+    interval: 1m
+    rules:
+      - alert: PlatformWebhookDLQGrowth
+        # Techspec: DLQ growth ≥ 100/hour → oncall.
+        expr: sum(increase(platform_webhook_delivery_total{outcome="dlq"}[1h])) >= 100
+        for: 15m
+        labels:
+          severity: page
+          team: platform
+        annotations:
+          summary: 'Webhook DLQ growing (≥100/hour)'
+          description: |
+            More than 100 webhook deliveries have landed in the DLQ in the last hour.
+            Investigate the receiver(s) — likely a downstream outage or a rotated
+            secret that customers haven't rolled forward yet.
+
+      - alert: PlatformIntegrationOAuthFailureRate
+        # Techspec: integration OAuth failure > 5% over 15 min → oncall.
+        expr: |
+          (
+            sum(rate(platform_integration_syncs_total{outcome="unauthorized"}[15m]))
+            /
+            sum(rate(platform_integration_syncs_total[15m]))
+          ) > 0.05
+        for: 15m
+        labels:
+          severity: page
+          team: platform
+        annotations:
+          summary: 'Integration OAuth failure rate > 5% (15m)'
+          description: |
+            More than 5% of integration sync attempts returned 401/403 in the last
+            15 minutes. Rotate the affected provider credentials and check for a
+            revoked OAuth app on the provider side.
+
+      - alert: PlatformRateLimitSaturation
+        # Warning signal: any key prefix sustaining >50 rate-limit hits/min likely
+        # means a runaway integration or a legitimate customer needing an uplift.
+        expr: sum by (key_prefix) (rate(platform_api_ratelimit_hits_total[5m])) * 60 > 50
+        for: 10m
+        labels:
+          severity: ticket
+          team: platform
+        annotations:
+          summary: 'Rate limit saturation on {{ $labels.key_prefix }}'
+          description: |
+            Key prefix {{ $labels.key_prefix }} sustained more than 50 rate-limit
+            hits per minute over the last 10 minutes. Contact the customer or
+            temporarily raise their bucket via config.
+
+      - alert: PlatformWebhookDeliveryLatency
+        # p95 delivery latency crossing 5 s for 10 min — subscriber-side issue
+        # that isn't yet failing.
+        expr: histogram_quantile(0.95, sum by (le) (rate(platform_webhook_delivery_latency_seconds_bucket[5m]))) > 5
+        for: 10m
+        labels:
+          severity: ticket
+          team: platform
+        annotations:
+          summary: 'Webhook delivery p95 latency > 5s'
+          description: |
+            p95 delivery latency has exceeded 5 s for 10 minutes. Check receiver
+            performance and network path.

@@ -14,6 +14,7 @@ import { SearchAuditMetricsCollector } from './search-audit.metrics';
 import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
+import { IntegrationsModule } from '../platform/integrations/integrations.module';
 import { RateLimitingModule } from '../platform/rate-limiting/rate-limiting.module';
 import { WebhooksModule } from '../platform/webhooks/webhooks.module';
 
@@ -26,6 +27,7 @@ import { WebhooksModule } from '../platform/webhooks/webhooks.module';
     BullModule.registerQueue({ name: METRICS_QUEUE }),
     RateLimitingModule,
     WebhooksModule,
+    IntegrationsModule,
   ],
   controllers: [DashboardController, MetricsController],
   providers: [

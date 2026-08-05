@@ -5,6 +5,7 @@ import { SearchAuditMetricsCollector } from './search-audit.metrics';
 import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
+import { IntegrationMetricsCollector } from '../platform/integrations/integration.metrics';
 import { RateLimitMetricsCollector } from '../platform/rate-limiting/rate-limit.metrics';
 import { WebhookMetricsCollector } from '../platform/webhooks/webhook.metrics';
 
@@ -24,6 +25,7 @@ export class MetricsController {
     private readonly ai: AiMetricsCollector,
     private readonly rateLimit: RateLimitMetricsCollector,
     private readonly webhooks: WebhookMetricsCollector,
+    private readonly integrations: IntegrationMetricsCollector,
   ) {}
 
   @Get()
@@ -37,7 +39,8 @@ export class MetricsController {
       this.notifications.render() +
       this.ai.render() +
       this.rateLimit.render() +
-      this.webhooks.render()
+      this.webhooks.render() +
+      this.integrations.render()
     );
   }
 }

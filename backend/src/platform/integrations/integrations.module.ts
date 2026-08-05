@@ -11,6 +11,7 @@ import { GoogleCalendarController } from './google-calendar/google-calendar.cont
 import { GoogleCalendarService } from './google-calendar/google-calendar.service';
 import { IntegrationOAuthStateService } from './integration-oauth-state.service';
 import { integrationTokenVaultProvider } from './integration-token-vault.provider';
+import { IntegrationMetricsCollector } from './integration.metrics';
 import { IntegrationsController } from './integrations.controller';
 import { IntegrationsService } from './integrations.service';
 
@@ -30,12 +31,14 @@ import { IntegrationsService } from './integrations.service';
     GithubIntegrationService,
     GithubLinkService,
     GoogleCalendarService,
+    IntegrationMetricsCollector,
   ],
   exports: [
     IntegrationsService,
     GithubLinkService,
     GithubIntegrationService,
     GoogleCalendarService,
+    IntegrationMetricsCollector,
   ],
 })
 export class IntegrationsModule {}
