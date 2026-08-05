@@ -22,6 +22,8 @@ interface CleanupResult {
   scheduledWarnings: number;
   purgedNotifications: number;
   reapedPushSubscriptions: number;
+  purgedWebhookDeliveries: number;
+  purgedWebhookDlq: number;
 }
 
 @Injectable()
@@ -97,6 +99,8 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
     );
     const pushDormantDays = this.config.get<number>('PUSH_DORMANT_DAYS', 60);
     const pushDormantCutoff = new Date(now.getTime() - pushDormantDays * 24 * 60 * 60 * 1000);
+    const webhookRetentionDays = this.config.get<number>('WEBHOOK_DELIVERY_RETENTION_DAYS', 30);
+    const webhookCutoff = new Date(now.getTime() - webhookRetentionDays * 24 * 60 * 60 * 1000);
 
     const result: CleanupResult = {
       expiredTokens: { verification: 0, passwordReset: 0 },
@@ -105,6 +109,8 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
       scheduledWarnings: 0,
       purgedNotifications: 0,
       reapedPushSubscriptions: 0,
+      purgedWebhookDeliveries: 0,
+      purgedWebhookDlq: 0,
     };
 
     try {
@@ -164,6 +170,26 @@ export class CleanupProcessor extends WorkerHost implements OnModuleInit {
       result.purgedNotifications = notifications.count;
     } catch (err) {
       this.logger.warn({ err, jobId: job.id }, 'Failed to purge stale notifications');
+    }
+
+    try {
+      const deliveries = await this.prisma
+        .forSystem()
+        .webhookDelivery.deleteMany({ where: { enqueuedAt: { lt: webhookCutoff } } });
+      result.purgedWebhookDeliveries = deliveries.count;
+    } catch (err) {
+      this.logger.warn({ err, jobId: job.id }, 'Failed to purge old webhook deliveries');
+    }
+
+    try {
+      // DLQ rows use the `expiresAt` column set at insert time (30 days out),
+      // so we sweep by that column rather than createdAt.
+      const dlq = await this.prisma
+        .forSystem()
+        .webhookDeliveryDLQ.deleteMany({ where: { expiresAt: { lt: now } } });
+      result.purgedWebhookDlq = dlq.count;
+    } catch (err) {
+      this.logger.warn({ err, jobId: job.id }, 'Failed to purge expired webhook DLQ rows');
     }
 
     try {

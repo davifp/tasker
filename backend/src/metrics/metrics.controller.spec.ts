@@ -6,6 +6,7 @@ import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
 import { RateLimitMetricsCollector } from '../platform/rate-limiting/rate-limit.metrics';
+import { WebhookMetricsCollector } from '../platform/webhooks/webhook.metrics';
 
 describe('MetricsController', () => {
   let planning: PlanningMetricsCollector;
@@ -14,6 +15,7 @@ describe('MetricsController', () => {
   let notifications: NotificationsMetricsCollector;
   let ai: AiMetricsCollector;
   let rateLimit: RateLimitMetricsCollector;
+  let webhooks: WebhookMetricsCollector;
   let controller: MetricsController;
 
   beforeEach(() => {
@@ -23,6 +25,7 @@ describe('MetricsController', () => {
     notifications = new NotificationsMetricsCollector();
     ai = new AiMetricsCollector();
     rateLimit = new RateLimitMetricsCollector();
+    webhooks = new WebhookMetricsCollector();
     controller = new MetricsController(
       planning,
       searchAudit,
@@ -30,6 +33,7 @@ describe('MetricsController', () => {
       notifications,
       ai,
       rateLimit,
+      webhooks,
     );
   });
 
@@ -45,6 +49,8 @@ describe('MetricsController', () => {
     ai.incrementInvocation('GENERATE_DESCRIPTION', 'anthropic', 'claude-sonnet-4-6', 'OK');
     rateLimit.incrementRequest('tsk_live', 200);
     rateLimit.incrementRateLimitHit('tsk_live');
+    webhooks.incrementDelivery('success');
+    webhooks.observeLatency('success', 0.123);
 
     const body = controller.scrape();
     expect(body).toContain('tasker_sprint_transition_total{from="PLANNED",to="ACTIVE"} 1');
@@ -64,6 +70,8 @@ describe('MetricsController', () => {
     );
     expect(body).toContain('platform_api_requests_total{key_prefix="tsk_live",status="200"} 1');
     expect(body).toContain('platform_api_ratelimit_hits_total{key_prefix="tsk_live"} 1');
+    expect(body).toContain('platform_webhook_delivery_total{outcome="success"} 1');
+    expect(body).toContain('platform_webhook_delivery_latency_seconds_count{outcome="success"} 1');
     expect(body.endsWith('\n')).toBe(true);
   });
 });

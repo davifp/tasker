@@ -4,7 +4,14 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { MailModule } from '../common/mail/mail.module';
 import { MailProcessor } from './mail.processor';
 import { CleanupProcessor } from './cleanup.processor';
-import { CLEANUP_QUEUE, MAIL_QUEUE, METRICS_QUEUE, NOTIFICATIONS_QUEUE } from './constants';
+import {
+  CLEANUP_QUEUE,
+  MAIL_QUEUE,
+  METRICS_QUEUE,
+  NOTIFICATIONS_QUEUE,
+  WEBHOOK_DELIVERY_QUEUE,
+  WEBHOOK_DLQ_QUEUE,
+} from './constants';
 
 // The notifications queue is registered here so producers everywhere can
 // inject it. The consumer worker (`NotificationsProcessor`) lives in
@@ -17,6 +24,8 @@ import { CLEANUP_QUEUE, MAIL_QUEUE, METRICS_QUEUE, NOTIFICATIONS_QUEUE } from '.
       { name: CLEANUP_QUEUE },
       { name: NOTIFICATIONS_QUEUE },
       { name: METRICS_QUEUE },
+      { name: WEBHOOK_DELIVERY_QUEUE },
+      { name: WEBHOOK_DLQ_QUEUE },
     ),
     PrismaModule,
     MailModule,

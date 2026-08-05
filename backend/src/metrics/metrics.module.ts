@@ -15,6 +15,7 @@ import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
 import { RateLimitingModule } from '../platform/rate-limiting/rate-limiting.module';
+import { WebhooksModule } from '../platform/webhooks/webhooks.module';
 
 @Global()
 @Module({
@@ -24,6 +25,7 @@ import { RateLimitingModule } from '../platform/rate-limiting/rate-limiting.modu
     RedisModule,
     BullModule.registerQueue({ name: METRICS_QUEUE }),
     RateLimitingModule,
+    WebhooksModule,
   ],
   controllers: [DashboardController, MetricsController],
   providers: [

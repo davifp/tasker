@@ -243,6 +243,13 @@ export const platformKeys = {
   all: (workspaceSlug: string) => ['platform', workspaceSlug] as const,
   apiKeys: (workspaceSlug: string, filters?: { includeRevoked?: boolean }) =>
     ['platform', workspaceSlug, 'api-keys', filters ?? {}] as const,
+  webhooks: (workspaceSlug: string) => ['platform', workspaceSlug, 'webhooks'] as const,
+  webhook: (workspaceSlug: string, webhookId: string) =>
+    ['platform', workspaceSlug, 'webhooks', webhookId] as const,
+  webhookDeliveries: (workspaceSlug: string, webhookId: string) =>
+    ['platform', workspaceSlug, 'webhooks', webhookId, 'deliveries'] as const,
+  webhookDlq: (workspaceSlug: string, webhookId: string) =>
+    ['platform', workspaceSlug, 'webhooks', webhookId, 'dlq'] as const,
 };
 
 export const dashboardKeys = {

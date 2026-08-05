@@ -6,6 +6,7 @@ import { RealtimeMetricsCollector } from './realtime.metrics';
 import { NotificationsMetricsCollector } from './notifications.metrics';
 import { AiMetricsCollector } from '../ai/metrics/ai.metrics';
 import { RateLimitMetricsCollector } from '../platform/rate-limiting/rate-limit.metrics';
+import { WebhookMetricsCollector } from '../platform/webhooks/webhook.metrics';
 
 /**
  * Prometheus scrape endpoint. Public so a scraper doesn't need auth —
@@ -22,6 +23,7 @@ export class MetricsController {
     private readonly notifications: NotificationsMetricsCollector,
     private readonly ai: AiMetricsCollector,
     private readonly rateLimit: RateLimitMetricsCollector,
+    private readonly webhooks: WebhookMetricsCollector,
   ) {}
 
   @Get()
@@ -34,7 +36,8 @@ export class MetricsController {
       this.realtime.render() +
       this.notifications.render() +
       this.ai.render() +
-      this.rateLimit.render()
+      this.rateLimit.render() +
+      this.webhooks.render()
     );
   }
 }

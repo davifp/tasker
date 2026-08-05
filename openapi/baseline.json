@@ -2668,6 +2668,186 @@
         ]
       }
     },
+    "/api/v1/workspaces/{slug}/webhooks": {
+      "get": {
+        "operationId": "WebhooksController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      },
+      "post": {
+        "operationId": "WebhooksController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebhookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/webhooks/{id}": {
+      "get": {
+        "operationId": "WebhooksController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      },
+      "patch": {
+        "operationId": "WebhooksController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWebhookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      },
+      "delete": {
+        "operationId": "WebhooksController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/webhooks/{id}/rotate-secret": {
+      "post": {
+        "operationId": "WebhooksController_rotateSecret",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/webhooks/{id}/deliveries": {
+      "get": {
+        "operationId": "WebhooksController_listDeliveries",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{slug}/webhooks/{id}/dlq": {
+      "get": {
+        "operationId": "WebhooksController_listDeadLetter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
     "/api/v1/workspaces/{slug}/search": {
       "get": {
         "operationId": "SearchController_find",
@@ -4286,6 +4466,82 @@
       "DashboardRefreshDto": {
         "type": "object",
         "properties": {}
+      },
+      "CreateWebhookDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500
+          },
+          "eventTypes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 13,
+            "items": {
+              "type": "string",
+              "enum": [
+                "TASK_CREATED",
+                "TASK_UPDATED",
+                "TASK_DELETED",
+                "PROJECT_CREATED",
+                "PROJECT_UPDATED",
+                "PROJECT_DELETED",
+                "COMMENT_CREATED",
+                "COMMENT_UPDATED",
+                "COMMENT_DELETED",
+                "SPRINT_CREATED",
+                "SPRINT_UPDATED",
+                "SPRINT_STARTED",
+                "SPRINT_COMPLETED"
+              ]
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "url",
+          "eventTypes"
+        ]
+      },
+      "UpdateWebhookDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500
+          },
+          "eventTypes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 13,
+            "items": {
+              "type": "string",
+              "enum": [
+                "TASK_CREATED",
+                "TASK_UPDATED",
+                "TASK_DELETED",
+                "PROJECT_CREATED",
+                "PROJECT_UPDATED",
+                "PROJECT_DELETED",
+                "COMMENT_CREATED",
+                "COMMENT_UPDATED",
+                "COMMENT_DELETED",
+                "SPRINT_CREATED",
+                "SPRINT_UPDATED",
+                "SPRINT_STARTED",
+                "SPRINT_COMPLETED"
+              ]
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       },
       "UpdatePreferencesBodyDto": {
         "type": "object",

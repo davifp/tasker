@@ -3,6 +3,8 @@ export const CLEANUP_QUEUE = 'cleanup' as const;
 export const NOTIFICATIONS_QUEUE = 'notifications' as const;
 export const ATTACHMENTS_QUEUE = 'attachments' as const;
 export const METRICS_QUEUE = 'metrics' as const;
+export const WEBHOOK_DELIVERY_QUEUE = 'webhook-delivery' as const;
+export const WEBHOOK_DLQ_QUEUE = 'webhook-dlq' as const;
 
 // Job names inside the cleanup queue.
 export const CLEANUP_JOB = 'run' as const;
@@ -25,3 +27,7 @@ export const ATTACHMENTS_JANITOR_JOB = 'janitor' as const;
 //   sprint lifecycle transitions and the debounced task-status listener.
 export const METRICS_REFRESH_JOB_GLOBAL = 'refresh' as const;
 export const METRICS_REFRESH_JOB_WORKSPACE = 'refresh:workspace' as const;
+
+// Job names inside the webhook queues.
+export const WEBHOOK_DELIVERY_JOB = 'deliver' as const;
+export const WEBHOOK_DLQ_JOB = 'archive' as const;

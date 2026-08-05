@@ -1039,6 +1039,68 @@
         "createFailed": "Não foi possível criar a chave. Tente novamente.",
         "revokeFailed": "Não foi possível revogar a chave. Tente novamente."
       }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Envie chamadas HTTP assinadas sempre que os eventos selecionados do workspace acontecerem.",
+      "forbiddenTitle": "Você não tem acesso a webhooks",
+      "forbiddenBody": "Apenas admins e owners do workspace podem gerenciar assinaturas de webhook.",
+      "createButton": "Criar webhook",
+      "empty": "Nenhum webhook ainda. Crie um para começar a receber eventos.",
+      "table": {
+        "url": "URL",
+        "events": "Eventos",
+        "status": "Status",
+        "created": "Criado em",
+        "actions": "Ações"
+      },
+      "status": {
+        "active": "Ativo",
+        "inactive": "Inativo"
+      },
+      "actions": {
+        "disable": "Desativar",
+        "enable": "Ativar",
+        "rotate": "Rotacionar segredo",
+        "delete": "Excluir"
+      },
+      "create": {
+        "title": "Criar webhook",
+        "description": "Escolha a URL de destino e quais eventos ela deve receber. Você verá o segredo de assinatura apenas uma vez — copie para o verificador do seu receptor.",
+        "urlLabel": "URL",
+        "eventsLabel": "Tipos de evento",
+        "submit": "Criar webhook",
+        "cancel": "Cancelar"
+      },
+      "reveal": {
+        "title": "Copie este segredo agora — não será mostrado de novo",
+        "body": "Esta é a única vez que exibimos o segredo bruto. Se perder, rotacione para gerar um novo.",
+        "copyButton": "Copiar",
+        "copied": "Copiado",
+        "dismiss": "Já salvei, fechar"
+      },
+      "delete": {
+        "title": "Excluir este webhook?",
+        "body": "Novos eventos deixarão de ser entregues. O histórico de entregas fica retido por 30 dias.",
+        "cancel": "Cancelar",
+        "confirm": "Excluir"
+      },
+      "rotate": {
+        "title": "Rotacionar o segredo de assinatura?",
+        "body": "O segredo anterior deixa de assinar novas entregas imediatamente. Você verá o novo segredo apenas uma vez — atualize seu receptor antes do próximo evento.",
+        "cancel": "Cancelar",
+        "confirm": "Rotacionar"
+      },
+      "toast": {
+        "created": "Webhook criado",
+        "updated": "Webhook atualizado",
+        "deleted": "Webhook excluído",
+        "rotated": "Segredo rotacionado",
+        "createFailed": "Não foi possível criar o webhook. Tente novamente.",
+        "updateFailed": "Não foi possível atualizar o webhook. Tente novamente.",
+        "deleteFailed": "Não foi possível excluir o webhook. Tente novamente.",
+        "rotateFailed": "Não foi possível rotacionar o segredo. Tente novamente."
+      }
     }
   }
 }

@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { PublicModule } from './public/public.module';
 import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
-  imports: [ApiKeysModule, RateLimitingModule, PublicModule],
-  exports: [ApiKeysModule, RateLimitingModule],
+  imports: [ApiKeysModule, RateLimitingModule, PublicModule, WebhooksModule],
+  exports: [ApiKeysModule, RateLimitingModule, WebhooksModule],
 })
 export class PlatformModule {}

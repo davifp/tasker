@@ -1039,6 +1039,68 @@
         "createFailed": "Could not create the API key. Please try again.",
         "revokeFailed": "Could not revoke the API key. Please try again."
       }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Deliver signed HTTP callbacks whenever selected workspace events happen.",
+      "forbiddenTitle": "You don't have access to webhooks",
+      "forbiddenBody": "Only workspace admins and owners can manage webhook subscriptions.",
+      "createButton": "Create webhook",
+      "empty": "No webhooks yet. Create one to start receiving events.",
+      "table": {
+        "url": "URL",
+        "events": "Events",
+        "status": "Status",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "actions": {
+        "disable": "Disable",
+        "enable": "Enable",
+        "rotate": "Rotate secret",
+        "delete": "Delete"
+      },
+      "create": {
+        "title": "Create webhook",
+        "description": "Pick a receiver URL and the events it should receive. We'll show the signing secret once — copy it into your receiver's verifier.",
+        "urlLabel": "URL",
+        "eventsLabel": "Event types",
+        "submit": "Create webhook",
+        "cancel": "Cancel"
+      },
+      "reveal": {
+        "title": "Copy this secret now — you won't see it again",
+        "body": "This is the only time we can display the raw signing secret. Rotate the secret if you ever lose it.",
+        "copyButton": "Copy",
+        "copied": "Copied",
+        "dismiss": "I've saved it, close"
+      },
+      "delete": {
+        "title": "Delete this webhook?",
+        "body": "New events will stop being delivered. Past delivery history is retained for 30 days.",
+        "cancel": "Cancel",
+        "confirm": "Delete"
+      },
+      "rotate": {
+        "title": "Rotate the signing secret?",
+        "body": "The previous secret stops signing new deliveries immediately. You'll see the new secret exactly once — update your receiver before it fires again.",
+        "cancel": "Cancel",
+        "confirm": "Rotate"
+      },
+      "toast": {
+        "created": "Webhook created",
+        "updated": "Webhook updated",
+        "deleted": "Webhook deleted",
+        "rotated": "Signing secret rotated",
+        "createFailed": "Could not create the webhook. Please try again.",
+        "updateFailed": "Could not update the webhook. Please try again.",
+        "deleteFailed": "Could not delete the webhook. Please try again.",
+        "rotateFailed": "Could not rotate the secret. Please try again."
+      }
     }
   }
 }

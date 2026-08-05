@@ -28,6 +28,11 @@ export const AuditEvent = {
   SPRINT_COMPLETED: 'sprint.completed',
   API_KEY_ISSUED: 'apiKey.issued',
   API_KEY_REVOKED: 'apiKey.revoked',
+  WEBHOOK_CREATED: 'webhook.created',
+  WEBHOOK_UPDATED: 'webhook.updated',
+  WEBHOOK_DELETED: 'webhook.deleted',
+  WEBHOOK_SECRET_ROTATED: 'webhook.secret_rotated',
+  WEBHOOK_DELIVERY_FAILED: 'webhook.delivery_failed',
   // Phase 7 — audit self-audit for CSV exports.
   AUDIT_EXPORT: 'audit.export',
   // Phase 9 — one row per AI invocation (success or failure). Metadata
