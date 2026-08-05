@@ -26,7 +26,7 @@ export interface CreateApiKeyResponse {
 }
 
 function base(slug: string): string {
-  return `/api/v1/workspaces/${encodeURIComponent(slug)}/api-keys`;
+  return `/workspaces/${encodeURIComponent(slug)}/api-keys`;
 }
 
 export const apiKeysHttp = {

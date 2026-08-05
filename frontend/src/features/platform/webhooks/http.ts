@@ -59,7 +59,7 @@ export interface RotateSecretResponse {
 }
 
 function base(slug: string): string {
-  return `/api/v1/workspaces/${encodeURIComponent(slug)}/webhooks`;
+  return `/workspaces/${encodeURIComponent(slug)}/webhooks`;
 }
 
 export const webhooksHttp = {

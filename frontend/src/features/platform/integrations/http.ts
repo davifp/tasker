@@ -24,7 +24,7 @@ export interface CompleteGithubConnectionResponse {
 }
 
 function base(slug: string): string {
-  return `/api/v1/workspaces/${encodeURIComponent(slug)}/integrations`;
+  return `/workspaces/${encodeURIComponent(slug)}/integrations`;
 }
 
 export const integrationsHttp = {
