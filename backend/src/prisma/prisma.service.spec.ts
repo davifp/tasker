@@ -48,8 +48,14 @@ describe('PrismaService', () => {
   });
 
   describe('construction', () => {
-    it('calls $extends once to build the tenant client', () => {
-      expect(mockRaw.$extends).toHaveBeenCalledOnce();
+    it('stacks demo-read-only on the system client and (demo-read-only + tenant) on the tenant client', () => {
+      // Three $extends calls total:
+      //   1. system client = raw + demo-read-only
+      //   2. tenant client = raw + demo-read-only + tenant-isolation
+      // demo-read-only is applied to BOTH so mutations through `forSystem()`
+      // (invitation accept, /me/*, notifications, ai) are still rejected at
+      // the persistence layer.
+      expect(mockRaw.$extends).toHaveBeenCalledTimes(3);
     });
   });
 

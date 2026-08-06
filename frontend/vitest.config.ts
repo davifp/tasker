@@ -4,6 +4,13 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  resolve: {
+    alias: {
+      // `server-only` throws in any non-server import path — swap for a no-op
+      // so modules that import it can be exercised from vitest.
+      'server-only': new URL('./test/stubs/server-only.ts', import.meta.url).pathname,
+    },
+  },
   test: {
     globals: false,
     environment: 'jsdom',

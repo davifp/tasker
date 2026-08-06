@@ -32,6 +32,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
         name: membership.name,
       }))}
       user={{ name: user.name, email: user.email, emailVerified: user.emailVerified }}
+      role={active.role}
     >
       {children}
     </AppShell>

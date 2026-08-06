@@ -7,6 +7,7 @@ import { CommandPalette, useCommandPalette } from '@/features/command-palette/Co
 import type { WorkspaceOption } from '@/features/workspace/WorkspaceSwitcher';
 import { MAIN_CONTENT_ID } from '@/components/shell/SkipToContent';
 import { VerificationBanner } from '@/features/verification/VerificationBanner';
+import { DemoBanner } from './DemoBanner';
 import { RealtimeProvider } from '@/features/realtime';
 import { bff } from '@/lib/http/bff';
 
@@ -15,6 +16,7 @@ interface AppShellProps {
   workspaceId: string;
   workspaces: WorkspaceOption[];
   user: { name: string; email: string; emailVerified?: boolean };
+  role?: string;
   children: React.ReactNode;
 }
 
@@ -23,6 +25,7 @@ export function AppShell({
   workspaceId,
   workspaces,
   user,
+  role,
   children,
 }: AppShellProps) {
   const { open, setOpen } = useCommandPalette();
@@ -43,6 +46,7 @@ export function AppShell({
       <div className="flex min-h-dvh w-full bg-background text-foreground">
         <Sidebar workspaceSlug={workspaceSlug} />
         <div className="flex min-w-0 flex-1 flex-col">
+          {role === 'DEMO_VIEWER' ? <DemoBanner /> : null}
           {user.emailVerified === false ? <VerificationBanner email={user.email} /> : null}
           <Topbar
             workspaceSlug={workspaceSlug}

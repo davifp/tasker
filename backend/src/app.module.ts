@@ -51,6 +51,7 @@ import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 import { RateLimitInterceptor } from './platform/rate-limiting/rate-limit.interceptor';
 import { WorkspaceGuard } from './common/context/workspace.guard';
 import { RolesGuard } from './common/context/roles.guard';
+import { DemoReadOnlyGuard } from './common/context/demo-readonly.guard';
 import { WorkspaceContextInterceptor } from './common/context/workspace-context.interceptor';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { AuditMutationInterceptor } from './common/audit/audit-mutation.interceptor';
@@ -221,6 +222,14 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    // Runs immediately after RolesGuard: blanket-denies any mutating verb
+    // when the caller is a DEMO_VIEWER, even if the handler forgot to declare
+    // @RequireRoles. Pairs with the Prisma `demo-read-only` extension for
+    // defense-in-depth on any code path that bypasses HTTP.
+    {
+      provide: APP_GUARD,
+      useClass: DemoReadOnlyGuard,
     },
     {
       provide: APP_GUARD,

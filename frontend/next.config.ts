@@ -65,6 +65,13 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: path.join(__dirname, '../'),
+  // ADR markdown lives at `<repo>/docs/adr/` — outside the frontend workspace.
+  // The `/docs` route reads them at build time via `generateStaticParams`, so
+  // they must ship inside the standalone bundle.
+  outputFileTracingIncludes: {
+    '/docs': ['../docs/adr/**/*.md'],
+    '/docs/[slug]': ['../docs/adr/**/*.md'],
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

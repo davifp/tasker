@@ -19,6 +19,11 @@ enum WorkspaceRole {
   ADMIN
   MEMBER
   GUEST
+  // Strictly read-only role for the public portfolio demo (`demo@tasker.dev`).
+  // Enforced twice — RolesGuard denies any @RequireRoles handler, and every
+  // write-side repository double-checks the caller role — so a routing bug
+  // cannot accidentally grant mutation power to an unauthenticated visitor.
+  DEMO_VIEWER
 }
 
 enum ProjectStatus {

@@ -11,6 +11,7 @@
     "start:worker": "node dist/worker.js",
     "openapi:dump": "ts-node-dev --transpile-only --respawn=false scripts/dump-openapi.ts",
     "simulate-incident": "ts-node-dev --transpile-only --respawn=false scripts/simulate-incident.ts",
+    "seed": "ts-node-dev --transpile-only --respawn=false prisma/seed.ts",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -71,6 +72,9 @@
     "web-push": "^3.6.7",
     "zod": "^3.24.0",
     "zod-to-json-schema": "^3.25.2"
+  },
+  "prisma": {
+    "seed": "ts-node-dev --transpile-only --respawn=false prisma/seed.ts"
   },
   "devDependencies": {
     "@nestjs/testing": "^11.0.0",

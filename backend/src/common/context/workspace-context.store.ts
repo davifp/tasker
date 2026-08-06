@@ -4,7 +4,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 export interface WorkspaceContext {
   userId: string;
   workspaceId: string;
-  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'GUEST';
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'GUEST' | 'DEMO_VIEWER';
   membershipId: string;
 }
 
