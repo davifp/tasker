@@ -142,6 +142,17 @@ export class AnthropicLlmProvider implements LlmProvider {
     }
   }
 
+  async ping(timeoutMs: number): Promise<void> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      // /v1/models is quota-free and does not enter the token accounting path.
+      await this.client.models.list({ limit: 1 }, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   /**
    * Maps our neutral `PromptBlock[]` to Anthropic's system block shape.
    * `cache: { ttl }` becomes `cache_control: { type: 'ephemeral', ttl }` so

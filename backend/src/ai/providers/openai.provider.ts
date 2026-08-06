@@ -157,6 +157,18 @@ export class OpenAiLlmProvider implements LlmProvider {
     }
   }
 
+  async ping(timeoutMs: number): Promise<void> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      // Cheapest reachability probe: /v1/models is quota-free and does not
+      // enter the token accounting path.
+      await this.client.models.list({ signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   private flattenSystemBlocks(blocks: PromptBlock[]): string {
     return blocks.map((block) => block.text).join('\n\n');
   }

@@ -1,4 +1,4 @@
-import { Logger, Optional, UseGuards, UsePipes } from '@nestjs/common';
+import { Logger, Optional, UseGuards, UseInterceptors, UsePipes } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -19,10 +19,12 @@ import { WsAuthGuard } from './ws-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { WsException } from '@nestjs/websockets';
 import { RealtimeMetricsCollector } from '../metrics/realtime.metrics';
+import { WsClsInterceptor } from './ws-cls.interceptor';
 
 // The workspace is provided by the client via handshake.auth.workspaceId so
 // the ticket stays user-scoped (a user with two open workspaces gets two
 // tickets, one per tab).
+@UseInterceptors(WsClsInterceptor)
 @WebSocketGateway({ transports: ['websocket'] })
 export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(RealtimeGateway.name);

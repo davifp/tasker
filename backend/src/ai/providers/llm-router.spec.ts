@@ -26,6 +26,7 @@ class FakeProvider implements LlmProvider {
   readonly name: LlmProviderName;
   complete = vi.fn<(req: LlmStructuredRequest<unknown>) => Promise<LlmStructuredResult<unknown>>>();
   stream = vi.fn<(req: LlmStreamRequest) => AsyncIterable<LlmChunk>>();
+  ping = vi.fn<(timeoutMs: number) => Promise<void>>().mockResolvedValue(undefined);
 
   constructor(name: LlmProviderName) {
     this.name = name;
@@ -211,6 +212,34 @@ describe('LlmRouter', () => {
 
       expect(chunks.map((c) => c.delta).join('')).toBe('partial ');
       expect(openai.stream).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pingDefault', () => {
+    it('probes only the default provider (no fallback)', async () => {
+      const router = new LlmRouter(
+        makeConfig('anthropic', 'openai'),
+        anthropic as unknown as never,
+        openai as unknown as never,
+      );
+      anthropic.ping.mockResolvedValueOnce(undefined);
+
+      await router.pingDefault(1000);
+
+      expect(anthropic.ping).toHaveBeenCalledWith(1000);
+      expect(openai.ping).not.toHaveBeenCalled();
+    });
+
+    it('propagates the default provider error without falling back', async () => {
+      const router = new LlmRouter(
+        makeConfig('anthropic', 'openai'),
+        anthropic as unknown as never,
+        openai as unknown as never,
+      );
+      anthropic.ping.mockRejectedValueOnce(new Error('unauthorized'));
+
+      await expect(router.pingDefault(500)).rejects.toThrow('unauthorized');
+      expect(openai.ping).not.toHaveBeenCalled();
     });
   });
 });

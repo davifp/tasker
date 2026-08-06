@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -72,6 +73,18 @@ export class S3StorageAdapter extends StorageService {
       Key: key,
     });
     return getSignedUrl(this.client, command, { expiresIn: expiresInSec });
+  }
+
+  async checkAvailability(timeoutMs: number): Promise<void> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }), {
+        abortSignal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async scheduleDelete(key: string): Promise<void> {

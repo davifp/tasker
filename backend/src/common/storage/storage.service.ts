@@ -30,4 +30,11 @@ export abstract class StorageService {
   abstract signPutUrl(input: SignPutInput): Promise<SignedPut>;
   abstract signGetUrl(key: string, opts?: SignGetOptions): Promise<string>;
   abstract scheduleDelete(key: string): Promise<void>;
+  /**
+   * Lightweight liveness check. Throws when the backing bucket cannot be
+   * reached, is missing, or credentials are rejected — used by
+   * `StorageHealthIndicator` to fail /readiness fast. Implementations MUST
+   * honor `timeoutMs` via an `AbortSignal`.
+   */
+  abstract checkAvailability(timeoutMs: number): Promise<void>;
 }

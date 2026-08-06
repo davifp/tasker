@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AbstractIntlMessages } from 'next-intl';
 import { NextIntlClientProvider } from 'next-intl';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { AnalyticsProvider } from '@/features/analytics/AnalyticsProvider';
 import { defaultTimeZone } from '@/i18n/config';
+import { initOtelWeb } from '@/observability/otel-web';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -16,6 +17,13 @@ interface ProvidersProps {
 }
 
 export function Providers({ children, locale, messages }: ProvidersProps) {
+  // Initialize the OTel-web tracer provider once per browser session so
+  // outbound fetches can propagate `traceparent`. Runs in useEffect (never on
+  // the server) to keep the module free of window/document references.
+  useEffect(() => {
+    initOtelWeb();
+  }, []);
+
   const [queryClient] = useState(
     () =>
       new QueryClient({

@@ -24,6 +24,13 @@ export interface LlmProvider {
 
   complete<T>(req: LlmStructuredRequest<T>): Promise<LlmStructuredResult<T>>;
   stream(req: LlmStreamRequest): AsyncIterable<LlmChunk>;
+  /**
+   * Lightweight liveness probe. Adapters MUST use a cheap, quota-free
+   * endpoint (Anthropic `/v1/models`, OpenAI `/v1/models`) and MUST respect
+   * `timeoutMs` via an `AbortSignal`. Throws on any failure — used by
+   * `LlmHealthIndicator` to short-circuit /readiness.
+   */
+  ping(timeoutMs: number): Promise<void>;
 }
 
 export type LlmProviderName = 'anthropic' | 'openai';

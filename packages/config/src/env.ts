@@ -109,6 +109,15 @@ export const envSchema = z.object({
   // Max time to wait for the cleanup repeatable-job registration at boot
   // (protects app.listen from blocking when Redis is unreachable).
   CLEANUP_REGISTER_TIMEOUT_MS: z.coerce.number().default(2000),
+  // Deep-readiness dependency timeouts. Kept tight so a single slow
+  // dependency does not stall the whole /readiness probe past a Kubernetes
+  // liveness/readiness threshold.
+  STORAGE_HEALTH_TIMEOUT_MS: z.coerce.number().default(2000),
+  LLM_HEALTH_TIMEOUT_MS: z.coerce.number().default(2000),
+  // Positive-result cache for the LLM probe. Deep readiness runs on every
+  // scrape; hitting the provider each time would burn quota and rate-limit
+  // buckets. A short TTL keeps the signal fresh enough to catch outages.
+  LLM_HEALTH_CACHE_TTL_MS: z.coerce.number().default(60_000),
 
   // Realtime (Phase 8) — Socket.IO ticket lifetime and signing key.
   // Ticket is one-shot: jti is stored in Redis with the same TTL, so a

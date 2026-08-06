@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HttpError, browserHttp, browserRequest } from './browser';
+import { __resetOtelWebForTests, initOtelWeb } from '@/observability/otel-web';
 
 describe('browserHttp', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
+    __resetOtelWebForTests();
   });
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+    __resetOtelWebForTests();
   });
 
   it('targets /api/proxy and returns json on 200', async () => {
@@ -73,6 +76,38 @@ describe('browserHttp', () => {
         return true;
       },
     );
+  });
+
+  it('omits traceparent before OTel-web is initialized so the backend mints a root span', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await browserHttp.get('/me');
+
+    const [, init] = vi.mocked(fetch).mock.calls[0] ?? [];
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers['traceparent']).toBeUndefined();
+  });
+
+  it('injects a well-formed W3C traceparent header once OTel-web is initialized', async () => {
+    initOtelWeb();
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await browserHttp.get('/me');
+
+    const [, init] = vi.mocked(fetch).mock.calls[0] ?? [];
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    // W3C Trace Context §3.2 — `version-traceId(32 hex)-spanId(16 hex)-flags(2 hex)`.
+    expect(headers['traceparent']).toMatch(/^\d{2}-[0-9a-f]{32}-[0-9a-f]{16}-\d{2}$/);
   });
 
   it('falls back to generic HttpError for non-json failures', async () => {

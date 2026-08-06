@@ -177,4 +177,26 @@ describe('AnthropicLlmProvider', () => {
       expect(terminal?.model).toBe('claude-sonnet-4-6');
     });
   });
+
+  describe('ping', () => {
+    it('lists models with the abort signal forwarded from the timeout', async () => {
+      const list = vi.fn().mockResolvedValue({ data: [] });
+      const client = { models: { list }, messages: {} } as unknown as Anthropic;
+      const provider = new AnthropicLlmProvider(makeConfig(), client);
+
+      await provider.ping(1000);
+
+      const [args, opts] = list.mock.calls[0] ?? [];
+      expect(args).toEqual({ limit: 1 });
+      expect(opts?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it('rejects when the underlying call rejects', async () => {
+      const list = vi.fn().mockRejectedValue(new Error('unauthorized'));
+      const client = { models: { list }, messages: {} } as unknown as Anthropic;
+      const provider = new AnthropicLlmProvider(makeConfig(), client);
+
+      await expect(provider.ping(1000)).rejects.toThrow('unauthorized');
+    });
+  });
 });

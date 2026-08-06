@@ -251,4 +251,31 @@ describe('OpenAiLlmProvider', () => {
       expect(terminal?.model).toBe('gpt-4o-mini');
     });
   });
+
+  describe('ping', () => {
+    it('lists models with the abort signal forwarded from the timeout', async () => {
+      const list = vi.fn().mockResolvedValue({ data: [] });
+      const client = {
+        chat: { completions: { create: vi.fn() } },
+        models: { list },
+      } as unknown as OpenAI;
+      const provider = new OpenAiLlmProvider(makeConfig(), client);
+
+      await provider.ping(1500);
+
+      const [args] = list.mock.calls[0] ?? [];
+      expect(args?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it('rejects when models.list rejects', async () => {
+      const list = vi.fn().mockRejectedValue(new Error('quota'));
+      const client = {
+        chat: { completions: { create: vi.fn() } },
+        models: { list },
+      } as unknown as OpenAI;
+      const provider = new OpenAiLlmProvider(makeConfig(), client);
+
+      await expect(provider.ping(500)).rejects.toThrow('quota');
+    });
+  });
 });

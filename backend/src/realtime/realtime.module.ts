@@ -10,6 +10,7 @@ import { RealtimeGateway } from './realtime.gateway';
 import { RealtimeController } from './realtime.controller';
 import { WsAuthGuard } from './ws-auth.guard';
 import { WsWorkspaceGuard } from './ws-workspace.guard';
+import { WsClsInterceptor } from './ws-cls.interceptor';
 
 // Dedicated JwtModule instance because the WS ticket is signed with
 // RT_TICKET_SECRET, not the JWT_SECRET used by the session access token.
@@ -33,6 +34,7 @@ import { WsWorkspaceGuard } from './ws-workspace.guard';
     RealtimeGateway,
     WsAuthGuard,
     WsWorkspaceGuard,
+    WsClsInterceptor,
   ],
   exports: [RealtimeEmitter, RedisConnectionFactory],
 })

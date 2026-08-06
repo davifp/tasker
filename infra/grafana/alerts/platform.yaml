@@ -44,19 +44,48 @@ groups:
         annotations:
           summary: 'API P95 latency > 300 ms for 10 min'
           description: 'The published SLO of P95 < 300 ms has been breached for 10 consecutive minutes.'
-      - alert: ApiReadinessFailing
-        # Backed by the Prometheus `up{}` metric — Prometheus flips a target
-        # to 0 when a scrape fails, so this catches both a hard down process
-        # and an unreachable /metrics endpoint. Task 5.0 will add a richer
-        # `tasker_readiness_ok` gauge from the deep readiness probe.
+      - alert: ApiScrapeTargetDown
+        # Prometheus flips a target to 0 when a scrape fails — catches a hard
+        # down process or an unreachable /metrics endpoint. Complements the
+        # deep readiness alert below (which needs a probe caller to run).
         expr: up{job="tasker-api"} == 0
         for: 2m
         labels:
           severity: page
           team: platform
         annotations:
-          summary: 'API readiness probe failing'
-          description: 'The API scrape target has been down for 2 minutes.'
+          summary: 'API scrape target down'
+          description: 'The API scrape target has been unreachable for 2 minutes.'
+      - alert: ApiReadinessFailing
+        # Deep readiness signal: `tasker_readiness_ok` is set by the
+        # /readiness handler after evaluating every dependency (postgres,
+        # redis, bullmq, storage, llm). Fires when at least one dependency
+        # has been down for 2 min across scrapes.
+        expr: max(tasker_readiness_ok) == 0
+        for: 2m
+        labels:
+          severity: page
+          team: platform
+        annotations:
+          summary: 'API deep readiness failing'
+          description: |
+            The deep readiness probe has been reporting failure for 2 minutes.
+            Query `tasker_readiness_dep_ok` to see which dependency is down.
+      - alert: ApiReadinessDependencyDown
+        # Per-dependency signal — ticket severity so operators can distinguish
+        # "LLM provider degraded" from "postgres down". Aggregates for 5 min
+        # to avoid single-scrape blips.
+        expr: max by (dep) (tasker_readiness_dep_ok) == 0
+        for: 5m
+        labels:
+          severity: ticket
+          team: platform
+        annotations:
+          summary: 'Readiness dependency down: {{ $labels.dep }}'
+          description: |
+            Dependency `{{ $labels.dep }}` reported down on the last several
+            readiness probes. If this is the LLM provider, check for a rate-limit
+            or outage upstream; otherwise investigate the corresponding datastore.
   - name: tasker-platform
     interval: 1m
     rules:

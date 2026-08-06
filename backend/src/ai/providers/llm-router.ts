@@ -100,6 +100,16 @@ export class LlmRouter {
     }
   }
 
+  /**
+   * Probes the currently configured default provider. Used by
+   * `LlmHealthIndicator` — routing failover is deliberately not exercised
+   * here: /readiness should reflect the default's status so ops sees the same
+   * signal callers do.
+   */
+  pingDefault(timeoutMs: number): Promise<void> {
+    return this.pick(this.defaultName).ping(timeoutMs);
+  }
+
   private pick(name: LlmProviderName): LlmProvider {
     return name === 'anthropic' ? this.anthropic : this.openai;
   }
