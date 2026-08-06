@@ -15,9 +15,10 @@ vi.mock('@/lib/http/backend', () => ({
   apiUrl: (path: string) => `http://backend.test/api/v1${path}`,
 }));
 
-import { GET } from './route';
+import { GET, POST } from './route';
 import { getSession } from '@/lib/session/session';
 import { getWorkspaceCookie } from '@/lib/session/workspace';
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, mintCsrfToken } from '@/lib/security/csrf';
 
 async function invoke(path: string[], headers: Record<string, string> = {}): Promise<Request> {
   const request = new Request(
@@ -113,5 +114,34 @@ describe('BFF proxy — [...path]/route.ts', () => {
     const [, init] = vi.mocked(fetch).mock.calls[0] ?? [];
     const headers = (init as RequestInit).headers as Headers;
     expect(headers.get('x-workspace-id')).toBe('ws-1');
+  });
+
+  it('rejects mutating verbs without a CSRF header (double-submit)', async () => {
+    const request = new Request('http://web.test/api/proxy/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', cookie: `${CSRF_COOKIE_NAME}=abc.def` },
+      body: '{}',
+    });
+    const response = await POST(request, { params: Promise.resolve({ path: ['tasks'] }) });
+    expect(response.status).toBe(403);
+    expect(response.headers.get('Content-Type')).toContain('application/problem+json');
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  });
+
+  it('forwards mutating verbs when the CSRF header matches the cookie', async () => {
+    vi.mocked(getWorkspaceCookie).mockResolvedValue(null);
+    const token = mintCsrfToken();
+    const request = new Request('http://web.test/api/proxy/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${CSRF_COOKIE_NAME}=${token}`,
+        [CSRF_HEADER_NAME]: token,
+      },
+      body: '{}',
+    });
+    const response = await POST(request, { params: Promise.resolve({ path: ['tasks'] }) });
+    expect(response.status).toBe(200);
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
   });
 });

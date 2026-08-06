@@ -3,6 +3,29 @@ import { HttpError } from './errors';
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
+// Canonical name for the double-submit CSRF cookie issued by the Next.js
+// proxy on session establishment (see /api/proxy/[...path]/route.ts).
+export const CSRF_COOKIE_NAME = 'tsk_csrf';
+export const CSRF_HEADER_NAME = 'X-CSRF-Token';
+const UNSAFE_METHODS = new Set<HttpMethod>(['POST', 'PATCH', 'PUT', 'DELETE']);
+
+function readCsrfCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const raw = document.cookie;
+  if (!raw) return undefined;
+  const prefix = `${CSRF_COOKIE_NAME}=`;
+  for (const part of raw.split(';')) {
+    const trimmed = part.trim();
+    if (!trimmed.startsWith(prefix)) continue;
+    try {
+      return decodeURIComponent(trimmed.slice(prefix.length));
+    } catch {
+      return trimmed.slice(prefix.length);
+    }
+  }
+  return undefined;
+}
+
 export interface BrowserRequestOptions {
   method?: HttpMethod;
   body?: unknown;
@@ -34,6 +57,16 @@ export async function browserRequest<T>(
     injectTraceparentHeaders(traceHeaders);
   });
 
+  // Double-submit CSRF: on mutating verbs, read the `tsk_csrf` cookie set by
+  // the proxy on session establishment and echo it back as `X-CSRF-Token`.
+  // The proxy compares the two — a cross-origin attacker cannot read the
+  // cookie (same-origin) and therefore cannot forge the header.
+  const csrfHeaders: Record<string, string> = {};
+  if (UNSAFE_METHODS.has(method)) {
+    const token = readCsrfCookie();
+    if (token) csrfHeaders[CSRF_HEADER_NAME] = token;
+  }
+
   const init: RequestInit = {
     method,
     credentials: 'same-origin',
@@ -42,6 +75,7 @@ export async function browserRequest<T>(
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       ...traceHeaders,
+      ...csrfHeaders,
       ...headers,
     },
     signal,

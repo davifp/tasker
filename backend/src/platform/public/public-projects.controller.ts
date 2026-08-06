@@ -18,6 +18,7 @@ import type { Request as ExpressRequest } from 'express';
 import { AuditEvent } from '../../common/audit/audit.events';
 import { Auditable } from '../../common/audit/auditable.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { SkipCsrf } from '../../common/csrf/skip-csrf.decorator';
 import type { WorkspaceContext } from '../../common/context/workspace-context.store';
 import { Idempotent } from '../../common/idempotency/idempotency.decorators';
 import { CreateProjectDto } from '../../projects/dto/create-project.dto';
@@ -43,6 +44,7 @@ function requireCtx(
  * behind API-key scopes and mounting the endpoints under `/api/v1/public/`.
  */
 @Public()
+@SkipCsrf()
 @UseGuards(ApiKeyAuthGuard, ScopesGuard)
 @Controller('public/workspaces/:slug/projects')
 export class PublicProjectsController {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -15,6 +15,9 @@ import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { RedisModule } from './common/redis/redis.module';
 import { SecurityModule } from './common/security/security.module';
+import { SecurityHeadersMiddleware } from './common/security/security-headers.middleware';
+import { CsrfModule } from './common/csrf/csrf.module';
+import { CsrfGuard } from './common/csrf/csrf.guard';
 import { StorageModule } from './common/storage/storage.module';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
 import { UsersModule } from './users/users.module';
@@ -155,6 +158,7 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     ClsContextModule,
     LoggerModule,
     SecurityModule,
+    CsrfModule,
     StorageModule,
     PrismaModule,
     HealthModule,
@@ -193,6 +197,15 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
     {
       provide: APP_FILTER,
       useClass: ProblemDetailsFilter,
+    },
+    // CsrfGuard runs FIRST so a forged mutating request is rejected before it
+    // burns a JWT verification, a workspace-membership DB lookup, or a slot in
+    // the throttler bucket. Fast-paths past requests without the CSRF cookie
+    // (Bearer / API-key auth); rejects mutating verbs on cookie-auth requests
+    // when the X-CSRF-Token header does not match the cookie.
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
     {
       provide: APP_GUARD,
@@ -252,6 +265,15 @@ function matchesPath(ctx: ExecutionContext, target: string): boolean {
       provide: APP_INTERCEPTOR,
       useClass: HttpMetricsInterceptor,
     },
+    SecurityHeadersMiddleware,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  // SecurityHeadersMiddleware sits on every route so both API responses and
+  // the Terminus health payload carry HSTS / nosniff / Referrer-Policy /
+  // Permissions-Policy / X-Frame-Options. Cheap sync `res.setHeader` calls;
+  // no reason to scope it narrower.
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(SecurityHeadersMiddleware).forRoutes('*');
+  }
+}

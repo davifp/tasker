@@ -1,7 +1,9 @@
+import { NextResponse } from 'next/server';
 import { clearSession, getSession, setSession } from '@/lib/session/session';
 import { refreshBackend } from '@/lib/session/auth-backend';
 import { getWorkspaceCookie } from '@/lib/session/workspace';
 import { apiUrl } from '@/lib/http/backend';
+import { issueCsrfCookie, isUnsafeMethod, validateCsrfHeader } from '@/lib/security/csrf';
 
 const HOP_BY_HOP = new Set([
   'connection',
@@ -68,6 +70,21 @@ function passthroughResponseHeaders(source: Headers): Headers {
 }
 
 async function forward(request: Request, path: string[]): Promise<Response> {
+  // Double-submit CSRF gate. Runs BEFORE the upstream call so a forged POST
+  // never touches the backend even if the session cookie is valid. Only
+  // enforced on mutating verbs — GETs read the CSRF cookie the same way any
+  // browser tab does.
+  if (isUnsafeMethod(request.method) && !validateCsrfHeader(request)) {
+    return NextResponse.json(
+      {
+        type: 'https://tasker.dev/problems/csrf',
+        title: 'CSRF token missing or invalid',
+        status: 403,
+      },
+      { status: 403, headers: { 'Content-Type': 'application/problem+json' } },
+    );
+  }
+
   const url = new URL(request.url);
   const upstreamPath = path.map((segment) => encodeURIComponent(segment)).join('/');
   const upstream = new URL(apiUrl(`/${upstreamPath}`));
@@ -112,11 +129,19 @@ async function forward(request: Request, path: string[]): Promise<Response> {
   }
 
   const responseHeaders = passthroughResponseHeaders(upstreamResponse.headers);
-  return new Response(upstreamResponse.body, {
+  const proxyResponse = new NextResponse(upstreamResponse.body, {
     status: upstreamResponse.status,
     statusText: upstreamResponse.statusText,
     headers: responseHeaders,
   });
+  // Re-issue the CSRF cookie on the way out. Cheap (`Set-Cookie` header +
+  // ~40 bytes) and gives us:
+  //   1. A bootstrap token on the first GET the SPA makes after page load —
+  //      so subsequent POSTs already have the header.
+  //   2. Rotation on every session-scoped call, keeping the token fresh well
+  //      inside the 2 h `maxAge`.
+  issueCsrfCookie(proxyResponse.cookies);
+  return proxyResponse;
 }
 
 interface RouteContext {

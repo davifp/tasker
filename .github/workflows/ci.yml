@@ -117,6 +117,42 @@ jobs:
       - name: Audit dependencies (advisory)
         run: pnpm audit --audit-level=high || true
 
+  # ── Job C: security (gitleaks + critical-CVE gate) ───────────────────────────
+  security:
+    name: Security · gitleaks + critical audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # gitleaks needs the full history to scan every commit on the branch;
+          # a shallow clone only surfaces the tip.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Scan for committed secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fail on critical-severity vulnerabilities (pnpm audit)
+        # `--audit-level=critical` exits non-zero on any advisory of critical
+        # severity. Blocking gate: unlike the advisory audit in the quality
+        # job, this one is NOT masked with `|| true`.
+        run: pnpm audit --audit-level=critical
+
   # ── Job B: Playwright E2E (Chromium) ─────────────────────────────────────────
   e2e:
     name: Playwright E2E (Chromium)

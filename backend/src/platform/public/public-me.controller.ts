@@ -1,6 +1,7 @@
 import { Controller, ForbiddenException, Get, Request, UseGuards } from '@nestjs/common';
 import type { Request as ExpressRequest } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
+import { SkipCsrf } from '../../common/csrf/skip-csrf.decorator';
 import type { WorkspaceContext } from '../../common/context/workspace-context.store';
 import { ApiKeyAuthGuard } from '../api-keys/api-key-auth.guard';
 import type { ApiKeyRequestPrincipal } from '../api-keys/scopes.guard';
@@ -12,6 +13,7 @@ import type { ApiKeyRequestPrincipal } from '../api-keys/scopes.guard';
  * able to introspect its own capabilities.
  */
 @Public()
+@SkipCsrf()
 @UseGuards(ApiKeyAuthGuard)
 @Controller('public/workspaces/:slug/me')
 export class PublicMeController {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { loginBackend } from '@/lib/session/auth-backend';
 import { setSession } from '@/lib/session/session';
+import { issueCsrfCookie } from '@/lib/security/csrf';
 
 interface LoginBody {
   email?: unknown;
@@ -42,5 +43,9 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   await setSession(result.session);
-  return NextResponse.json({ userId: result.session.userId });
+  // Fresh session → fresh CSRF token. The response carries the cookie the
+  // browser JS will read and echo on the next mutation.
+  const response = NextResponse.json({ userId: result.session.userId });
+  issueCsrfCookie(response.cookies);
+  return response;
 }

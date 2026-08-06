@@ -14,6 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Request as ExpressRequest } from 'express';
 import { Public } from '../../../common/decorators/public.decorator';
+import { SkipCsrf } from '../../../common/csrf/skip-csrf.decorator';
 
 /**
  * Not exposed under `/api/v1` — this is an internal-only receiver so GitHub's
@@ -25,6 +26,7 @@ import { Public } from '../../../common/decorators/public.decorator';
  * loop is a follow-up. Verified signatures still return 200 so GitHub does
  * not disable the webhook.
  */
+@SkipCsrf()
 @Controller('internal/integrations/github')
 export class GithubWebhookController {
   private readonly logger = new Logger(GithubWebhookController.name);

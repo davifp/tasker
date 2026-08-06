@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { registerBackend } from '@/lib/session/auth-backend';
 import { setSession } from '@/lib/session/session';
+import { issueCsrfCookie } from '@/lib/security/csrf';
 
 interface RegisterBody {
   email?: unknown;
@@ -51,5 +52,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   await setSession(result.session);
-  return NextResponse.json({ userId: result.session.userId });
+  const response = NextResponse.json({ userId: result.session.userId });
+  issueCsrfCookie(response.cookies);
+  return response;
 }

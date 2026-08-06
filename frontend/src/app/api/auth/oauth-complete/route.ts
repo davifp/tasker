@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { setSession } from '@/lib/session/session';
 import { apiUrl } from '@/lib/http/backend';
+import { issueCsrfCookie } from '@/lib/security/csrf';
 
 interface OAuthCompleteBody {
   accessToken?: unknown;
@@ -72,5 +73,7 @@ export async function POST(request: Request): Promise<Response> {
   });
 
   const redirectTo = safeRedirect(body.redirectTo, '/');
-  return NextResponse.json({ redirectTo });
+  const response = NextResponse.json({ redirectTo });
+  issueCsrfCookie(response.cookies);
+  return response;
 }
