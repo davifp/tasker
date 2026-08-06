@@ -1,11 +1,196 @@
-# Production compose scaffold. Task 2.0 lands the observability services
-# (Tempo + Grafana bootstrap); Tasks 3.0 (Prometheus), 7.0 (API/Worker/Web/
-# Nginx/Certbot), and 9.0 (backup sidecar) extend this file with their own
-# services and volumes.
+# Production compose stack for the single-node Ampere A1 deploy (2 OCPU /
+# 12 GB). Nginx is the only container exposed on the public interface (:80,
+# :443); everything else lives on the compose network.
 #
-# Deployed as `docker compose -f infra/docker-compose.prod.yml up -d`.
+# Deployment:
+#   docker compose -f infra/docker-compose.prod.yml pull
+#   docker compose -f infra/docker-compose.prod.yml up -d
+#
+# The GitHub Actions deploy workflow (Task 8.0) resolves ${TAG} to the git
+# SHA of the release commit; local operators can override with
+# `TAG=main docker compose -f infra/docker-compose.prod.yml up -d`.
 
 services:
+  # ── Datastores ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tasker}
+      POSTGRES_USER: ${POSTGRES_USER:-tasker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-tasker} -d ${POSTGRES_DB:-tasker}']
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+    # `mem_limit` is the plain-compose enforcement path. `deploy.resources`
+    # is Swarm-only and silently ignored by `docker compose up`.
+    mem_limit: 512m
+
+  redis:
+    image: redis:7-alpine
+    # `--save ""` disables RDB snapshots (queues + sessions tolerate loss);
+    # `--appendonly no` avoids AOF disk churn on the tiny A1 volume.
+    command:
+      [
+        'redis-server',
+        '--save',
+        '',
+        '--appendonly',
+        'no',
+        '--maxmemory',
+        '96mb',
+        '--maxmemory-policy',
+        'allkeys-lru',
+      ]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 128m
+
+  # ── App tier ──────────────────────────────────────────────────────────────
+  api:
+    image: ${API_IMAGE:-ghcr.io/davipavone/tasker-api}:${TAG:-main}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+      DATABASE_URL: postgres://${POSTGRES_USER:-tasker}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tasker}
+      REDIS_URL: redis://redis:6379
+      RELEASE_ID: ${TAG:-main}
+      # Observability
+      OTEL_SERVICE_NAME: tasker-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLE_RATE:-0.05}
+      SENTRY_DSN: ${SENTRY_DSN_API:-}
+      SENTRY_ENVIRONMENT: production
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
+      # Storage (Task 9.0 will point this at OCI Object Storage; MinIO for staging).
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:?STORAGE_ENDPOINT is required}
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-tasker-attachments}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:?STORAGE_ACCESS_KEY_ID is required}
+      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:?STORAGE_SECRET_ACCESS_KEY is required}
+      STORAGE_FORCE_PATH_STYLE: ${STORAGE_FORCE_PATH_STYLE:-false}
+      # Secrets
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      RT_TICKET_SECRET: ${RT_TICKET_SECRET:?RT_TICKET_SECRET is required}
+      SESSION_COOKIE_SECRET: ${SESSION_COOKIE_SECRET:?SESSION_COOKIE_SECRET is required}
+      # LLM
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_DEFAULT_PROVIDER: ${AI_DEFAULT_PROVIDER:-anthropic}
+    restart: unless-stopped
+    # `mem_limit` is the plain-compose enforcement path. `deploy.resources`
+    # is Swarm-only and silently ignored by `docker compose up`.
+    mem_limit: 512m
+
+  worker:
+    image: ${WORKER_IMAGE:-ghcr.io/davipavone/tasker-worker}:${TAG:-main}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-tasker}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tasker}
+      REDIS_URL: redis://redis:6379
+      RELEASE_ID: ${TAG:-main}
+      OTEL_SERVICE_NAME: tasker-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
+      SENTRY_DSN: ${SENTRY_DSN_API:-}
+      SENTRY_ENVIRONMENT: production
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT}
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-tasker-attachments}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID}
+      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      RT_TICKET_SECRET: ${RT_TICKET_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    restart: unless-stopped
+    # `mem_limit` is the plain-compose enforcement path. `deploy.resources`
+    # is Swarm-only and silently ignored by `docker compose up`.
+    mem_limit: 512m
+
+  web:
+    image: ${WEB_IMAGE:-ghcr.io/davipavone/tasker-web}:${TAG:-main}
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      # The Next.js server-side fetch layer calls the API on the compose
+      # network. Public browser calls hit /api/proxy on this same origin.
+      BACKEND_INTERNAL_URL: http://api:3001
+      SESSION_COOKIE_SECRET: ${SESSION_COOKIE_SECRET}
+      NEXT_PUBLIC_SENTRY_DSN: ${SENTRY_DSN_WEB:-}
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: production
+      NEXT_PUBLIC_RELEASE_ID: ${TAG:-main}
+    restart: unless-stopped
+    # `mem_limit` is the plain-compose enforcement path. `deploy.resources`
+    # is Swarm-only and silently ignored by `docker compose up`.
+    mem_limit: 512m
+
+  # ── Edge ─────────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - api
+      - web
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Seeds a self-signed placeholder cert when the volume is empty, so
+      # nginx can boot before certbot has ever run. Executed by the base
+      # nginx-alpine entrypoint. See infra/nginx/entrypoint/00-init-cert.sh.
+      - ./nginx/entrypoint/00-init-cert.sh:/docker-entrypoint.d/00-init-cert.sh:ro
+      # `rw` because the init script writes the placeholder cert on first
+      # boot; certbot needs write access here too.
+      - nginx_letsencrypt:/etc/letsencrypt
+      - nginx_certbot_www:/var/www/certbot:ro
+    ports:
+      - '80:80'
+      - '443:443'
+    restart: unless-stopped
+    mem_limit: 96m
+
+  certbot:
+    build:
+      context: ..
+      dockerfile: infra/docker/certbot.Dockerfile
+    depends_on:
+      - nginx
+    environment:
+      LE_DOMAIN: ${LE_DOMAIN:?LE_DOMAIN is required (e.g. tasker.example.com)}
+      LE_EMAIL: ${LE_EMAIL:?LE_EMAIL is required for Let's Encrypt account}
+      NGINX_CONTAINER: ${NGINX_CONTAINER:-tasker-nginx-1}
+    volumes:
+      - nginx_letsencrypt:/etc/letsencrypt
+      - nginx_certbot_www:/var/www/certbot
+      # Read-only docker socket — certbot only needs SIGHUP (kill), never
+      # container mutation. Acknowledged risk: any code that runs inside
+      # certbot has read-visibility into other containers via the API.
+      # Acceptable for a single-tenant portfolio deploy; not for multi-tenant.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    mem_limit: 64m
+
+  # ── Observability (from Task 2 / 3) ──────────────────────────────────────
   tempo:
     image: grafana/tempo:2.6.1
     command: ['-config.file=/etc/tempo/tempo.yml']
@@ -22,10 +207,7 @@ services:
       timeout: 5s
       retries: 8
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 700M
+    mem_limit: 700m
 
   prometheus:
     image: prom/prometheus:v2.55.1
@@ -39,7 +221,6 @@ services:
       - ./grafana/alerts:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     ports:
-      # Local-only; Grafana reaches it on the compose network at prometheus:9090.
       - '127.0.0.1:9090:9090'
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:9090/-/ready || exit 1']
@@ -47,10 +228,7 @@ services:
       timeout: 5s
       retries: 8
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 600M
+    mem_limit: 600m
 
   grafana:
     image: grafana/grafana:11.3.0
@@ -67,17 +245,20 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
       GF_USERS_ALLOW_SIGN_UP: 'false'
       GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3300/}
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'false'
     ports:
-      # Nginx (Task 7.0) will front this on the public domain; for now expose
-      # locally only.
-      - '127.0.0.1:3000:3000'
+      # Not fronted by Nginx in v1 — SSH-tunnel through the host to reach it:
+      # `ssh -L 3300:127.0.0.1:3300 tasker@<host>` then open http://localhost:3300
+      - '127.0.0.1:3300:3000'
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 300M
+    mem_limit: 300m
 
 volumes:
+  postgres_data:
+  redis_data:
   tempo_data:
   grafana_data:
   prometheus_data:
+  nginx_letsencrypt:
+  nginx_certbot_www:
