@@ -57,6 +57,10 @@ interface RealtimeProviderProps {
   workspaceId: string;
   workspaceSlug: string;
   children: ReactNode;
+  // Skip the socket connection entirely for read-only roles (e.g. the
+  // public demo) — the gateway would reject them and the client would spam
+  // reconnects. Default true keeps existing callers untouched.
+  enabled?: boolean;
   // Test seam — tests inject a fake connection factory instead of io().
   connectFactory?: (url: string, opts: { auth: Record<string, string> }) => Socket;
   ticketFetcher?: () => Promise<Ticket>;
@@ -66,6 +70,7 @@ export function RealtimeProvider({
   workspaceId,
   workspaceSlug,
   children,
+  enabled = true,
   connectFactory,
   ticketFetcher,
 }: RealtimeProviderProps): ReactNode {
@@ -99,6 +104,7 @@ export function RealtimeProvider({
   );
 
   useEffect(() => {
+    if (!enabled) return;
     let disposed = false;
     let current: Socket | null = null;
 
@@ -164,7 +170,7 @@ export function RealtimeProvider({
       setSocket(null);
       setConnected(false);
     };
-  }, [workspaceId, workspaceSlug, factory, queryClient, resolvedFetchTicket]);
+  }, [enabled, workspaceId, workspaceSlug, factory, queryClient, resolvedFetchTicket]);
 
   const value = useMemo<RealtimeContextValue>(() => ({ socket, connected }), [socket, connected]);
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
