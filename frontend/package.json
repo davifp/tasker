@@ -71,6 +71,7 @@
     "@next/eslint-plugin-next": "^16.0.0",
     "@storybook/react": "^10.5.7",
     "@storybook/react-vite": "^10.5.7",
+    "@tailwindcss/typography": "^0.5.20",
     "@tasker/eslint-config": "workspace:*",
     "@tasker/tsconfig": "workspace:*",
     "@testing-library/jest-dom": "^6.0.0",
