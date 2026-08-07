@@ -3,12 +3,12 @@
 import { useMemo, useState } from 'react';
 import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import type { WorkspaceRole } from '@/lib/http/types';
 import { epicsHttp, roadmapHttp, type Epic } from '@/lib/http/epics';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import { epicKeys } from '@/features/queryKeys';
+import { useWorkspaceRole } from '@/features/workspace/context/WorkspaceRoleContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { EpicBar } from './EpicBar';
@@ -35,7 +35,9 @@ export function RoadmapBoard({
     epic: null,
   });
 
-  const readOnly = currentUserRole !== 'OWNER' && currentUserRole !== 'ADMIN';
+  const { canManageRoadmap } = useWorkspaceRole();
+  const readOnly =
+    !canManageRoadmap || (currentUserRole !== 'OWNER' && currentUserRole !== 'ADMIN');
   const queryClient = useQueryClient();
 
   const { data } = useQuery({
@@ -49,6 +51,11 @@ export function RoadmapBoard({
         toQuarter: quarters[quarters.length - 1],
       }),
     initialData: { items: initialEpics },
+    // Mark the placeholder as immediately stale so the client refetches on
+    // mount. Without this, TanStack v5 treats `initialData` as fresh and the
+    // page never fires the roadmap request — showing 0 epics even when the
+    // workspace has some.
+    initialDataUpdatedAt: 0,
   });
 
   const reposition = useMutation({
@@ -62,9 +69,7 @@ export function RoadmapBoard({
       await queryClient.invalidateQueries({ queryKey: epicKeys.all(workspaceSlug) });
     },
     onError: (err) => {
-      const message =
-        err instanceof HttpError ? (err.detail ?? err.title ?? err.message) : 'Move failed';
-      toast.error(message);
+      toastFromError(err, 'Move failed');
     },
   });
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,9 +16,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { HttpError } from '@/lib/http/errors';
 import { epicsHttp, type Epic } from '@/lib/http/epics';
 import { epicKeys } from '@/features/queryKeys';
+import { useProjects } from '@/features/projects/hooks/useProjects';
+import { toastFromError } from '@/lib/errors/toastFromError';
 
 export interface EpicDialogProps {
   workspaceSlug: string;
@@ -35,6 +37,7 @@ export function EpicDialog({
   onOpenChange,
 }: EpicDialogProps): React.JSX.Element {
   const editing = epic !== null;
+  const workspaceScoped = !editing && projectSlug === '';
   const queryClient = useQueryClient();
 
   const form = useForm<CreateEpicInput>({
@@ -48,13 +51,27 @@ export function EpicDialog({
     },
   });
 
+  const projectsQuery = useProjects(workspaceSlug, { status: 'ACTIVE' });
+  const projects = useMemo(() => projectsQuery.data?.items ?? [], [projectsQuery.data]);
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState<string>('');
+
+  useEffect(() => {
+    if (!open) return;
+    if (workspaceScoped && projects.length > 0 && !selectedProjectSlug) {
+      setSelectedProjectSlug(projects[0]!.slug);
+    }
+  }, [open, workspaceScoped, projects, selectedProjectSlug]);
+
+  const [projectError, setProjectError] = useState<string | null>(null);
+
   const mutation = useMutation({
     mutationFn: async (values: CreateEpicInput) => {
       if (editing && epic) {
         return epicsHttp.update(workspaceSlug, epic.id, values);
       }
+      const targetSlug = workspaceScoped ? selectedProjectSlug : projectSlug;
       const idempotencyKey = crypto.randomUUID();
-      return epicsHttp.create(workspaceSlug, projectSlug, values, idempotencyKey);
+      return epicsHttp.create(workspaceSlug, targetSlug, values, idempotencyKey);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: epicKeys.all(workspaceSlug) });
@@ -62,13 +79,20 @@ export function EpicDialog({
       toast.success(editing ? 'Epic updated' : 'Epic created');
     },
     onError: (err) => {
-      const message =
-        err instanceof HttpError ? (err.detail ?? err.title ?? err.message) : 'Save failed';
-      toast.error(message);
+      toastFromError(err, editing ? 'Save failed' : 'Create failed');
     },
   });
 
   const errors = form.formState.errors;
+
+  const onSubmit = form.handleSubmit((values) => {
+    if (workspaceScoped && !selectedProjectSlug) {
+      setProjectError('Pick a project to create this epic in');
+      return;
+    }
+    setProjectError(null);
+    mutation.mutate(values);
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -76,10 +100,38 @@ export function EpicDialog({
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit epic' : 'New epic'}</DialogTitle>
         </DialogHeader>
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
-        >
+        <form className="flex flex-col gap-3" onSubmit={onSubmit}>
+          {workspaceScoped ? (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="epic-project">Project</Label>
+              <select
+                id="epic-project"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                value={selectedProjectSlug}
+                onChange={(event) => {
+                  setSelectedProjectSlug(event.target.value);
+                  if (event.target.value) setProjectError(null);
+                }}
+                disabled={projectsQuery.isLoading || projects.length === 0}
+              >
+                {projectsQuery.isLoading ? (
+                  <option value="">Loading projects…</option>
+                ) : projects.length === 0 ? (
+                  <option value="">No active projects — create one first</option>
+                ) : (
+                  <>
+                    <option value="">Select a project…</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.slug}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+              {projectError ? <p className="text-xs text-destructive">{projectError}</p> : null}
+            </div>
+          ) : null}
           <div className="flex flex-col gap-1">
             <Label htmlFor="epic-title">Title</Label>
             <Input id="epic-title" {...form.register('title')} />
@@ -107,7 +159,13 @@ export function EpicDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button
+              type="submit"
+              disabled={
+                mutation.isPending ||
+                (workspaceScoped && (projectsQuery.isLoading || projects.length === 0))
+              }
+            >
               {mutation.isPending ? 'Saving…' : editing ? 'Save' : 'Create'}
             </Button>
           </DialogFooter>
