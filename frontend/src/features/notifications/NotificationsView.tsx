@@ -10,6 +10,7 @@ import {
   useNotifications,
   useUnreadCount,
 } from './hooks/useNotifications';
+import { useWorkspaceRole } from '@/features/workspace/context/WorkspaceRoleContext';
 import type { NotificationEventType } from '@/lib/http/notifications';
 
 interface Props {
@@ -27,6 +28,7 @@ const PAGE_LIMIT = 30;
 
 export function NotificationsView({ workspaceSlug }: Props) {
   const t = useTranslations('notifications');
+  const { isDemo } = useWorkspaceRole();
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [type, setType] = useState<NotificationEventType | undefined>(undefined);
   const query = useNotifications({
@@ -34,10 +36,11 @@ export function NotificationsView({ workspaceSlug }: Props) {
     unreadOnly,
     type,
     pageLimit: PAGE_LIMIT,
+    enabled: !isDemo,
   });
   const markRead = useMarkRead(workspaceSlug);
   const markAllRead = useMarkAllRead(workspaceSlug);
-  const unread = useUnreadCount(workspaceSlug);
+  const unread = useUnreadCount(workspaceSlug, !isDemo);
 
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
 

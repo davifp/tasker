@@ -20,6 +20,7 @@ import {
   useNotifications,
   useUnreadCount,
 } from './hooks/useNotifications';
+import { useWorkspaceRole } from '@/features/workspace/context/WorkspaceRoleContext';
 
 interface Props {
   workspaceSlug: string;
@@ -30,11 +31,12 @@ const BELL_PAGE_LIMIT = 10;
 export function NotificationBell({ workspaceSlug }: Props) {
   const t = useTranslations('notifications');
   const [open, setOpen] = useState(false);
-  const unread = useUnreadCount(workspaceSlug);
+  const { isDemo } = useWorkspaceRole();
+  const unread = useUnreadCount(workspaceSlug, !isDemo);
   const list = useNotifications({
     workspaceSlug,
     pageLimit: BELL_PAGE_LIMIT,
-    enabled: open,
+    enabled: open && !isDemo,
   });
   const markRead = useMarkRead(workspaceSlug);
   const markAllRead = useMarkAllRead(workspaceSlug);
