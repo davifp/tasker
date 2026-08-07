@@ -290,7 +290,7 @@ export function CalendarView({
             button_next:
               'inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             month_grid: 'w-full border-collapse',
-            weekdays: 'text-[10px] font-medium uppercase text-muted-foreground',
+            weekdays: 'grid grid-cols-7 text-[10px] font-medium uppercase text-muted-foreground',
             weekday: 'p-1 text-center',
             week: 'grid grid-cols-7',
             day: 'align-top',
