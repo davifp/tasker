@@ -8,6 +8,7 @@ import { useDependencies, useAddDependency, useRemoveDependency } from './hooks/
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 
 interface DependenciesPanelProps {
   workspaceSlug: string;
@@ -36,11 +37,9 @@ export function DependenciesPanel({
     } catch (err) {
       if (err instanceof HttpError && err.type.endsWith('/dependency-cycle')) {
         toast.error(t('errors.cycle'));
-      } else if (err instanceof HttpError) {
-        toast.error(err.title, { description: err.detail });
-      } else {
-        toast.error(t('errors.addFailed'));
+        return;
       }
+      toastFromError(err, t('errors.addFailed'));
     }
   }
 

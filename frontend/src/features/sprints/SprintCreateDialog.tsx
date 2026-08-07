@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import { sprintsHttp } from '@/lib/http/sprints';
 import { sprintKeys } from '@/features/queryKeys';
 
@@ -53,9 +53,7 @@ export function SprintCreateDialog({
       toast.success('Sprint created');
     },
     onError: (err) => {
-      const message =
-        err instanceof HttpError ? (err.detail ?? err.title ?? err.message) : 'Create failed';
-      toast.error(message);
+      toastFromError(err, 'Create failed');
     },
   });
 

@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import { sprintsHttp, type SprintCloseSummary } from '@/lib/http/sprints';
 import { sprintKeys } from '@/features/queryKeys';
 
@@ -63,9 +63,7 @@ export function SprintCloseDialog({
       });
     },
     onError: (err) => {
-      const message =
-        err instanceof HttpError ? (err.detail ?? err.title ?? err.message) : 'Rollover failed';
-      toast.error(message);
+      toastFromError(err, 'Rollover failed');
     },
   });
 

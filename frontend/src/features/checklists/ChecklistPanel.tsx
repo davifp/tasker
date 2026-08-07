@@ -29,7 +29,7 @@ import {
 } from './hooks/useChecklistMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import type { ChecklistItem } from '@/lib/http/types';
 import { computeReorderPosition } from './reorderChecklist';
 
@@ -196,8 +196,7 @@ export function ChecklistPanel({ workspaceSlug, projectSlug, taskNumber }: Check
       await rename.mutateAsync({ itemId: editing.id, title: next });
       setEditing(null);
     } catch (err) {
-      if (err instanceof HttpError) toast.error(err.title, { description: err.detail });
-      else toast.error(t('errors.renameFailed'));
+      toastFromError(err, t('errors.renameFailed'));
     }
   }
 
@@ -212,8 +211,7 @@ export function ChecklistPanel({ workspaceSlug, projectSlug, taskNumber }: Check
       await add.mutateAsync({ title });
       setPending('');
     } catch (err) {
-      if (err instanceof HttpError) toast.error(err.title, { description: err.detail });
-      else toast.error(t('errors.addFailed'));
+      toastFromError(err, t('errors.addFailed'));
     }
   }
 

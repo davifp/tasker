@@ -11,7 +11,7 @@ import {
 } from '@tasker/config';
 import type { WorkspaceRole } from '@/lib/http/types';
 import { dashboardHttp } from '@/lib/http/dashboard';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import { dashboardKeys } from '@/features/queryKeys';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -63,9 +63,7 @@ export function DashboardShell({
       await queryClient.invalidateQueries({ queryKey: dashboardKeys.all(workspaceSlug) });
     },
     onError: (err) => {
-      const message =
-        err instanceof HttpError ? (err.detail ?? err.title ?? err.message) : 'Refresh failed';
-      toast.error(message);
+      toastFromError(err, 'Refresh failed');
     },
   });
 

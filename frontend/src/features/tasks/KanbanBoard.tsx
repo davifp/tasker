@@ -19,7 +19,7 @@ import { useCreateTask } from './hooks/useCreateTask';
 import { useMoveTask, BlockersOpenError } from './hooks/useMoveTask';
 import { useDeleteTaskWithUndo } from './hooks/useDeleteTaskWithUndo';
 import { useAnalytics } from '@/features/analytics/AnalyticsProvider';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import type { Task, TaskStatus, WorkspaceRole } from '@/lib/http/types';
 import { COLUMN_ORDER } from './columnOrder';
 import { computeMovePosition, type DropTarget } from './moveTarget';
@@ -190,11 +190,7 @@ export function KanbanBoard({
           return;
         }
         setLiveMessage(t('announce.moveFailed', { title: moveInput.task.title }));
-        if (err instanceof HttpError) {
-          toast.error(err.title, { description: err.detail });
-        } else {
-          toast.error(t('errors.moveFailed'));
-        }
+        toastFromError(err, t('errors.moveFailed'));
       }
     },
     [emit, move, projectId, t, workspaceId],
@@ -255,11 +251,7 @@ export function KanbanBoard({
       emit({ name: 'task_created', workspaceId, projectId, taskId: created.id });
       toast.success(t('quickAdd.created', { title: created.title }));
     } catch (err) {
-      if (err instanceof HttpError) {
-        toast.error(err.title, { description: err.detail });
-      } else {
-        toast.error(t('errors.createFailed'));
-      }
+      toastFromError(err, t('errors.createFailed'));
     }
   }
 
@@ -276,11 +268,7 @@ export function KanbanBoard({
         },
       });
     } catch (err) {
-      if (err instanceof HttpError) {
-        toast.error(err.title, { description: err.detail });
-      } else {
-        toast.error(t('errors.deleteFailed'));
-      }
+      toastFromError(err, t('errors.deleteFailed'));
     }
   }
 

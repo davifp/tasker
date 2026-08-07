@@ -23,11 +23,10 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import type { Task, TaskLabel, WorkspaceRole } from '@/lib/http/types';
 import { useProjectTasks } from '../hooks/useProjectTasks';
 import { useMoveTask } from '../hooks/useMoveTask';
@@ -338,11 +337,7 @@ export function BacklogView({
         );
       } catch (err) {
         setLiveMessage(t('announce.moveFailed', { title: source.title }));
-        if (err instanceof HttpError) {
-          toast.error(err.title, { description: err.detail });
-        } else {
-          toast.error(t('errors.moveFailed'));
-        }
+        toastFromError(err, t('errors.moveFailed'));
       }
     },
     [move, rows, t],

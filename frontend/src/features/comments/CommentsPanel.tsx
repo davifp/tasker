@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { toast } from 'sonner';
 import { Pencil, Trash2, X } from 'lucide-react';
 import { useComments } from './hooks/useComments';
 import { useAddComment, useDeleteComment, useEditComment } from './hooks/useCommentMutations';
@@ -11,7 +10,7 @@ import { CommentReactions } from './reactions/CommentReactions';
 import { useAnalytics } from '@/features/analytics/AnalyticsProvider';
 import { Button } from '@/components/ui/button';
 import { SafeMarkdown } from '@/components/markdown/SafeMarkdown';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import { AssigneeBubble } from '@/features/tasks/AssigneeBubble';
 import type { WorkspaceRole } from '@/lib/http/types';
 import { SummarizeThreadButton } from '@/features/ai/components/SummarizeThreadButton';
@@ -104,9 +103,7 @@ export function CommentsPanel({
   }
 
   function handleError(err: unknown, fallback: string) {
-    if (err instanceof HttpError && err.status === 403) toast.error(err.title);
-    else if (err instanceof HttpError) toast.error(err.title, { description: err.detail });
-    else toast.error(fallback);
+    toastFromError(err, fallback);
   }
 
   const isAdmin = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
