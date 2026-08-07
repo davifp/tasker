@@ -330,7 +330,8 @@
         "OWNER": "Owner",
         "ADMIN": "Admin",
         "MEMBER": "Membro",
-        "GUEST": "Convidado"
+        "GUEST": "Convidado",
+        "DEMO_VIEWER": "Visualizador demo"
       }
     },
     "validation": {
