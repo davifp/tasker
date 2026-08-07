@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import { useUpdateTask } from './hooks/useUpdateTask';
-import { HttpError } from '@/lib/http/errors';
 import type { Priority, Task } from '@/lib/http/types';
 import { PriorityChip } from './PriorityChip';
 import { AssigneeBubble } from './AssigneeBubble';
 import { LabelMultiSelect } from './LabelMultiSelect';
+import { useWorkspaceMembers } from '@/features/members/hooks/useWorkspaceMembers';
+import { useWorkspaceRole } from '@/features/workspace/context/WorkspaceRoleContext';
 import { cn } from '@/lib/utils';
 
 interface TaskMetadataPanelProps {
@@ -42,14 +43,23 @@ function isInvalidInterval(startDate: string, dueDate: string): boolean {
 export function TaskMetadataPanel({ workspaceSlug, projectSlug, task }: TaskMetadataPanelProps) {
   const t = useTranslations('board.metadata');
   const update = useUpdateTask(workspaceSlug, projectSlug);
-  const [assigneeDraft, setAssigneeDraft] = useState(task.assigneeUserId ?? '');
+  const members = useWorkspaceMembers(workspaceSlug);
+  const { canWrite } = useWorkspaceRole();
   const [startDateDraft, setStartDateDraft] = useState(isoToDateOnly(task.startDate ?? null));
   const [dueDateDraft, setDueDateDraft] = useState(isoToDateOnly(task.dueDate));
   const [intervalError, setIntervalError] = useState(false);
 
-  useEffect(() => {
-    setAssigneeDraft(task.assigneeUserId ?? '');
-  }, [task.assigneeUserId]);
+  const assignableMembers = useMemo(
+    () => (members.data ?? []).filter((m) => m.role !== 'DEMO_VIEWER'),
+    [members.data],
+  );
+
+  const assigneeDisplayName = useMemo(() => {
+    if (!task.assigneeUserId) return null;
+    return (
+      (members.data ?? []).find((m) => m.userId === task.assigneeUserId)?.displayName ?? null
+    );
+  }, [members.data, task.assigneeUserId]);
 
   useEffect(() => {
     setStartDateDraft(isoToDateOnly(task.startDate ?? null));
@@ -63,8 +73,7 @@ export function TaskMetadataPanel({ workspaceSlug, projectSlug, task }: TaskMeta
     try {
       await update.mutateAsync({ number: task.number, patch });
     } catch (err) {
-      if (err instanceof HttpError) toast.error(err.title, { description: err.detail });
-      else toast.error(t('errors.updateFailed'));
+      toastFromError(err, t('errors.updateFailed'));
     }
   }
 
@@ -128,20 +137,26 @@ export function TaskMetadataPanel({ workspaceSlug, projectSlug, task }: TaskMeta
           {t('assignee')}
         </label>
         <div className="flex items-center gap-2">
-          <AssigneeBubble userId={task.assigneeUserId} />
-          <input
+          <AssigneeBubble userId={task.assigneeUserId} displayName={assigneeDisplayName} />
+          <select
             id={`task-${task.number}-assignee`}
-            className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-            value={assigneeDraft}
-            onChange={(event) => setAssigneeDraft(event.target.value)}
-            placeholder={t('assigneePlaceholder')}
-            onBlur={() => {
-              const next = assigneeDraft.trim();
+            className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+            value={task.assigneeUserId ?? ''}
+            disabled={!canWrite || members.isLoading}
+            onChange={(event) => {
+              const next = event.target.value;
               const value = next.length === 0 ? null : next;
               if (value === task.assigneeUserId) return;
               void commit({ assigneeUserId: value });
             }}
-          />
+          >
+            <option value="">{t('assigneePlaceholder')}</option>
+            {assignableMembers.map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {member.displayName}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

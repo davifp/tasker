@@ -1,9 +1,11 @@
 import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useMemberDisplayName } from '@/features/members/hooks/useMemberDisplayName';
 import { cn } from '@/lib/utils';
 
 interface AssigneeBubbleProps {
   userId: string | null;
+  displayName?: string | null;
   size?: 'sm' | 'md';
   className?: string;
 }
@@ -19,13 +21,21 @@ function hueFromId(id: string): number {
   return Math.abs(hash) % 360;
 }
 
-function initialFromId(id: string): string {
-  const first = id.charAt(0);
-  return first ? first.toUpperCase() : '?';
+function initialFromName(name: string, fallback: string): string {
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return fallback.charAt(0).toUpperCase() || '?';
+  return trimmed.charAt(0).toUpperCase();
 }
 
-export function AssigneeBubble({ userId, size = 'sm', className }: AssigneeBubbleProps) {
+export function AssigneeBubble({
+  userId,
+  displayName,
+  size = 'sm',
+  className,
+}: AssigneeBubbleProps) {
   const t = useTranslations('board.assignee');
+  const resolvedName = useMemberDisplayName(userId);
+  const effectiveName = displayName ?? resolvedName;
   const dims = size === 'sm' ? 'h-6 w-6 text-[10px]' : 'h-8 w-8 text-xs';
   if (!userId) {
     return (
@@ -42,13 +52,14 @@ export function AssigneeBubble({ userId, size = 'sm', className }: AssigneeBubbl
     );
   }
   const hue = hueFromId(userId);
+  const name = effectiveName?.trim() || userId;
   return (
-    <Avatar className={cn(dims, className)} aria-label={t('assignedTo', { id: userId })}>
+    <Avatar className={cn(dims, className)} aria-label={t('assignedTo', { id: name })}>
       <AvatarFallback
         className="font-medium text-foreground"
         style={{ backgroundColor: `hsl(${hue} 70% 82%)` }}
       >
-        {initialFromId(userId)}
+        {initialFromName(effectiveName ?? '', userId)}
       </AvatarFallback>
     </Avatar>
   );

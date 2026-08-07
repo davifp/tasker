@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import enMessages from '@/i18n/messages/en.json';
 import type { Task } from '@/lib/http/types';
 import { TaskCard } from './TaskCard';
@@ -32,14 +33,19 @@ function baseTask(overrides: Partial<Task> = {}): Task {
 }
 
 function renderCard(task: Task) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <NextIntlClientProvider locale="en" messages={enMessages}>
-      <DndContext>
-        <SortableContext items={[task.id]}>
-          <TaskCard task={task} onOpen={vi.fn()} />
-        </SortableContext>
-      </DndContext>
-    </NextIntlClientProvider>,
+    <QueryClientProvider client={client}>
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <DndContext>
+          <SortableContext items={[task.id]}>
+            <TaskCard task={task} onOpen={vi.fn()} />
+          </SortableContext>
+        </DndContext>
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
   );
 }
 

@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTask } from './hooks/useTasks';
 import { useUpdateTask } from './hooks/useUpdateTask';
-import { HttpError } from '@/lib/http/errors';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import type { Task, WorkspaceRole } from '@/lib/http/types';
 import { MarkdownEditor } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -28,6 +28,7 @@ import { AttachmentsPanel } from '@/features/attachments/AttachmentsPanel';
 import { ActivityFeed } from '@/features/activity/ActivityFeed';
 import { AiActionsMenu } from '@/features/ai/components/AiActionsMenu';
 import { useAiUsage, useAcceptAiConsent } from '@/features/ai/hooks/useAiUsage';
+import { useWorkspaceRole } from '@/features/workspace/context/WorkspaceRoleContext';
 
 interface TaskDrawerProps {
   workspaceSlug: string;
@@ -131,6 +132,7 @@ function DrawerBody({
   const [editingDescription, setEditingDescription] = useState(false);
   const [descDraft, setDescDraft] = useState('');
   const isAdmin = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const { canWrite } = useWorkspaceRole();
   // Only admins can hit /ai/usage — the endpoint returns 403 otherwise.
   // The menu still renders for members; the banner + disabled state read
   // from the admin-populated usage cache when available, else fall back
@@ -172,8 +174,7 @@ function DrawerBody({
     try {
       await update.mutateAsync({ number: task!.number, patch: { title: next } });
     } catch (err) {
-      if (err instanceof HttpError) toast.error(err.title, { description: err.detail });
-      else toast.error(t('errors.saveTitleFailed'));
+      toastFromError(err, t('errors.saveTitleFailed'));
     }
   }
 
@@ -182,8 +183,7 @@ function DrawerBody({
       await update.mutateAsync({ number: task!.number, patch: { description: descDraft } });
       setEditingDescription(false);
     } catch (err) {
-      if (err instanceof HttpError) toast.error(err.title, { description: err.detail });
-      else toast.error(t('errors.saveDescriptionFailed'));
+      toastFromError(err, t('errors.saveDescriptionFailed'));
     }
   }
 
@@ -197,8 +197,9 @@ function DrawerBody({
           <textarea
             ref={titleRef}
             rows={1}
-            className="resize-none rounded-md border border-transparent bg-transparent px-1 text-lg font-semibold text-foreground hover:border-border focus:border-border focus:outline-none focus:ring-2 focus:ring-ring"
+            className="resize-none rounded-md border border-transparent bg-transparent px-1 text-lg font-semibold text-foreground hover:border-border focus:border-border focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-default disabled:hover:border-transparent"
             value={titleDraft ?? task.title}
+            readOnly={!canWrite}
             onChange={(event) => setTitleDraft(event.target.value)}
             onBlur={() => void commitTitle()}
             onKeyDown={(event) => {
@@ -239,8 +240,7 @@ function DrawerBody({
           try {
             await update.mutateAsync({ number: task.number, patch: { description: draft } });
           } catch (err) {
-            if (err instanceof HttpError) toast.error(err.title, { description: err.detail });
-            else toast.error(t('errors.saveDescriptionFailed'));
+            toastFromError(err, t('errors.saveDescriptionFailed'));
           }
         }}
         onAcceptChecklist={async (items) => {
@@ -272,7 +272,7 @@ function DrawerBody({
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {t('descriptionHeading')}
           </h4>
-          {!editingDescription ? (
+          {!editingDescription && canWrite ? (
             <Button
               type="button"
               variant="ghost"
@@ -341,18 +341,20 @@ function DrawerBody({
         </>
       ) : null}
 
-      <footer className="mt-2 flex justify-end border-t border-border pt-3">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-destructive"
-          onClick={() => onDelete(task)}
-        >
-          <Trash2 className="mr-1 h-4 w-4" aria-hidden="true" />
-          {t('delete')}
-        </Button>
-      </footer>
+      {canWrite ? (
+        <footer className="mt-2 flex justify-end border-t border-border pt-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={() => onDelete(task)}
+          >
+            <Trash2 className="mr-1 h-4 w-4" aria-hidden="true" />
+            {t('delete')}
+          </Button>
+        </footer>
+      ) : null}
     </div>
   );
 }
