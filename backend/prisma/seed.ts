@@ -25,7 +25,7 @@
 // via `pnpm --filter api seed` and would otherwise crash with
 // "Environment variable not found: DATABASE_URL".
 import 'dotenv/config';
-import { PrismaClient, WorkspaceRole, TaskStatus, Priority } from '@prisma/client';
+import { PrismaClient, WorkspaceRole, TaskStatus, Priority, SprintState } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { generateKeyBetween } from 'fractional-indexing';
 
@@ -231,6 +231,51 @@ async function seed(): Promise<void> {
           where: { projectId: project.id },
           data: { nextNumber: 21 },
         });
+
+        // Seed one active sprint per project so the planner has content to
+        // demo. Start = today − 5 days, end = today + 9 days (a 2-week
+        // sprint currently mid-flight). Pull the first 6 non-DONE tasks
+        // into the sprint; the rest stay in the backlog so the "drag from
+        // backlog" affordance has a source.
+        const now = new Date();
+        const startDate = new Date(now.getTime() - 5 * 86_400_000);
+        const endDate = new Date(now.getTime() + 9 * 86_400_000);
+        const sprint = await prisma.sprint.upsert({
+          where: { projectId_number: { projectId: project.id, number: 1 } },
+          update: {
+            state: SprintState.ACTIVE,
+            startDate,
+            endDate,
+            startedAt: startDate,
+          },
+          create: {
+            workspaceId: workspace.id,
+            projectId: project.id,
+            number: 1,
+            name: `${projTpl.name} sprint 1`,
+            goal: `Demo the ${projTpl.name.toLowerCase()} planner with mid-flight data`,
+            state: SprintState.ACTIVE,
+            startDate,
+            endDate,
+            startedAt: startDate,
+            createdByUserId: owner.id,
+          },
+        });
+        const plannedTasks = await prisma.task.findMany({
+          where: {
+            projectId: project.id,
+            status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.IN_REVIEW] },
+          },
+          orderBy: { number: 'asc' },
+          take: 6,
+          select: { id: true },
+        });
+        if (plannedTasks.length > 0) {
+          await prisma.task.updateMany({
+            where: { id: { in: plannedTasks.map((t) => t.id) } },
+            data: { sprintId: sprint.id },
+          });
+        }
       }
     }
 
