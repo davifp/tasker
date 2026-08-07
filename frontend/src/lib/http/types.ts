@@ -5,7 +5,7 @@
 export type ProjectStatus = 'ACTIVE' | 'ARCHIVED';
 export type TaskStatus = 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
-export type WorkspaceRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'GUEST';
+export type WorkspaceRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'GUEST' | 'DEMO_VIEWER';
 
 export interface CursorPage<T> {
   items: T[];
