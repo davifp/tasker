@@ -1,7 +1,15 @@
+import { redirect } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { getSession } from '@/lib/session/session';
 import { MAIN_CONTENT_ID } from '@/components/shell/SkipToContent';
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSession();
+  if (session) redirect('/');
+  return <AuthLayoutShell>{children}</AuthLayoutShell>;
+}
+
+function AuthLayoutShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations('auth');
   return (
     <div className="flex min-h-dvh flex-col bg-background">
