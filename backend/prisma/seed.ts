@@ -19,6 +19,12 @@
  *   pnpm --filter api exec ts-node-dev --transpile-only --respawn=false prisma/seed.ts
  * or via package.json's prisma.seed hook: `pnpm --filter api prisma db seed`.
  */
+// Load env before importing the Prisma client so `DATABASE_URL` is resolved.
+// Prisma's own CLI (`prisma migrate`) auto-loads `.env` from the schema
+// directory, but `ts-node-dev` invocations do not — this seed script runs
+// via `pnpm --filter api seed` and would otherwise crash with
+// "Environment variable not found: DATABASE_URL".
+import 'dotenv/config';
 import { PrismaClient, WorkspaceRole, TaskStatus, Priority } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { generateKeyBetween } from 'fractional-indexing';
@@ -78,12 +84,7 @@ const STATUS_ROTATION: TaskStatus[] = [
   TaskStatus.DONE,
 ];
 
-const PRIORITY_ROTATION: Priority[] = [
-  Priority.LOW,
-  Priority.MEDIUM,
-  Priority.HIGH,
-  Priority.URGENT,
-];
+const PRIORITY_ROTATION: Priority[] = [Priority.LOW, Priority.MEDIUM, Priority.HIGH];
 
 async function seed(): Promise<void> {
   const prisma = new PrismaClient();
