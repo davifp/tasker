@@ -22,6 +22,10 @@ const isoDateSchema = z
 
 const sprintNameSchema = z.string().trim().min(1).max(120);
 const sprintGoalSchema = z.string().trim().min(1).max(2000);
+const optionalSprintGoalSchema = z.preprocess(
+  (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+  sprintGoalSchema.optional(),
+);
 
 const taskIdSchema = z.string().min(1).max(64);
 const memberIdSchema = z.string().min(1).max(64);
@@ -40,7 +44,7 @@ const daysBetween = (start: string, end: string): number => {
 export const createSprintSchema = z
   .object({
     name: sprintNameSchema,
-    goal: sprintGoalSchema.optional(),
+    goal: optionalSprintGoalSchema,
     startDate: isoDateSchema,
     endDate: isoDateSchema,
   })
@@ -65,7 +69,7 @@ export const createSprintSchema = z
 export const updateSprintSchema = z
   .object({
     name: sprintNameSchema.optional(),
-    goal: sprintGoalSchema.optional().nullable(),
+    goal: optionalSprintGoalSchema.nullable(),
     startDate: isoDateSchema.optional(),
     endDate: isoDateSchema.optional(),
   })
