@@ -72,5 +72,10 @@ export class ListTasksQueryDto extends createZodDto(
     to: z.string().datetime().optional(),
     // Comma-separated priority filter — union semantics.
     priority: priorityListSchema,
+    // Sprint scope: pass a sprint's CUID to filter to its planned tasks, or
+    // the literal string `none` to fetch the project's backlog (tasks with
+    // no sprint assignment yet). Used by the sprint planner RSC to hydrate
+    // both panes from the server.
+    sprintId: z.union([z.string().cuid(), z.literal('none')]).optional(),
   }),
 ) {}

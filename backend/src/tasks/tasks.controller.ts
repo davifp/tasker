@@ -104,6 +104,9 @@ export class TasksController {
       from: query.from,
       to: query.to,
       priority: query.priority,
+      ...(query.sprintId !== undefined
+        ? { sprintId: query.sprintId === 'none' ? null : query.sprintId }
+        : {}),
     });
   }
 

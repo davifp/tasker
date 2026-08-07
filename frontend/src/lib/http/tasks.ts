@@ -49,6 +49,9 @@ export interface ListTasksInput {
   sort?: TaskSortField;
   sortDir?: TaskSortDir;
   includeDeleted?: boolean;
+  // 'none' fetches project backlog (sprintId IS NULL); a CUID fetches
+  // tasks assigned to that sprint. Consumed by the sprint planner RSC.
+  sprintId?: string | 'none';
 }
 
 function base(workspaceSlug: string, projectSlug: string): string {
