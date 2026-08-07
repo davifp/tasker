@@ -18,9 +18,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { AlertCircle, Users2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toastFromError } from '@/lib/errors/toastFromError';
 import { cn } from '@/lib/utils';
-import { HttpError } from '@/lib/http/errors';
 import { useSprintMoveTask } from './useSprintMoveTask';
 import {
   plannerReducer,
@@ -90,11 +89,7 @@ export function SprintPlanner({
         {
           onError: (err) => {
             dispatch({ type: 'reset', next: before });
-            const message =
-              err instanceof HttpError
-                ? (err.detail ?? err.title ?? err.message)
-                : 'Move failed. Please try again.';
-            toast.error(message);
+            toastFromError(err, 'Move failed. Please try again.');
           },
         },
       );
@@ -103,19 +98,21 @@ export function SprintPlanner({
   );
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext id="sprint-planner-dnd" sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="grid gap-4 lg:grid-cols-2">
         <PlannerPane
           id="backlog"
           title="Backlog"
           tasks={state.backlog}
           testId="sprint-planner-backlog"
+          emptyLabel="Backlog is empty — create a task to plan the next sprint."
         />
         <PlannerPane
           id="sprint"
           title={`Sprint ${sprintNumber}`}
           tasks={state.sprint}
           testId="sprint-planner-sprint"
+          emptyLabel="Drag tasks from the backlog to plan this sprint."
         />
       </div>
     </DndContext>
@@ -127,9 +124,16 @@ interface PlannerPaneProps {
   title: string;
   tasks: PlannerTask[];
   testId: string;
+  emptyLabel: string;
 }
 
-function PlannerPane({ id, title, tasks, testId }: PlannerPaneProps): React.JSX.Element {
+function PlannerPane({
+  id,
+  title,
+  tasks,
+  testId,
+  emptyLabel,
+}: PlannerPaneProps): React.JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id });
   const total = useMemo(() => sumEstimates(tasks), [tasks]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -152,7 +156,7 @@ function PlannerPane({ id, title, tasks, testId }: PlannerPaneProps): React.JSX.
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.length === 0 ? (
             <p className="rounded border border-dashed border-border p-4 text-xs text-muted-foreground">
-              Drop tasks here.
+              {emptyLabel}
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
