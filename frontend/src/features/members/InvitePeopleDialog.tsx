@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useWorkspaceRole } from '@/features/workspace/context/WorkspaceRoleContext';
 
 interface InvitePeopleDialogProps {
   slug: string;
@@ -29,6 +30,12 @@ interface InvitePeopleDialogProps {
 }
 
 export function InvitePeopleDialog({ slug, workspaceId }: InvitePeopleDialogProps) {
+  const { canManageMembers } = useWorkspaceRole();
+  if (!canManageMembers) return null;
+  return <InvitePeopleDialogInner slug={slug} workspaceId={workspaceId} />;
+}
+
+function InvitePeopleDialogInner({ slug, workspaceId }: InvitePeopleDialogProps) {
   const t = useTranslations('members.invite');
   const emit = useAnalytics();
   const tValidation = useTranslations('members.validation');

@@ -7,6 +7,7 @@ import type { Task, TaskStatus } from '@/lib/http/types';
 import { cn } from '@/lib/utils';
 import { TaskCard } from './TaskCard';
 import { TaskQuickAdd } from './TaskQuickAdd';
+import { useWorkspaceRole } from '@/features/workspace/context/WorkspaceRoleContext';
 
 interface KanbanColumnProps {
   status: TaskStatus;
@@ -24,6 +25,7 @@ export function KanbanColumn({
   onQuickAdd,
 }: KanbanColumnProps) {
   const t = useTranslations('board');
+  const { canWrite } = useWorkspaceRole();
   const { setNodeRef, isOver } = useDroppable({
     id: `column:${status}`,
     data: { type: 'column', status },
@@ -67,7 +69,9 @@ export function KanbanColumn({
             {t('emptyColumn')}
           </p>
         ) : null}
-        <TaskQuickAdd status={status} disabled={quickAddDisabled} onSubmit={onQuickAdd} />
+        {canWrite ? (
+          <TaskQuickAdd status={status} disabled={quickAddDisabled} onSubmit={onQuickAdd} />
+        ) : null}
       </div>
     </section>
   );

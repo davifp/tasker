@@ -10,13 +10,16 @@ import { VerificationBanner } from '@/features/verification/VerificationBanner';
 import { DemoBanner } from './DemoBanner';
 import { RealtimeProvider } from '@/features/realtime';
 import { bff } from '@/lib/http/bff';
+import { WorkspaceRoleProvider } from '@/features/workspace/context/WorkspaceRoleContext';
+import { WorkspaceSlugProvider } from '@/features/members/hooks/useMemberDisplayName';
+import type { WorkspaceRole } from '@/lib/http/types';
 
 interface AppShellProps {
   workspaceSlug: string;
   workspaceId: string;
   workspaces: WorkspaceOption[];
   user: { name: string; email: string; emailVerified?: boolean };
-  role?: string;
+  role: WorkspaceRole;
   children: React.ReactNode;
 }
 
@@ -42,28 +45,36 @@ export function AppShell({
   }, [workspaceSlug]);
 
   return (
-    <RealtimeProvider workspaceId={workspaceId} workspaceSlug={workspaceSlug}>
-      <div className="flex min-h-dvh w-full bg-background text-foreground">
-        <Sidebar workspaceSlug={workspaceSlug} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          {role === 'DEMO_VIEWER' ? <DemoBanner /> : null}
-          {user.emailVerified === false ? <VerificationBanner email={user.email} /> : null}
-          <Topbar
-            workspaceSlug={workspaceSlug}
-            workspaces={workspaces}
-            user={user}
-            onOpenPalette={() => setOpen(true)}
-          />
-          <main
-            id={MAIN_CONTENT_ID}
-            tabIndex={-1}
-            className="mx-auto w-full max-w-6xl flex-1 px-6 py-8"
-          >
-            {children}
-          </main>
-        </div>
-        <CommandPalette open={open} onOpenChange={setOpen} workspaceSlug={workspaceSlug} />
-      </div>
-    </RealtimeProvider>
+    <WorkspaceRoleProvider role={role}>
+      <WorkspaceSlugProvider slug={workspaceSlug}>
+        <RealtimeProvider
+          workspaceId={workspaceId}
+          workspaceSlug={workspaceSlug}
+          enabled={role !== 'DEMO_VIEWER'}
+        >
+          <div className="flex min-h-dvh w-full bg-background text-foreground">
+            <Sidebar workspaceSlug={workspaceSlug} />
+            <div className="flex min-w-0 flex-1 flex-col">
+              {role === 'DEMO_VIEWER' ? <DemoBanner /> : null}
+              {user.emailVerified === false ? <VerificationBanner email={user.email} /> : null}
+              <Topbar
+                workspaceSlug={workspaceSlug}
+                workspaces={workspaces}
+                user={user}
+                onOpenPalette={() => setOpen(true)}
+              />
+              <main
+                id={MAIN_CONTENT_ID}
+                tabIndex={-1}
+                className="mx-auto w-full max-w-6xl flex-1 px-6 py-8"
+              >
+                {children}
+              </main>
+            </div>
+            <CommandPalette open={open} onOpenChange={setOpen} workspaceSlug={workspaceSlug} />
+          </div>
+        </RealtimeProvider>
+      </WorkspaceSlugProvider>
+    </WorkspaceRoleProvider>
   );
 }

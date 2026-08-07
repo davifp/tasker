@@ -1,6 +1,12 @@
 import { notFound, redirect } from 'next/navigation';
 import { requireSession, fetchMe, fetchMyWorkspaces } from '@/lib/session/require';
 import { AppShell } from '@/components/shell/AppShell';
+import type { WorkspaceRole } from '@/lib/http/types';
+
+const ROLES: readonly WorkspaceRole[] = ['OWNER', 'ADMIN', 'MEMBER', 'GUEST', 'DEMO_VIEWER'];
+function toWorkspaceRole(value: string | undefined): WorkspaceRole {
+  return (ROLES as readonly string[]).includes(value ?? '') ? (value as WorkspaceRole) : 'MEMBER';
+}
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -32,7 +38,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
         name: membership.name,
       }))}
       user={{ name: user.name, email: user.email, emailVerified: user.emailVerified }}
-      role={active.role}
+      role={toWorkspaceRole(active.role)}
     >
       {children}
     </AppShell>
