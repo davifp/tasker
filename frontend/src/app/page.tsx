@@ -1,38 +1,22 @@
-import { useTranslations } from 'next-intl';
-import { HomeDemo } from '@/components/home-demo';
-import { MAIN_CONTENT_ID } from '@/components/shell/SkipToContent';
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/session/session';
+import { getWorkspaceCookie } from '@/lib/session/workspace';
+import { fetchMyWorkspaces } from '@/lib/session/require';
 
-export default function Home() {
-  const t = useTranslations('home');
-  return (
-    <main
-      id={MAIN_CONTENT_ID}
-      tabIndex={-1}
-      className="flex min-h-dvh flex-col items-center justify-center gap-10 p-8"
-    >
-      <div className="flex flex-col items-center gap-3 text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground">{t('title')}</h1>
-        <p className="max-w-md text-lg text-muted-foreground">{t('subtitle')}</p>
-      </div>
+// Root landing router. Server-side redirects so the browser never renders a
+// flash of unwanted content:
+//   - No session → /login
+//   - Session but no workspaces → /workspaces/new (create the first one)
+//   - Session + workspaces → the last-visited workspace's dashboard, or
+//     the first membership when no cookie is set yet.
+export default async function Home(): Promise<never> {
+  const session = await getSession();
+  if (!session) redirect('/login');
 
-      <HomeDemo />
+  const workspaces = await fetchMyWorkspaces(session.accessToken);
+  if (workspaces.length === 0) redirect('/workspaces/new');
 
-      <div className="grid w-full max-w-xl gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-card-foreground">{t('swatches.primary')}</h2>
-          <div className="mt-2 h-8 rounded bg-primary" aria-hidden="true" />
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-card-foreground">{t('swatches.accent')}</h2>
-          <div className="mt-2 h-8 rounded bg-accent" aria-hidden="true" />
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-card-foreground">
-            {t('swatches.destructive')}
-          </h2>
-          <div className="mt-2 h-8 rounded bg-destructive" aria-hidden="true" />
-        </div>
-      </div>
-    </main>
-  );
+  const cookie = await getWorkspaceCookie();
+  const active = (cookie && workspaces.find((w) => w.slug === cookie.slug)) ?? workspaces[0]!;
+  redirect(`/${active.slug}/dashboard`);
 }
