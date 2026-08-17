@@ -153,6 +153,21 @@ jobs:
         # job, this one is NOT masked with `|| true`.
         run: pnpm audit --audit-level=critical
 
+  # ── Job D: infra shell script tests (deploy.sh / rollback.sh / backup.sh) ────
+  infra-scripts:
+    name: Infra · shell script tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Zero-dep test harness under infra/scripts/tests. If we ever need
+      # bats or shellcheck, install them here.
+      - name: Run deploy/rollback/backup script tests
+        run: bash infra/scripts/tests/run-all.sh
+
   # ── Job B: Playwright E2E (Chromium) ─────────────────────────────────────────
   e2e:
     name: Playwright E2E (Chromium)

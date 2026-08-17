@@ -1,0 +1,149 @@
+name: Deploy
+
+# Deploys a previously-published release to the single-node Oracle A1 box
+# (or the Hetzner CX22 fallback) over SSH. Runs when `release.yml`
+# completes successfully, or manually via `workflow_dispatch` — the manual
+# path is our rollback lever: pick any previous tag, re-run this workflow.
+#
+# Order of operations on the box (matches infra/scripts/deploy.sh):
+#   1. `docker compose pull` for the tag
+#   2. `docker compose run --rm api pnpm prisma migrate deploy`
+#   3. `docker compose up -d --no-deps --pull always api worker web`
+#   4. Poll /api/v1/health/readiness until healthy or timeout
+#   5. On success: prune old images and record deployed tag
+#      On failure: re-invoke this workflow with the previous tag (rollback)
+#
+# Nothing in this workflow rebuilds images — deploys only what `release.yml`
+# already pushed. A missing tag on GHCR is a hard failure, not a rebuild.
+
+on:
+  workflow_run:
+    workflows: ['Release']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to deploy (e.g. v1.4.2). Use the previous tag for rollback.'
+        required: true
+        type: string
+
+concurrency:
+  # Serialise deploys — two concurrent runs would race on migrate.
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # Allow the auto-rollback step to re-invoke this workflow with a
+  # previous tag via `gh workflow run`.
+  actions: write
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.tag || github.event.workflow_run.head_branch }}
+    runs-on: ubuntu-latest
+    # For the workflow_run trigger, gate on the upstream workflow's outcome
+    # so a failed Release doesn't cascade into a broken deploy.
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        github.event.workflow_run.conclusion == 'success'
+      }}
+
+    environment:
+      name: production
+      url: https://${{ vars.DEPLOY_HOST }}
+
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+      COMPOSE_FILE: infra/docker-compose.prod.yml
+      READINESS_URL: https://${{ vars.DEPLOY_HOST }}/api/v1/health/readiness
+      # workflow_dispatch supplies `inputs.tag`; workflow_run infers the tag
+      # from the release ref that triggered the upstream Release workflow.
+      RELEASE_TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+
+    steps:
+      - name: Checkout
+        # Needed so the deploy script can `rsync` the compose file to the
+        # box (in case the local copy has drifted from what shipped).
+        uses: actions/checkout@v7
+
+      - name: Fail fast if RELEASE_TAG is empty
+        run: |
+          if [[ -z "${RELEASE_TAG}" ]]; then
+            echo "::error::RELEASE_TAG is empty — deploy requires a tag."
+            exit 1
+          fi
+          echo "Deploying tag: ${RELEASE_TAG}"
+
+      - name: Install SSH deploy key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_DEPLOY_KEY }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          # ed25519 aligns with the host-side authorized_keys entry the
+          # deploy user runbook documents in ADR 0002.
+          if_key_exists: replace
+
+      - name: Snapshot currently-deployed tag (for rollback)
+        id: snapshot
+        run: |
+          set -euo pipefail
+          previous=$(ssh -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "cat ${DEPLOY_PATH}/.deployed_tag 2>/dev/null || echo ''")
+          echo "previous=${previous}" >> "$GITHUB_OUTPUT"
+          echo "Previously-deployed tag on ${DEPLOY_HOST}: ${previous:-<none>}"
+
+      - name: Sync deploy scripts + compose file to the box
+        # `rsync` (not scp) so re-runs only ship changed bytes. Restrict to
+        # the two directories the deploy script actually reads.
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -o StrictHostKeyChecking=yes" \
+            infra/docker-compose.prod.yml \
+            infra/nginx \
+            infra/prometheus \
+            infra/tempo \
+            infra/grafana \
+            infra/backups \
+            infra/scripts \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/infra/"
+
+      - name: Deploy release
+        id: apply
+        # `deploy.sh` handles pull → migrate → up → readiness gate → cleanup.
+        # See infra/scripts/deploy.sh for the exact contract.
+        run: |
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "cd ${DEPLOY_PATH} && \
+             TAG='${RELEASE_TAG}' \
+             READINESS_URL='${READINESS_URL}' \
+             COMPOSE_FILE='${COMPOSE_FILE}' \
+             sudo -E ./infra/scripts/deploy.sh"
+
+      - name: Record deployed tag
+        # Written only after the readiness gate passes so a failed deploy
+        # never poisons the rollback pointer.
+        run: |
+          ssh -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "echo '${RELEASE_TAG}' > ${DEPLOY_PATH}/.deployed_tag"
+
+      - name: Auto-rollback on failure
+        # Only fires if a previous tag was recorded. The rollback path is a
+        # `workflow_dispatch` re-invocation with the last-known-good tag —
+        # this is the same lever a human would pull, keeping the audit trail
+        # identical to a manual rollback.
+        if: failure() && steps.snapshot.outputs.previous != '' && steps.snapshot.outputs.previous != env.RELEASE_TAG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIOUS: ${{ steps.snapshot.outputs.previous }}
+        run: |
+          set -euo pipefail
+          echo "::warning::Deploy of ${RELEASE_TAG} failed — auto-rolling back to ${PREVIOUS}"
+          gh workflow run deploy.yml \
+            --ref "${{ github.ref_name }}" \
+            --field "tag=${PREVIOUS}"

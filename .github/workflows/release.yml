@@ -1,0 +1,201 @@
+name: Release
+
+# Fires on a published GitHub Release. Builds multi-arch (amd64 + arm64)
+# images for the api / worker / web services, pushes them to GHCR tagged
+# with the release name (e.g. `v1.4.2`) and `latest`, then uploads Sentry
+# source maps for the same release id so client-side stack traces resolve.
+#
+# The subsequent `deploy.yml` workflow triggers on this workflow's
+# completion — do NOT run migrations or touch the box from here.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to (re)build and publish (e.g. v1.4.2). Required for manual runs.'
+        required: true
+        type: string
+
+concurrency:
+  # One publish per tag at a time — parallel pushes to the same tag can race.
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # OIDC-issued token for GHCR push — no long-lived PAT required.
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  # `github.repository_owner` is the org/user hosting the repo — GHCR
+  # namespaces images under it. Lower-cased below because GHCR rejects
+  # uppercase image paths.
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}
+  # Resolves to the tag on release events, or the manual dispatch input.
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  build-and-push:
+    name: Build and push ${{ matrix.service }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Fail-fast off so a flaky arm64 layer on `worker` doesn't kill the
+      # already-succeeded `api` push.
+      fail-fast: false
+      matrix:
+        service: [api, worker, web]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Compute lowercase namespace
+        id: ns
+        # GHCR rejects uppercase characters in image paths. `github.actor`
+        # and `github.repository_owner` can legally contain uppercase, so
+        # normalise once and reuse.
+        run: echo "value=$(echo '${{ env.IMAGE_NAMESPACE }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        # Cross-arch emulation for the linux/arm64 build stage. Without this,
+        # buildx would fall back to native amd64 only.
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # `GITHUB_TOKEN` is exchanged via OIDC for a short-lived GHCR
+          # token because `permissions.packages: write` is set above.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.ns.outputs.value }}/tasker-${{ matrix.service }}
+          tags: |
+            type=raw,value=${{ env.RELEASE_TAG }}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/${{ matrix.service }}.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.RELEASE_TAG }}
+          build-args: |
+            RELEASE_ID=${{ env.RELEASE_TAG }}
+          # GitHub Actions cache keeps subsequent multi-arch pushes fast;
+          # scope-per-service keeps images from stomping each other.
+          cache-from: type=gha,scope=release-${{ matrix.service }}
+          cache-to: type=gha,scope=release-${{ matrix.service }},mode=max
+
+      - name: Verify multi-arch manifest
+        # Guards against the classic buildx failure mode where one platform
+        # silently drops out (e.g. an arm64-incompatible base). If the
+        # manifest is missing linux/arm64 we fail here rather than
+        # discovering it at deploy time on the Ampere box.
+        run: |
+          set -euo pipefail
+          tag="${{ env.REGISTRY }}/${{ steps.ns.outputs.value }}/tasker-${{ matrix.service }}:${{ env.RELEASE_TAG }}"
+          platforms=$(docker buildx imagetools inspect "$tag" \
+            | awk '/^ *Platform:/ {print $2}' \
+            | sort -u \
+            | paste -sd',' -)
+          echo "Published platforms for $tag: $platforms"
+          for required in linux/amd64 linux/arm64; do
+            if ! echo "$platforms" | tr ',' '\n' | grep -qx "$required"; then
+              echo "::error::Missing $required in published manifest for $tag"
+              exit 1
+            fi
+          done
+
+  upload-sentry-sourcemaps:
+    name: Upload Sentry source maps
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    # Only run when the Sentry publisher has an auth token to spend — forks
+    # and manual re-runs without the secret succeed with a no-op.
+    if: ${{ vars.SENTRY_ORG != '' }}
+
+    env:
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_LOG_LEVEL: warn
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── Frontend ───────────────────────────────────────────────────────
+      # `next build` invokes `withSentryConfig` which uploads client + server
+      # bundle source maps automatically when SENTRY_AUTH_TOKEN is set. This
+      # is the canonical Next.js path (docs.sentry.io/platforms/javascript/
+      # guides/nextjs/sourcemaps/#automatic-upload).
+      - name: Build web bundle (uploads client source maps via next.config)
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT_WEB }}
+          NEXT_PUBLIC_RELEASE_ID: ${{ env.RELEASE_TAG }}
+          RELEASE_ID: ${{ env.RELEASE_TAG }}
+          NODE_ENV: production
+        run: pnpm --filter web build
+
+      # ── Backend ────────────────────────────────────────────────────────
+      # Nest tsc emits .js + .js.map into backend/dist (sourceMap:true in
+      # packages/tsconfig/nest.json). Upload those via sentry-cli so
+      # captureException stacks resolve to TypeScript files.
+      - name: Build api bundle
+        env:
+          RELEASE_ID: ${{ env.RELEASE_TAG }}
+        run: pnpm --filter api build
+
+      - name: Upload backend source maps to Sentry
+        # `dist: api` lets us upload maps for api and worker under the same
+        # release without collisions, since both share this compiled tree.
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT_API }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        run: |
+          set -euo pipefail
+          npx --yes @sentry/cli@2.42.2 releases new "${RELEASE_TAG}"
+          npx --yes @sentry/cli@2.42.2 releases files "${RELEASE_TAG}" \
+            upload-sourcemaps backend/dist \
+            --dist api \
+            --url-prefix '~/dist' \
+            --rewrite
+          npx --yes @sentry/cli@2.42.2 releases files "${RELEASE_TAG}" \
+            upload-sourcemaps backend/dist \
+            --dist worker \
+            --url-prefix '~/dist' \
+            --rewrite
+          npx --yes @sentry/cli@2.42.2 releases finalize "${RELEASE_TAG}"
