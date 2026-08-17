@@ -137,6 +137,46 @@ groups:
             hits per minute over the last 10 minutes. Contact the customer or
             temporarily raise their bucket via config.
 
+      - alert: BackupMissing
+        # Task 9.0 / FR-7.1 — cron writes `backup_last_success_timestamp_seconds`
+        # to Pushgateway after every successful pg_dump+upload. If we don't see
+        # a fresh value within 26 h, either the sidecar is broken, cron didn't
+        # fire, or the upload has been failing silently. All three page.
+        #
+        # 26h (not 24h + slack) so a delayed cron tick doesn't false-page. Alert
+        # references the metric by absolute age: `time() - metric`.
+        expr: (time() - max by (env) (backup_last_success_timestamp_seconds)) > 26 * 3600
+        for: 15m
+        labels:
+          severity: page
+          team: platform
+        annotations:
+          summary: 'Postgres backup missing for env {{ $labels.env }} (>26h)'
+          description: |
+            No fresh `backup_last_success_timestamp_seconds` metric from the
+            `backup` sidecar for `env={{ $labels.env }}` in the last 26 h.
+            Check container logs (`docker logs tasker-backup-1`) and Oracle
+            Object Storage bucket for the newest object under
+            `${env}/YYYY/MM/DD/`. Rerun `backup.sh` by hand once fixed.
+
+      - alert: BackupNeverObserved
+        # `absent()` guard: if the metric has NEVER been ingested (fresh
+        # deploy, deleted volume, wrong Pushgateway URL, blocked network),
+        # the `BackupMissing` alert can't fire because there's no series
+        # to age. This one catches that case.
+        expr: absent(backup_last_success_timestamp_seconds) == 1
+        for: 30m
+        labels:
+          severity: ticket
+          team: platform
+        annotations:
+          summary: 'Backup metric never observed'
+          description: |
+            No `backup_last_success_timestamp_seconds` series has been scraped
+            since the last Prometheus restart. Verify the backup sidecar is
+            running (`docker compose ps backup`), the Pushgateway is reachable
+            from it, and the first cron tick has landed.
+
       - alert: PlatformWebhookDeliveryLatency
         # p95 delivery latency crossing 5 s for 10 min — subscriber-side issue
         # that isn't yet failing.

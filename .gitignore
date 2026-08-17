@@ -19,6 +19,8 @@ storybook-static/
 
 # Logs
 *.log
+# ...except restore-drill evidence — see ADR 0003 §Drill log.
+!backups/drill-*.log
 
 # Prisma
 prisma/migrations/dev.db

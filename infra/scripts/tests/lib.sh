@@ -77,14 +77,14 @@ assert_eq() {
 
 assert_contains() {
   local haystack="$1" needle="$2" msg="${3:-substring not found}"
-  if ! printf '%s' "$haystack" | grep -qF "$needle"; then
+  if ! printf '%s' "$haystack" | grep -qF -e "$needle"; then
     fail "$msg (needle='$needle')"
   fi
 }
 
 assert_not_contains() {
   local haystack="$1" needle="$2" msg="${3:-forbidden substring present}"
-  if printf '%s' "$haystack" | grep -qF "$needle"; then
+  if printf '%s' "$haystack" | grep -qF -e "$needle"; then
     fail "$msg (needle='$needle')"
   fi
 }
@@ -92,8 +92,8 @@ assert_not_contains() {
 assert_line_before() {
   local haystack="$1" first="$2" second="$3" msg="${4:-order violated}"
   local first_line second_line
-  first_line=$(printf '%s' "$haystack" | grep -nF "$first" | head -1 | cut -d: -f1)
-  second_line=$(printf '%s' "$haystack" | grep -nF "$second" | head -1 | cut -d: -f1)
+  first_line=$(printf '%s' "$haystack" | grep -nF -e "$first" | head -1 | cut -d: -f1)
+  second_line=$(printf '%s' "$haystack" | grep -nF -e "$second" | head -1 | cut -d: -f1)
   if [[ -z "$first_line" || -z "$second_line" ]]; then
     fail "$msg — missing marker (first='$first' second='$second')"
     return

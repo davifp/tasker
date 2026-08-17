@@ -33,3 +33,15 @@ scrape_configs:
       - targets: ['tempo:3200']
         labels:
           service: tempo
+
+  # Pushgateway carries metrics from cron-driven jobs (backup sidecar).
+  # `honor_labels: true` preserves the `env` / `job` labels the pusher
+  # attaches; without it Prometheus would overwrite `job` with
+  # `pushgateway`, and the "backup missing" alert would lose its per-env
+  # dimension.
+  - job_name: pushgateway
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']
+        labels:
+          service: pushgateway

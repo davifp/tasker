@@ -1,0 +1,9 @@
+=== drill-20260817-154617 ===
+timestamp:    2026-08-17T15:46:28Z
+env:          local
+bucket:       tasker-backups
+endpoint:     http://minio:9000
+source_key:   local/2026/08/17/tasker-202608171545.sql.gz
+status:       PASS
+notes:        users=1768 workspaces=1656 tasks=23510 projects=1254
+

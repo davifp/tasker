@@ -230,6 +230,63 @@ services:
     restart: unless-stopped
     mem_limit: 600m
 
+  # ── Backups (Task 9.0) ────────────────────────────────────────────────
+  # `pg_dump | gzip | aws s3 cp` on an hourly cron, pushing a
+  # `backup_last_success_timestamp_seconds` gauge to the Pushgateway after
+  # each successful upload. See infra/backups/backup.sh + ADR 0003.
+  backup:
+    build:
+      context: ..
+      dockerfile: infra/docker/backup.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-tasker}
+      PGDATABASE: ${POSTGRES_DB:-tasker}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      # Backup bucket lives in Oracle Object Storage (S3-compatible). For
+      # local/staging point at MinIO — see infra/docker-compose.yml.
+      S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:?BACKUP_S3_ENDPOINT is required (Oracle Object Storage S3-compatible URL)}
+      S3_REGION: ${BACKUP_S3_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${BACKUP_ACCESS_KEY_ID:?BACKUP_ACCESS_KEY_ID is required}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_SECRET_ACCESS_KEY:?BACKUP_SECRET_ACCESS_KEY is required}
+      BACKUP_BUCKET: ${BACKUP_BUCKET:-tasker-backups}
+      BACKUP_ENV: ${BACKUP_ENV:-production}
+      BACKUP_SSE: ${BACKUP_SSE:-}
+      PUSHGATEWAY_URL: http://pushgateway:9091
+    volumes:
+      # restore-drill.sh spins an ephemeral postgres via `docker run` from
+      # inside this container. That means we need the host's docker socket.
+      # Tradeoff documented in ADR 0003 §Known risks — accepted for a
+      # single-tenant portfolio deploy, would NOT be acceptable in a
+      # multi-tenant one.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Drill logs written here are committed as evidence (backups/drill-*.log).
+      - backup_drill_logs:/opt/tasker/backups/backups
+    restart: unless-stopped
+    mem_limit: 128m
+
+  # Pushgateway lets the cron-driven backup sidecar publish a metric that
+  # Prometheus can scrape on its normal cycle. The alternative — running
+  # node_exporter with a textfile collector — would need another sidecar
+  # and a shared volume for one metric. This is smaller.
+  pushgateway:
+    image: prom/pushgateway:v1.9.0
+    command:
+      - '--persistence.file=/data/pushgateway.data'
+      - '--persistence.interval=30s'
+    volumes:
+      - pushgateway_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:9091/-/ready || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 64m
+
   grafana:
     image: grafana/grafana:11.3.0
     depends_on:
@@ -262,3 +319,5 @@ volumes:
   prometheus_data:
   nginx_letsencrypt:
   nginx_certbot_www:
+  pushgateway_data:
+  backup_drill_logs:
