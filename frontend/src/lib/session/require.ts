@@ -30,10 +30,6 @@ interface BackendMembership {
   workspace: { id: string; slug: string; name: string };
 }
 
-// Discriminated fetch result. Callers that gate rendering on auth need to
-// distinguish "backend rejected the credentials" (destroy the cookie) from
-// "transient failure" (keep the cookie, surface a normal error) — collapsing
-// both into `null` was the cause of BUG-15's redirect loop.
 type FetchResult<T> = { status: 'ok'; data: T } | { status: 'unauthorized' } | { status: 'error' };
 
 async function fetchMeStatus(accessToken: string): Promise<FetchResult<CurrentUser>> {
@@ -59,32 +55,12 @@ async function fetchMeStatus(accessToken: string): Promise<FetchResult<CurrentUs
   }
 }
 
-/**
- * Discriminated authentication state for RSC guards.
- *
- * `'expired'` means the iron-session cookie is intact but the backend
- * rejected the wrapped JWT — the caller must `redirect(EXPIRE_PATH)` so a
- * Route Handler destroys the cookie (Server Components cannot mutate
- * cookies in Next.js 15). `'unauthenticated'` means no cookie at all.
- * `'error'` means the backend was unreachable but the cookie may still be
- * valid — do not destroy.
- */
 export type AuthResult =
   | { status: 'authenticated'; session: SessionPayload; user: CurrentUser }
   | { status: 'expired' }
   | { status: 'unauthenticated' }
   | { status: 'error' };
 
-/**
- * Data Access Layer for authentication — Next.js's recommended pattern for
- * App Router. Reads the iron-session cookie, verifies the wrapped access
- * token against the backend once per request (deduped via `React.cache`),
- * and returns the authenticated user together with the session.
- *
- * Server Components cannot mutate cookies (Next.js constraint), so this
- * helper only *observes* the state — cookie destruction happens in the
- * `/api/auth/expire` Route Handler that callers redirect to.
- */
 export const verifySession = cache(async (): Promise<AuthResult> => {
   const session = await getSession();
   if (!session) return { status: 'unauthenticated' };
@@ -94,15 +70,8 @@ export const verifySession = cache(async (): Promise<AuthResult> => {
   return { status: 'authenticated', session, user: result.data };
 });
 
-/** Route Handler that destroys the iron-session cookie and redirects. */
 export const EXPIRE_PATH = '/api/auth/expire';
 
-/**
- * Standard RSC guard. Returns the authenticated principal, or redirects:
- *   - `expired` → `/api/auth/expire?next=/login` (destroys cookie first)
- *   - `unauthenticated` → `/login`
- *   - `error` → `/login` (best-effort; backend is unreachable)
- */
 export async function requireVerified(): Promise<{
   session: SessionPayload;
   user: CurrentUser;
@@ -117,13 +86,15 @@ export async function requireVerified(): Promise<{
   redirect('/login');
 }
 
-/**
- * Legacy helper kept for the handful of RSCs that only need the session
- * payload (no user). Prefer `requireVerified()` for new call sites.
- */
 export async function requireSession(): Promise<SessionPayload> {
   const { session } = await requireVerified();
   return session;
+}
+
+export async function redirectIfAuthenticated(): Promise<void> {
+  const verified = await verifySession();
+  if (verified.status === 'authenticated') redirect('/');
+  if (verified.status === 'expired') redirect(`${EXPIRE_PATH}?next=/login`);
 }
 
 export async function fetchMe(accessToken: string): Promise<CurrentUser | null> {

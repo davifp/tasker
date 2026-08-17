@@ -1,9 +1,11 @@
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { ForgotPasswordForm } from '@/features/auth/ForgotPasswordForm';
+import { redirectIfAuthenticated } from '@/lib/session/require';
 
-export default function ForgotPasswordPage() {
-  const t = useTranslations('auth.forgotPassword');
+export default async function ForgotPasswordPage() {
+  await redirectIfAuthenticated();
+  const t = await getTranslations('auth.forgotPassword');
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5 text-center">

@@ -1,12 +1,14 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ResetPasswordForm } from '@/features/auth/ResetPasswordForm';
+import { redirectIfAuthenticated } from '@/lib/session/require';
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{ token?: string }>;
 }
 
 export default async function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {
+  await redirectIfAuthenticated();
   const { token } = await searchParams;
   const t = await getTranslations('auth.resetPassword');
 

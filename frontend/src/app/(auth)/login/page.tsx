@@ -1,10 +1,12 @@
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { LoginForm } from '@/features/auth/LoginForm';
 import { OAuthProviders, AuthDivider } from '@/features/auth/OAuthProviders';
+import { redirectIfAuthenticated } from '@/lib/session/require';
 
-export default function LoginPage() {
-  const t = useTranslations('auth.login');
+export default async function LoginPage() {
+  await redirectIfAuthenticated();
+  const t = await getTranslations('auth.login');
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5 text-center">

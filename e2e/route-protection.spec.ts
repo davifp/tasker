@@ -26,18 +26,6 @@ test.describe('route protection', () => {
     }
   });
 
-  // ── Redirect-loop regression (post-2026-08-07 fix) ────────────────────
-  //
-  // A valid iron-session cookie whose wrapped JWT the backend rejects (rolled
-  // secret, revoked user, expired token) must not ping-pong between the app
-  // guard and the auth guard. The fix in `frontend/src/lib/session/require.ts`
-  // + `frontend/src/app/api/auth/expire/route.ts` distinguishes 'expired' from
-  // 'unauthenticated' and redirects through the expire Route Handler so the
-  // stale cookie is destroyed before the next render.
-  //
-  // The `/api/session/plant-stale` handler seals a valid iron-session cookie
-  // wrapping a garbage JWT. Same NODE_ENV gate as the test-only JWT_SECRET /
-  // RT_TICKET_SECRET fallbacks in playwright.config.ts.
   test.describe('stale iron-session cookie (BUG-15 regression)', () => {
     async function plantStaleSession(page: Page): Promise<void> {
       const response = await page.request.get('/api/session/plant-stale');
