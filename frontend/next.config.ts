@@ -16,25 +16,28 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 //   - `img-src`/`font-src` allow `data:` so shadcn icons and inline SVGs work.
 //   - `frame-ancestors 'none'` forbids embedding under any origin.
 const isProduction = process.env['NODE_ENV'] === 'production';
-// `script-src`:
-//   - `'unsafe-inline'` stays in production because Next.js App Router emits
-//     inline hydration + RSC bootstrap scripts. Moving to nonce-based CSP
-//     would require request-scoped nonces (middleware + a rewrite of every
-//     `<script>` inject site) and is tracked as a follow-up.
-//   - `'unsafe-eval'` is dev only — the Next.js dev runtime + React devtools
-//     compile modules at runtime; production bundles do not need it and
-//     shipping it in prod would soften the eval-based-XSS gate.
-// `style-src 'unsafe-inline'` stays because Radix / shadcn / Tailwind emit
-// inline `style=` attributes and a nonce roundtrip would break RSC streaming.
-// `connect-src` is same-origin only — Sentry ingest is tunneled through
-// `/monitoring` (see tunnelRoute below), so no third-party origin is needed.
+
+// Object-storage origin for presigned PUT uploads (attachments). Browser
+// fetches straight at S3/MinIO — that origin must appear in connect-src or
+// the CSP blocks the PUT before it reaches the network. Empty in builds
+// without storage configured.
+function storageOrigin(): string {
+  const raw = process.env['STORAGE_ENDPOINT'] ?? process.env['NEXT_PUBLIC_STORAGE_ENDPOINT'];
+  if (!raw) return '';
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return '';
+  }
+}
+
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' wss: ws:",
+  `connect-src 'self' wss: ws:${storageOrigin() ? ` ${storageOrigin()}` : ''}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

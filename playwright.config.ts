@@ -109,6 +109,7 @@ export default defineConfig({
         NEXT_PUBLIC_API_URL: API_BASE_URL,
         INTERNAL_API_URL: API_BASE_URL,
         SESSION_COOKIE_SECRET: 'e2e-only-secret-please-change-me-0000000000',
+        STORAGE_ENDPOINT: process.env['STORAGE_ENDPOINT'] ?? 'http://localhost:9000',
       },
     },
   ],
