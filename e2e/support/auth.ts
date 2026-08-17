@@ -30,6 +30,12 @@ function slugifyWorkspaceName(name: string): string {
 // by hitting the register endpoint and marking the user verified in the
 // same trip via a dev-only backdoor if available; if not, we invoke the
 // mail worker like the UI does.
+async function csrfHeader(page: Page): Promise<Record<string, string>> {
+  const cookies = await page.context().cookies();
+  const token = cookies.find((cookie) => cookie.name === 'tsk_csrf')?.value;
+  return token ? { 'X-CSRF-Token': token } : {};
+}
+
 export async function onboardAccount(
   page: Page,
   overrides: Partial<OnboardedAccount> = {},
@@ -70,6 +76,7 @@ export async function onboardAccount(
   const workspaceSlug = slugifyWorkspaceName(workspaceName);
   const createResponse = await page.request.post('/api/proxy/workspaces', {
     data: { name: workspaceName, slug: workspaceSlug },
+    headers: await csrfHeader(page),
   });
   if (!createResponse.ok()) {
     throw new Error(
@@ -79,6 +86,7 @@ export async function onboardAccount(
   const workspace = (await createResponse.json()) as { slug: string };
   const selectResponse = await page.request.post('/api/workspaces/select', {
     data: { slug: workspace.slug },
+    headers: await csrfHeader(page),
   });
   if (!selectResponse.ok()) {
     throw new Error(
