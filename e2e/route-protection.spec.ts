@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 test.describe('route protection', () => {
   test('unauthenticated deep link redirects to /login with redirectTo=', async ({ page }) => {
@@ -24,5 +24,59 @@ test.describe('route protection', () => {
       expect(session.httpOnly).toBe(true);
       expect(session.sameSite?.toLowerCase()).toBe('lax');
     }
+  });
+
+  // ── Redirect-loop regression (post-2026-08-07 fix) ────────────────────
+  //
+  // A valid iron-session cookie whose wrapped JWT the backend rejects (rolled
+  // secret, revoked user, expired token) must not ping-pong between the app
+  // guard and the auth guard. The fix in `frontend/src/lib/session/require.ts`
+  // + `frontend/src/app/api/auth/expire/route.ts` distinguishes 'expired' from
+  // 'unauthenticated' and redirects through the expire Route Handler so the
+  // stale cookie is destroyed before the next render.
+  //
+  // The `/api/session/plant-stale` handler seals a valid iron-session cookie
+  // wrapping a garbage JWT. Same NODE_ENV gate as the test-only JWT_SECRET /
+  // RT_TICKET_SECRET fallbacks in playwright.config.ts.
+  test.describe('stale iron-session cookie (BUG-15 regression)', () => {
+    async function plantStaleSession(page: Page): Promise<void> {
+      const response = await page.request.get('/api/session/plant-stale');
+      expect(response.ok(), 'plant-stale helper must succeed in non-prod').toBe(true);
+    }
+
+    test('/ with stale cookie lands on /login (no infinite redirect)', async ({
+      page,
+      context,
+    }) => {
+      await plantStaleSession(page);
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/\/login(\?|$)/);
+      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+      const cookies = await context.cookies();
+      expect(cookies.find((cookie) => cookie.name === 'tsk_session')).toBeUndefined();
+    });
+
+    test('/login with stale cookie renders the form (does not bounce to /)', async ({
+      page,
+      context,
+    }) => {
+      await plantStaleSession(page);
+      await page.goto('/login', { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/\/login(\?|$)/);
+      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+      const cookies = await context.cookies();
+      expect(cookies.find((cookie) => cookie.name === 'tsk_session')).toBeUndefined();
+    });
+
+    test('protected deep link with stale cookie ends on /login (no loop)', async ({
+      page,
+      context,
+    }) => {
+      await plantStaleSession(page);
+      await page.goto('/orbital-labs/dashboard', { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/\/login(\?|$)/);
+      const cookies = await context.cookies();
+      expect(cookies.find((cookie) => cookie.name === 'tsk_session')).toBeUndefined();
+    });
   });
 });

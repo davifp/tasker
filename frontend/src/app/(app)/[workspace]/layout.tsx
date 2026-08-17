@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { requireSession, fetchMe, fetchMyWorkspaces } from '@/lib/session/require';
+import { fetchMyWorkspaces, requireVerified } from '@/lib/session/require';
 import { AppShell } from '@/components/shell/AppShell';
 import type { WorkspaceRole } from '@/lib/http/types';
 
@@ -15,14 +15,9 @@ interface WorkspaceLayoutProps {
 
 export default async function WorkspaceLayout({ children, params }: WorkspaceLayoutProps) {
   const { workspace: slug } = await params;
-  const session = await requireSession();
+  const { session, user } = await requireVerified();
 
-  const [user, workspaces] = await Promise.all([
-    fetchMe(session.accessToken),
-    fetchMyWorkspaces(session.accessToken),
-  ]);
-
-  if (!user) redirect('/login');
+  const workspaces = await fetchMyWorkspaces(session.accessToken);
   if (workspaces.length === 0) redirect('/workspaces/new');
 
   const active = workspaces.find((membership) => membership.slug === slug);

@@ -1,13 +1,10 @@
-import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { requireSession, fetchMe } from '@/lib/session/require';
+import { requireVerified } from '@/lib/session/require';
 import { CreateWorkspaceForm } from '@/features/workspace/CreateWorkspaceForm';
 import { MAIN_CONTENT_ID } from '@/components/shell/SkipToContent';
 
 export default async function CreateWorkspacePage() {
-  const session = await requireSession();
-  const user = await fetchMe(session.accessToken);
-  if (!user) redirect('/login');
+  await requireVerified();
 
   const t = await getTranslations('workspace.create');
 
