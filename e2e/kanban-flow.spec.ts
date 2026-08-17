@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { onboardAccount, type OnboardedAccount } from './support/auth';
+import { apiPost } from './support/csrf';
 import { mockExternalIntegrations, pinEnglishLocale } from './support/mocks';
 import {
   columnRegion,
@@ -36,8 +37,8 @@ async function declareBlocker(
   blockerId: string,
 ): Promise<void> {
   const url = `/api/proxy/workspaces/${account.workspaceSlug}/projects/${project.slug}/tasks/${blockedNumber}/dependencies`;
-  const resp = await page.request.post(url, { data: { blockedByTaskId: blockerId } });
-  expect(resp.ok(), `POST ${url} → ${resp.status()}`).toBe(true);
+  const resp = await apiPost(page, url, { blockedByTaskId: blockerId });
+  expect(resp.ok, `POST ${url} → ${resp.status}`).toBe(true);
 }
 
 test.describe('Kanban flow — PRD mandatory merge blocker', () => {

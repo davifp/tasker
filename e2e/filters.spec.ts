@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { onboardAccount } from './support/auth';
+import { apiPatch } from './support/csrf';
 import { mockExternalIntegrations, pinEnglishLocale } from './support/mocks';
 import { columnRegion, createProject, quickAddTask } from './support/board';
 
@@ -22,11 +23,12 @@ test.describe('Board filters — URL as source of truth', () => {
     // the filter appears to work while actually hiding everything.
     const meResponse = await page.request.get('/api/proxy/me');
     const me = (await meResponse.json()) as { id: string };
-    const patchResponse = await page.request.patch(
+    const patchResponse = await apiPatch(
+      page,
       `/api/proxy/workspaces/${account.workspaceSlug}/projects/${project.slug}/tasks/1`,
-      { data: { assigneeUserId: me.id } },
+      { assigneeUserId: me.id },
     );
-    expect(patchResponse.ok()).toBe(true);
+    expect(patchResponse.ok).toBe(true);
     await page.reload();
 
     const todo = columnRegion(page, 'To do');

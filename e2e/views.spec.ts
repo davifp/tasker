@@ -69,7 +69,7 @@ test.describe.serial('Additional views — E2E, accessibility, performance', () 
     const account = await onboardAccount(page);
     const project = await createProject(page);
     const fixture = await seedFiveHundredTasks({
-      request: page.request,
+      page,
       workspaceSlug: account.workspaceSlug,
       projectSlug: project.slug,
     });

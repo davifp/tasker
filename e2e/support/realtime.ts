@@ -2,6 +2,7 @@ import type { BrowserContext, Page } from '@playwright/test';
 import { extractFirstUrl, waitForEmail } from './mailhog';
 import { randomEmail } from './factories';
 import { onboardAccount } from './auth';
+import { apiPost } from './csrf';
 
 // ---- Second-user onboarding into an existing workspace ---------------------
 //
@@ -42,14 +43,15 @@ export async function inviteAndJoin(opts: JoinOptions): Promise<JoinedMember> {
   });
   await inviteePage.close();
 
-  const inviteResponse = await inviterPage.request.post(
+  const inviteResponse = await apiPost(
+    inviterPage,
     `/api/proxy/workspaces/${encodeURIComponent(workspaceSlug)}/invitations`,
-    {
-      data: { email: account.email, role },
-    },
+    { email: account.email, role },
   );
-  if (!inviteResponse.ok()) {
-    throw new Error(`invite failed: ${inviteResponse.status()} ${await inviteResponse.text()}`);
+  if (!inviteResponse.ok) {
+    throw new Error(
+      `invite failed: ${inviteResponse.status} ${JSON.stringify(inviteResponse.body)}`,
+    );
   }
 
   const inviteMail = await waitForEmail(
@@ -63,14 +65,14 @@ export async function inviteAndJoin(opts: JoinOptions): Promise<JoinedMember> {
   if (!token) throw new Error(`Could not parse invitation token from ${acceptUrl}`);
 
   const acceptPage = await inviteeContext.newPage();
-  // Redeem via the BFF proxy so the iron-session cookie authorises the call.
-  const acceptResponse = await acceptPage.request.post(
+  const acceptResponse = await apiPost(
+    acceptPage,
     `/api/proxy/invitations/${encodeURIComponent(token)}/accept`,
-    { data: {} },
+    {},
   );
-  if (!acceptResponse.ok()) {
+  if (!acceptResponse.ok) {
     throw new Error(
-      `invitation accept failed: ${acceptResponse.status()} ${await acceptResponse.text()}`,
+      `invitation accept failed: ${acceptResponse.status} ${JSON.stringify(acceptResponse.body)}`,
     );
   }
   await acceptPage.request.post('/api/workspaces/select', {

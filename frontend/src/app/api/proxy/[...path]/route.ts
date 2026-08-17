@@ -134,13 +134,18 @@ async function forward(request: Request, path: string[]): Promise<Response> {
     statusText: upstreamResponse.statusText,
     headers: responseHeaders,
   });
-  // Re-issue the CSRF cookie on the way out. Cheap (`Set-Cookie` header +
-  // ~40 bytes) and gives us:
-  //   1. A bootstrap token on the first GET the SPA makes after page load —
-  //      so subsequent POSTs already have the header.
-  //   2. Rotation on every session-scoped call, keeping the token fresh well
-  //      inside the 2 h `maxAge`.
-  issueCsrfCookie(proxyResponse.cookies);
+  // Bootstrap the CSRF cookie for callers that don't have one yet (first
+  // GET after a page load with a valid iron-session but expired CSRF).
+  // Rotating per response would race concurrent requests (e.g. bell poll +
+  // user POST): document.cookie reads and the outgoing Cookie header snap
+  // to different tokens if a Set-Cookie lands between them. Login,
+  // register, and oauth-complete still mint a fresh token on session
+  // change — the leak window is per-session, not per-request.
+  const cookieHeader = request.headers.get('cookie') ?? '';
+  const hasCsrfCookie = cookieHeader.split(';').some((part) => part.trim().startsWith('tsk_csrf='));
+  if (!hasCsrfCookie) {
+    issueCsrfCookie(proxyResponse.cookies);
+  }
   return proxyResponse;
 }
 

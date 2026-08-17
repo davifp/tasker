@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { onboardAccount } from '../support/auth';
+import { apiPost } from '../support/csrf';
 import { mockExternalIntegrations, pinEnglishLocale } from '../support/mocks';
 import { createProject, openDrawer, quickAddTask } from '../support/board';
 import { stubAiSse, stubAiUsage } from '../support/ai';
@@ -18,8 +19,8 @@ async function postComment(
   body: string,
 ): Promise<void> {
   const url = `/api/proxy/workspaces/${coords.workspaceSlug}/projects/${coords.projectSlug}/tasks/${coords.taskNumber}/comments`;
-  const resp = await page.request.post(url, { data: { body } });
-  expect(resp.ok(), `POST ${url} → ${resp.status()}`).toBe(true);
+  const resp = await apiPost(page, url, { body });
+  expect(resp.ok, `POST ${url} → ${resp.status}`).toBe(true);
 }
 
 test.describe('AI — Summarize discussion', () => {

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { onboardAccount } from './support/auth';
+import { apiPost } from './support/csrf';
 import { mockExternalIntegrations, pinEnglishLocale } from './support/mocks';
 import { createProject, openDrawer, quickAddTask } from './support/board';
 
@@ -51,11 +52,12 @@ test.describe('Collaboration flow', () => {
     const fileInput = drawer.getByLabel(/attach files/i);
     // Bail early with a hint if MinIO is unreachable so the failure is
     // actionable (rather than a nested XHR error).
-    const preflight = await page.request.post(
+    const preflight = await apiPost(
+      page,
       `/api/proxy/workspaces/${page.url().split('/')[3]}/projects/${project.slug}/tasks/1/attachments/sign`,
-      { data: { filename: 'preflight.txt', mime: 'text/plain', sizeBytes: 4 } },
+      { filename: 'preflight.txt', mime: 'text/plain', sizeBytes: 4 },
     );
-    test.skip(preflight.status() >= 500, 'MinIO not reachable — skipping attachment leg');
+    test.skip(preflight.status >= 500, 'MinIO not reachable — skipping attachment leg');
 
     await fileInput.setInputFiles({
       name: 'hello.txt',

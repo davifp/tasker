@@ -1,4 +1,5 @@
-import type { APIRequestContext } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { apiPost } from '../support/csrf';
 
 // Deterministic 500-task fixture for the Task 9.0 spec. Uses a seeded
 // pseudo-random distribution so a spec re-run against the same account
@@ -33,7 +34,7 @@ const LABEL_NAMES = ['bug', 'feature', 'chore', 'docs', 'design'] as const;
 const LABEL_COLORS = ['#ef4444', '#3b82f6', '#a3a3a3', '#22c55e', '#a855f7'] as const;
 
 export interface SeedContext {
-  request: APIRequestContext;
+  page: Page;
   workspaceSlug: string;
   projectSlug: string;
 }
@@ -88,14 +89,17 @@ function shuffle<T>(items: readonly T[], rand: () => number): T[] {
 }
 
 async function createLabel(ctx: SeedContext, name: string, color: string): Promise<string> {
-  const response = await ctx.request.post(`/api/proxy/workspaces/${ctx.workspaceSlug}/labels`, {
-    data: { name, color },
-  });
-  if (!response.ok()) {
-    throw new Error(`label create failed (${name}): ${response.status()} ${await response.text()}`);
+  const response = await apiPost<{ id: string }>(
+    ctx.page,
+    `/api/proxy/workspaces/${ctx.workspaceSlug}/labels`,
+    { name, color },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `label create failed (${name}): ${response.status} ${JSON.stringify(response.body)}`,
+    );
   }
-  const label = (await response.json()) as { id: string };
-  return label.id;
+  return response.body.id;
 }
 
 interface TaskPayload {
@@ -108,13 +112,14 @@ interface TaskPayload {
 }
 
 async function createTask(ctx: SeedContext, payload: TaskPayload): Promise<void> {
-  const response = await ctx.request.post(
+  const response = await apiPost(
+    ctx.page,
     `/api/proxy/workspaces/${ctx.workspaceSlug}/projects/${ctx.projectSlug}/tasks`,
-    { data: payload },
+    payload,
   );
-  if (!response.ok()) {
+  if (!response.ok) {
     throw new Error(
-      `task create failed (${payload.title}): ${response.status()} ${await response.text()}`,
+      `task create failed (${payload.title}): ${response.status} ${JSON.stringify(response.body)}`,
     );
   }
 }
