@@ -38,16 +38,14 @@ export class WorkspaceGuard implements CanActivate {
     // No workspace signal on the request → not a workspace-scoped route.
     if (!headerId && !slug) return true;
 
-    // The URL slug always wins. If a header is also present, it MUST resolve to
-    // the same workspace as the slug — otherwise an Admin of workspace A could
-    // send `X-Workspace-Id: A` while hitting `/workspaces/B/*` and inherit
-    // Admin permissions on B's data (the controller reads slug from the URL).
+    // URL slug is authoritative when present — workspace resolution, membership
+    // check, and ctx.workspaceId below all key off it. A stale X-Workspace-Id
+    // from a cookie is ignored, not rejected: legitimate any time the user
+    // navigates across workspaces faster than the cookie updates.
     const workspace = slug
       ? await this.prisma.forSystem().workspace.findUnique({ where: { slug } })
       : await this.prisma.forSystem().workspace.findUnique({ where: { id: headerId! } });
 
-    // Allow the restore endpoint to reach a soft-deleted workspace. Every other
-    // route treats a soft-deleted workspace as inaccessible (guard-level 403).
     const isRestoreRoute =
       req.method === 'POST' && typeof req.path === 'string' && req.path.endsWith('/restore');
 
@@ -56,15 +54,6 @@ export class WorkspaceGuard implements CanActivate {
         type: 'https://tasker.dev/problems/workspace-not-found',
         title: 'Workspace not accessible',
         detail: 'The workspace does not exist or you do not have access to it.',
-        status: 403,
-      });
-    }
-
-    if (headerId && slug && headerId !== workspace.id) {
-      throw new ForbiddenException({
-        type: 'https://tasker.dev/problems/workspace-id-mismatch',
-        title: 'Conflicting workspace identifiers',
-        detail: 'The X-Workspace-Id header does not match the workspace in the URL.',
         status: 403,
       });
     }

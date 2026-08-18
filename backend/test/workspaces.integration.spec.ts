@@ -445,10 +445,7 @@ describe('Workspaces + invitations + RBAC (integration)', () => {
       expect(after?.deletedAt).toBeNull();
     });
 
-    it('rejects a mismatched X-Workspace-Id header against the URL slug (tenant leak guard)', async () => {
-      // Register a user who is Admin of workspace A. Ask for workspace B by
-      // slug while asserting X-Workspace-Id: A → must 403, otherwise Admin of A
-      // could read/mutate B's data.
+    it('rejects a non-member hitting a URL slug they do not belong to, regardless of X-Workspace-Id', async () => {
       const attacker = await register(baseUrl, 'tenant-leak@example.com');
       await verifyUser(attacker.userId);
       const wsA = await req(baseUrl, 'POST', '/workspaces', {
@@ -470,7 +467,7 @@ describe('Workspaces + invitations + RBAC (integration)', () => {
       });
       expect(res.status).toBe(403);
       const body = (await res.json()) as { type: string };
-      expect(body.type).toBe('https://tasker.dev/problems/workspace-id-mismatch');
+      expect(body.type).toBe('https://tasker.dev/problems/workspace-membership-required');
     });
   });
 

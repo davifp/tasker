@@ -51,3 +51,4 @@ coverage/
 skills-lock.json
 test-results
 .playwright-mcp/
+playwright-report/

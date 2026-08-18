@@ -67,11 +67,12 @@ export function startTelemetry(config: TelemetryConfig): NodeSDK {
     root: new TraceIdRatioBasedSampler(config.sampleRate),
   });
 
-  // Falls back to no-op export when no endpoint is configured (dev/test),
-  // so unit tests don't spam localhost:4318 with connection errors.
+  // Without explicit empty arrays, NodeSDK falls back to env-based OTLP
+  // exporters defaulting to http://localhost:4318 (ECONNREFUSED in CI).
   const traceExporter = config.otlpEndpoint
     ? new OTLPTraceExporter({ url: `${config.otlpEndpoint.replace(/\/$/, '')}/v1/traces` })
     : undefined;
+  const optOut = !config.otlpEndpoint;
 
   sdk = new NodeSDK({
     resource: resourceFromAttributes({
@@ -82,7 +83,8 @@ export function startTelemetry(config: TelemetryConfig): NodeSDK {
       'tasker.release_id': config.releaseId,
     }),
     sampler,
-    ...(traceExporter ? { traceExporter } : {}),
+    ...(traceExporter ? { traceExporter } : optOut ? { spanProcessors: [] } : {}),
+    ...(optOut ? { metricReaders: [] } : {}),
     instrumentations: [
       getNodeAutoInstrumentations({
         // fs spans are noisy and rarely useful; host-metrics runs its own
