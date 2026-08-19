@@ -3,6 +3,7 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { browserHttp } from '@/lib/http/browser';
 import {
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { InviteRole, type InviteRoleValue, type MemberRoleValue } from './schemas';
+import { membersKeys } from './hooks/useWorkspaceMembers';
 
 interface ChangeRoleMenuProps {
   slug: string;
@@ -25,6 +27,7 @@ export function ChangeRoleMenu({ slug, userId, currentRole, editable }: ChangeRo
   const t = useTranslations('members.role');
   const tRoles = useTranslations('members.invite.roles');
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
 
   function changeRole(role: InviteRoleValue) {
@@ -35,6 +38,7 @@ export function ChangeRoleMenu({ slug, userId, currentRole, editable }: ChangeRo
           role,
         });
         toast.success(t('changed'));
+        void queryClient.invalidateQueries({ queryKey: membersKeys.all(slug) });
         router.refresh();
       } catch {
         toast.error(t('failed'));

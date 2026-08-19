@@ -31,7 +31,8 @@ async function fetchWorkspaceMembers(slug: string): Promise<WorkspaceMemberSumma
   }));
 }
 
-const membersKeys = {
+export const membersKeys = {
+  all: (slug: string) => ['workspace-members', slug] as const,
   list: (slug: string) => ['workspace-members', slug, 'list'] as const,
 };
 
@@ -40,6 +41,6 @@ export function useWorkspaceMembers(workspaceSlug: string) {
     queryKey: membersKeys.list(workspaceSlug),
     queryFn: () => fetchWorkspaceMembers(workspaceSlug),
     enabled: Boolean(workspaceSlug),
-    staleTime: 60_000,
+    staleTime: 2 * 60 * 1000,
   });
 }

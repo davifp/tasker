@@ -153,34 +153,22 @@ function DrawerBody({
     }
   }, [task, focusTitleOnMount]);
 
-  if (isLoading || !task) {
-    return (
-      <div className="flex flex-col gap-3">
-        <SheetHeader>
-          <SheetTitle>{t('loading')}</SheetTitle>
-          <SheetDescription className="sr-only">{t('description')}</SheetDescription>
-        </SheetHeader>
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
-  }
-
   async function commitTitle() {
-    const next = (titleDraft ?? task!.title).trim();
+    if (!task) return;
+    const next = (titleDraft ?? task.title).trim();
     setTitleDraft(null);
-    if (!next || next === task!.title) return;
+    if (!next || next === task.title) return;
     try {
-      await update.mutateAsync({ number: task!.number, patch: { title: next } });
+      await update.mutateAsync({ number: task.number, patch: { title: next } });
     } catch (err) {
       toastFromError(err, t('errors.saveTitleFailed'));
     }
   }
 
   async function commitDescription() {
+    if (!task) return;
     try {
-      await update.mutateAsync({ number: task!.number, patch: { description: descDraft } });
+      await update.mutateAsync({ number: task.number, patch: { description: descDraft } });
       setEditingDescription(false);
     } catch (err) {
       toastFromError(err, t('errors.saveDescriptionFailed'));
@@ -189,159 +177,174 @@ function DrawerBody({
 
   return (
     <div className="flex flex-col gap-4">
-      <SheetHeader className="gap-2">
-        <SheetDescription className="text-xs font-mono uppercase text-muted-foreground">
-          {t('taskNumber', { number: task.number })}
-        </SheetDescription>
-        <SheetTitle asChild>
-          <textarea
-            ref={titleRef}
-            rows={1}
-            className="resize-none rounded-md border border-transparent bg-transparent px-1 text-lg font-semibold text-foreground hover:border-border focus:border-border focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-default disabled:hover:border-transparent"
-            value={titleDraft ?? task.title}
-            readOnly={!canWrite}
-            onChange={(event) => setTitleDraft(event.target.value)}
-            onBlur={() => void commitTitle()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                (event.target as HTMLTextAreaElement).blur();
-              } else if (event.key === 'Escape') {
-                event.preventDefault();
-                setTitleDraft(null);
-                (event.target as HTMLTextAreaElement).blur();
+      {isLoading || !task ? (
+        <div className="flex flex-col gap-3">
+          <SheetHeader>
+            <SheetTitle>{t('loading')}</SheetTitle>
+            <SheetDescription className="sr-only">{t('description')}</SheetDescription>
+          </SheetHeader>
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      ) : (
+        <>
+          <SheetHeader className="gap-2">
+            <SheetDescription className="text-xs font-mono uppercase text-muted-foreground">
+              {t('taskNumber', { number: task.number })}
+            </SheetDescription>
+            <SheetTitle asChild>
+              <textarea
+                ref={titleRef}
+                rows={1}
+                className="resize-none rounded-md border border-transparent bg-transparent px-1 text-lg font-semibold text-foreground hover:border-border focus:border-border focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-default disabled:hover:border-transparent"
+                value={titleDraft ?? task.title}
+                readOnly={!canWrite}
+                onChange={(event) => setTitleDraft(event.target.value)}
+                onBlur={() => void commitTitle()}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    (event.target as HTMLTextAreaElement).blur();
+                  } else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    setTitleDraft(null);
+                    (event.target as HTMLTextAreaElement).blur();
+                  }
+                }}
+                aria-label={t('titleLabel')}
+              />
+            </SheetTitle>
+          </SheetHeader>
+
+          <TaskMetadataPanel
+            workspaceSlug={workspaceSlug}
+            projectSlug={projectSlug}
+            task={task}
+          />
+
+          <AiActionsMenu
+            workspaceSlug={workspaceSlug}
+            taskId={task.id}
+            taskTitle={task.title}
+            usage={usageQuery.data}
+            isAdmin={isAdmin}
+            onAcceptConsent={isAdmin ? () => acceptConsent.mutate() : undefined}
+            onAcceptDescription={async (draft) => {
+              // Persist immediately so follow-up AI actions (checklist,
+              // estimate) that read the description from the DB see the new
+              // value. The editor stays open so the user can still tweak-
+              // and-resave.
+              setDescDraft(draft);
+              setEditingDescription(true);
+              try {
+                await update.mutateAsync({ number: task.number, patch: { description: draft } });
+              } catch (err) {
+                toastFromError(err, t('errors.saveDescriptionFailed'));
               }
             }}
-            aria-label={t('titleLabel')}
+            onAcceptChecklist={async (items) => {
+              // Persist items sequentially so their positions match the order the
+              // model produced (the API assigns position at insert time). Parallel
+              // fires would race on position and shuffle the list.
+              let failed = 0;
+              for (const title of items) {
+                try {
+                  await addChecklistItem.mutateAsync({ title });
+                } catch {
+                  failed += 1;
+                }
+              }
+              if (failed === 0) {
+                toast.success(`Added ${items.length} checklist item${items.length === 1 ? '' : 's'}.`);
+              } else if (failed < items.length) {
+                toast.warning(
+                  `Added ${items.length - failed} of ${items.length} items — ${failed} failed.`,
+                );
+              } else {
+                toast.error('Could not add any checklist items.');
+              }
+            }}
           />
-        </SheetTitle>
-      </SheetHeader>
 
-      <TaskMetadataPanel
-        workspaceSlug={workspaceSlug}
-        projectSlug={projectSlug}
-        task={task}
-      />
-
-      <AiActionsMenu
-        workspaceSlug={workspaceSlug}
-        taskId={task.id}
-        taskTitle={task.title}
-        usage={usageQuery.data}
-        isAdmin={isAdmin}
-        onAcceptConsent={isAdmin ? () => acceptConsent.mutate() : undefined}
-        onAcceptDescription={async (draft) => {
-          // Persist immediately so follow-up AI actions (checklist,
-          // estimate) that read the description from the DB see the new
-          // value. The editor stays open so the user can still tweak-
-          // and-resave.
-          setDescDraft(draft);
-          setEditingDescription(true);
-          try {
-            await update.mutateAsync({ number: task.number, patch: { description: draft } });
-          } catch (err) {
-            toastFromError(err, t('errors.saveDescriptionFailed'));
-          }
-        }}
-        onAcceptChecklist={async (items) => {
-          // Persist items sequentially so their positions match the order the
-          // model produced (the API assigns position at insert time). Parallel
-          // fires would race on position and shuffle the list.
-          let failed = 0;
-          for (const title of items) {
-            try {
-              await addChecklistItem.mutateAsync({ title });
-            } catch {
-              failed += 1;
-            }
-          }
-          if (failed === 0) {
-            toast.success(`Added ${items.length} checklist item${items.length === 1 ? '' : 's'}.`);
-          } else if (failed < items.length) {
-            toast.warning(
-              `Added ${items.length - failed} of ${items.length} items — ${failed} failed.`,
-            );
-          } else {
-            toast.error('Could not add any checklist items.');
-          }
-        }}
-      />
-
-      <section className="flex flex-col gap-2" aria-label={t('descriptionLabel')}>
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {t('descriptionHeading')}
-          </h4>
-          {!editingDescription && canWrite ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-[11px]"
-              onClick={() => {
-                setDescDraft(task.description ?? '');
-                setEditingDescription(true);
-              }}
-            >
-              {t('edit')}
-            </Button>
-          ) : null}
-        </div>
-        {editingDescription ? (
-          <MarkdownEditor
-            value={descDraft}
-            onChange={setDescDraft}
-            onSave={() => void commitDescription()}
-            onCancel={() => setEditingDescription(false)}
-            saving={update.isPending}
-          />
-        ) : task.description ? (
-          <MarkdownPreview markdown={task.description} />
-        ) : (
-          <p className="text-xs text-muted-foreground">{t('noDescription')}</p>
-        )}
-      </section>
+          <section className="flex flex-col gap-2" aria-label={t('descriptionLabel')}>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('descriptionHeading')}
+              </h4>
+              {!editingDescription && canWrite ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => {
+                    setDescDraft(task.description ?? '');
+                    setEditingDescription(true);
+                  }}
+                >
+                  {t('edit')}
+                </Button>
+              ) : null}
+            </div>
+            {editingDescription ? (
+              <MarkdownEditor
+                value={descDraft}
+                onChange={setDescDraft}
+                onSave={() => void commitDescription()}
+                onCancel={() => setEditingDescription(false)}
+                saving={update.isPending}
+              />
+            ) : task.description ? (
+              <MarkdownPreview markdown={task.description} />
+            ) : (
+              <p className="text-xs text-muted-foreground">{t('noDescription')}</p>
+            )}
+          </section>
+        </>
+      )}
 
       <ChecklistPanel
         workspaceSlug={workspaceSlug}
         projectSlug={projectSlug}
-        taskNumber={task.number}
+        taskNumber={taskNumber}
       />
 
       <DependenciesPanel
         workspaceSlug={workspaceSlug}
         projectSlug={projectSlug}
-        taskNumber={task.number}
+        taskNumber={taskNumber}
       />
 
       {currentUserId && currentUserRole ? (
         <>
-          <CommentsPanel
-            workspaceSlug={workspaceSlug}
-            workspaceId={workspaceId}
-            projectId={projectId}
-            projectSlug={projectSlug}
-            taskNumber={task.number}
-            taskId={task.id}
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-          />
+          {task ? (
+            <CommentsPanel
+              workspaceSlug={workspaceSlug}
+              workspaceId={workspaceId}
+              projectId={projectId}
+              projectSlug={projectSlug}
+              taskNumber={taskNumber}
+              taskId={task.id}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+            />
+          ) : null}
           <AttachmentsPanel
             workspaceSlug={workspaceSlug}
             projectSlug={projectSlug}
-            taskNumber={task.number}
+            taskNumber={taskNumber}
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}
           />
           <ActivityFeed
             workspaceSlug={workspaceSlug}
             projectSlug={projectSlug}
-            taskNumber={task.number}
+            taskNumber={taskNumber}
           />
         </>
       ) : null}
 
-      {canWrite ? (
+      {task && canWrite ? (
         <footer className="mt-2 flex justify-end border-t border-border pt-3">
           <Button
             type="button"

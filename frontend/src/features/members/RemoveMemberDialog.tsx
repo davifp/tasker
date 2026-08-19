@@ -3,9 +3,11 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { browserHttp } from '@/lib/http/browser';
 import { useAnalytics } from '@/features/analytics/AnalyticsProvider';
+import { membersKeys } from './hooks/useWorkspaceMembers';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +37,7 @@ export function RemoveMemberDialog({
 }: RemoveMemberDialogProps) {
   const t = useTranslations('members.remove');
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const emit = useAnalytics();
@@ -45,6 +48,7 @@ export function RemoveMemberDialog({
         await browserHttp.delete(`/workspaces/${encodeURIComponent(slug)}/members/${userId}`);
         if (workspaceId) emit({ name: 'member_removed', workspaceId });
         toast.success(t('success'));
+        void queryClient.invalidateQueries({ queryKey: membersKeys.all(slug) });
         router.refresh();
       } catch {
         toast.error(t('failed'));
