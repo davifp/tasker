@@ -94,7 +94,7 @@ export default withSentryConfig(withNextIntl(nextConfig), {
   silent: !process.env['CI'],
   telemetry: false,
   widenClientFileUpload: true,
-  disableLogger: true,
+  webpack: { treeshake: { removeDebugLogging: true } },
   // Tunnel avoids ad-blockers eating client-side events by proxying through
   // /monitoring on our own origin. Cheap and preserves free-tier visibility.
   tunnelRoute: '/monitoring',

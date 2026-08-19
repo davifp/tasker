@@ -20,3 +20,5 @@ if (dsn) {
     transportOptions: { fetchOptions: { keepalive: true } },
   });
 }
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
