@@ -12,7 +12,7 @@
 
 > A conta abaixo entra em todos os workspaces como `DEMO_VIEWER`. Dá para navegar por tudo, mas qualquer tentativa de criar, editar ou apagar retorna `403` no formato Problem Details com o motivo "read-only demo". Duas camadas garantem isso: o `DemoReadOnlyGuard` no HTTP e uma extensão do Prisma na camada de persistência.
 
-- **URL pública**: Minha conta free tier da AWS expirou, então está sem uma URL. Teste localmente.
+- **URL pública**: Está sem no momento
 - **E-mail**: `demo@tasker.dev`
 - **Senha**: `DemoViewer!2026`
 
